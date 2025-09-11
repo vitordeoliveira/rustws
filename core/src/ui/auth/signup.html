@@ -1,0 +1,112 @@
+{% extends "shared/base.html" %}
+
+{% block title %}Sign Up - Matrix{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-md w-full space-y-8">
+    <div>
+      <h2 class="mt-6 text-center text-3xl font-extrabold text-white">
+        Create your account
+      </h2>
+    </div>
+
+    <form class="mt-8 space-y-6" action="/auth/signup" method="POST">
+      <div class="rounded-md shadow-sm -space-y-px">
+        <div>
+          <label for="name" class="sr-only">Full name</label>
+          <input
+            id="name"
+            name="name"
+            type="text"
+            autocomplete="name"
+            required
+            class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-600 placeholder-gray-400 text-white bg-gray-800 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+            placeholder="Full name"
+          />
+        </div>
+        <div>
+          <label for="email" class="sr-only">Email address</label>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            autocomplete="email"
+            required
+            class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-600 placeholder-gray-400 text-white bg-gray-800 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+            placeholder="Email address"
+          />
+        </div>
+        <div>
+          <label for="password" class="sr-only">Password</label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            autocomplete="new-password"
+            required
+            class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-600 placeholder-gray-400 text-white bg-gray-800 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+            placeholder="Password"
+          />
+        </div>
+        <div>
+          <label for="confirm_password" class="sr-only">Confirm password</label>
+          <input
+            id="confirm_password"
+            name="confirm_password"
+            type="password"
+            autocomplete="new-password"
+            required
+            class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-600 placeholder-gray-400 text-white bg-gray-800 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+            placeholder="Confirm password"
+          />
+        </div>
+      </div>
+
+      <div class="flex items-center">
+        <input
+          id="terms"
+          name="terms"
+          type="checkbox"
+          required
+          class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-600 bg-gray-800 rounded"
+        />
+        <label for="terms" class="ml-2 block text-sm text-white">
+          I agree to the <a href="#" class="font-medium text-indigo-600 hover:text-indigo-500">Terms of Service</a> and <a href="#" class="font-medium text-indigo-600 hover:text-indigo-500">Privacy Policy</a>
+        </label>
+      </div>
+
+      <div>
+        <button
+          type="submit"
+          class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+        >
+          <span class="absolute left-0 inset-y-0 flex items-center pl-3">
+            <svg
+              class="h-5 w-5 text-indigo-500 group-hover:text-indigo-400"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z"
+              />
+            </svg>
+          </span>
+          Create account
+        </button>
+      </div>
+
+      <div class="text-center">
+        <span class="text-sm text-gray-300">
+          Already have an account? 
+          <a href="/login" class="font-medium text-indigo-600 hover:text-indigo-500">
+            Sign in
+          </a>
+        </span>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

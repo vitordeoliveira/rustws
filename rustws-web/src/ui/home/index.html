@@ -1,0 +1,116 @@
+{% extends "shared/base.html" %}
+
+{% block content %}
+<!-- Hero Section - Connected to navbar -->
+<div class="bg-gradient-to-br from-blue-600 to-purple-700 text-white -mt-0">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-24">
+        <div class="text-center">
+            <h1 class="text-4xl md:text-6xl font-bold mb-6">
+                Welcome to <span class="text-yellow-300">rustws</span>
+            </h1>
+            <p class="text-xl md:text-2xl mb-8 text-blue-100 max-w-3xl mx-auto">
+                An open-source, AWS-like cloud platform designed to run on your VPS. 
+                Take control of your infrastructure with enterprise-grade features.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="/getting-started" 
+                   class="bg-yellow-400 hover:bg-yellow-300 text-gray-900 font-semibold py-3 px-8 rounded-lg transition-colors duration-200 shadow-lg">
+                    Get Started
+                </a>
+                <a href="/docs" 
+                   class="border-2 border-white hover:bg-white hover:text-blue-600 text-white font-semibold py-3 px-8 rounded-lg transition-colors duration-200">
+                    Documentation
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Features Section -->
+<div class="py-16 bg-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-12">
+            <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                Why Choose rustws?
+            </h2>
+            <p class="text-xl text-gray-600 max-w-2xl mx-auto">
+                Built with Rust for performance, reliability, and security. Deploy anywhere, scale everywhere.
+            </p>
+        </div>
+        
+        <div class="grid md:grid-cols-3 gap-8">
+            <!-- Open Source -->
+            <div class="text-center p-6">
+                <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900 mb-2">100% Open Source</h3>
+                <p class="text-gray-600">
+                    Complete transparency and freedom. No vendor lock-in, modify and extend as needed.
+                </p>
+            </div>
+            
+            <!-- VPS Ready -->
+            <div class="text-center p-6">
+                <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900 mb-2">VPS Optimized</h3>
+                <p class="text-gray-600">
+                    Designed to run efficiently on Virtual Private Servers with minimal resource requirements.
+                </p>
+            </div>
+            
+            <!-- Enterprise Features -->
+            <div class="text-center p-6">
+                <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900 mb-2">Enterprise Grade</h3>
+                <p class="text-gray-600">
+                    AWS-like features including compute, storage, networking, and monitoring capabilities.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Getting Started Section -->
+<div class="py-16 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-12">
+            <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                Ready to Deploy?
+            </h2>
+            <p class="text-xl text-gray-600 max-w-2xl mx-auto">
+                Get rustws running on your VPS in minutes. Start with a simple setup and scale as you grow.
+            </p>
+        </div>
+        
+        <div class="bg-gray-900 rounded-lg p-6 max-w-2xl mx-auto">
+            <div class="text-green-400 font-mono text-sm">
+                <div class="mb-2"># Quick install on Ubuntu/Debian</div>
+                <div class="text-white">curl -sSL https://install.rustws.io | bash</div>
+                <div class="mt-4 mb-2 text-green-400"># Start the service</div>
+                <div class="text-white">sudo systemctl start rustws</div>
+            </div>
+        </div>
+        
+        <div class="text-center mt-8">
+            <a href="/install" 
+               class="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200">
+                View Installation Guide
+                <svg class="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

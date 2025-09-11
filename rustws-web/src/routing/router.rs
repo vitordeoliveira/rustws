@@ -1,0 +1,64 @@
+//! Route definitions and smart routing
+
+use axum::{
+    Router,
+    body::Body,
+    extract::Request,
+    middleware,
+    routing::{get, post},
+};
+use axum_login::login_required;
+use tower_http::{services::ServeDir, trace::TraceLayer};
+
+use tracing::error_span;
+
+use crate::{
+    auth::{SessionManager, dto::AuthBackend},
+    error_handling::AppResult,
+    handlers::{api, pages},
+    routing::{RequestId, request_id_middleware},
+    state::AppState,
+};
+
+pub fn create_private_router() -> Router<AppState> {
+    Router::new()
+}
+
+pub fn create_auth_router() -> Router<AppState> {
+    Router::new()
+        .route("/", get(pages::home_handler))
+        .route("/login", get(pages::login_handler))
+        .route("/signup", get(pages::signup_handler))
+        .route("/auth/login", post(pages::login_form_handler))
+        .route("/auth/signup", post(pages::signup_form_handler))
+        .route("/auth/logout", post(pages::logout_handler))
+}
+
+/// Creates the application router with all routes
+pub async fn create_router(state: AppState, session_manager: SessionManager) -> AppResult<Router> {
+    let router = Router::new()
+        .merge(create_private_router())
+        .merge(create_auth_router())
+        .nest_service("/assets", ServeDir::new("assets/public"))
+        .layer(session_manager)
+        .layer(
+            TraceLayer::new_for_http().make_span_with(|request: &Request<Body>| {
+                let request_id = request
+                    .extensions()
+                    .get::<RequestId>()
+                    .map(|r| r.0.clone())
+                    .unwrap_or_else(|| "unknown".into());
+                error_span!(
+                    "request",
+                    id = %request_id,
+                    method = %request.method(),
+                    uri = %request.uri(),
+                )
+            }),
+        )
+        // Add request ID middleware (should be one of the first layers)
+        .layer(middleware::from_fn(request_id_middleware))
+        .with_state(state);
+
+    Ok(router)
+}
