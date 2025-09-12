@@ -76,71 +76,96 @@
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
-                    <!-- Sample Function -->
-                    <tr class="hover:bg-gray-50">
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="flex items-center">
-                                <div class="flex-shrink-0 w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
-                                    <svg class="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
-                                    </svg>
+                    {% if lambdas %}
+                        {% for lambda in lambdas %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                                        <svg class="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                                        </svg>
+                                    </div>
+                                    <div class="ml-3">
+                                        <div class="text-sm font-medium text-gray-900">{{ lambda.name }}</div>
+                                        <div class="text-sm text-gray-500">
+                                            {% if lambda.description %}{{ lambda.description }}{% else %}Lambda function from source file{% endif %}
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="ml-3">
-                                    <div class="text-sm font-medium text-gray-900">hello-world</div>
-                                    <div class="text-sm text-gray-500">Simple greeting function</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                    {% if lambda.runtime == 'rs' %}bg-rust-100 text-rust-800
+                                    {% elif lambda.runtime == 'js' %}bg-yellow-100 text-yellow-800
+                                    {% elif lambda.runtime == 'py' %}bg-blue-100 text-blue-800
+                                    {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                    {% if lambda.runtime == 'rs' %}Rust
+                                    {% elif lambda.runtime == 'js' %}Node.js
+                                    {% elif lambda.runtime == 'py' %}Python
+                                    {% elif lambda.runtime == 'go' %}Go
+                                    {% else %}{{ lambda.runtime }}{% endif %}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ lambda.memory_mb }} MB</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ lambda.timeout_seconds }}s</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ lambda.updated_at | date(format="%Y-%m-%d %H:%M") }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if lambda.status == 'Active' %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    <span class="w-2 h-2 bg-green-400 rounded-full mr-1"></span>
+                                    Active
+                                </span>
+                                {% elif lambda.status == 'Inactive' %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                    <span class="w-2 h-2 bg-yellow-400 rounded-full mr-1"></span>
+                                    Inactive
+                                </span>
+                                {% else %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                    <span class="w-2 h-2 bg-red-400 rounded-full mr-1"></span>
+                                    Error
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <div class="flex items-center justify-end space-x-2">
+                                    <button class="text-orange-600 hover:text-orange-700 p-1" title="Edit">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                                        </svg>
+                                    </button>
+                                    <button class="text-blue-600 hover:text-blue-700 p-1" title="Test">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1.5a2.5 2.5 0 010 5H9m-3-5a5 5 0 1110 0m-6 7v.01"></path>
+                                        </svg>
+                                    </button>
+                                    <button class="text-red-600 hover:text-red-700 p-1" title="Delete">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                        </svg>
+                                    </button>
                                 </div>
-                            </div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-rust-100 text-rust-800">
-                                Rust 1.75
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">128 MB</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">15s</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">2 hours ago</td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                <span class="w-2 h-2 bg-green-400 rounded-full mr-1"></span>
-                                Active
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <div class="flex items-center justify-end space-x-2">
-                                <button class="text-orange-600 hover:text-orange-700 p-1">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <!-- Empty State -->
+                        <tr>
+                            <td colspan="7" class="px-6 py-12 text-center">
+                                <div class="flex flex-col items-center">
+                                    <svg class="w-12 h-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
                                     </svg>
-                                </button>
-                                <button class="text-blue-600 hover:text-blue-700 p-1">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1.5a2.5 2.5 0 010 5H9m-3-5a5 5 0 1110 0m-6 7v.01"></path>
-                                    </svg>
-                                </button>
-                                <button class="text-red-600 hover:text-red-700 p-1">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                    </svg>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-
-                    <!-- Empty State -->
-                    <tr>
-                        <td colspan="7" class="px-6 py-12 text-center">
-                            <div class="flex flex-col items-center">
-                                <svg class="w-12 h-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
-                                </svg>
-                                <h3 class="text-lg font-medium text-gray-900 mb-2">No functions yet</h3>
-                                <p class="text-gray-500 mb-4">Get started by creating your first serverless function.</p>
-                                <button class="bg-orange-600 hover:bg-orange-700 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200">
-                                    Create Your First Function
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
+                                    <h3 class="text-lg font-medium text-gray-900 mb-2">No functions yet</h3>
+                                    <p class="text-gray-500 mb-4">Get started by creating your first serverless function.</p>
+                                    <button class="bg-orange-600 hover:bg-orange-700 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200">
+                                        Create Your First Function
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endif %}
                 </tbody>
             </table>
         </div>
@@ -159,7 +184,7 @@
                 </div>
                 <div class="ml-3">
                     <div class="text-sm font-medium text-gray-500">Total Functions</div>
-                    <div class="text-2xl font-bold text-gray-900">1</div>
+                    <div class="text-2xl font-bold text-gray-900">{{ lambdas | length }}</div>
                 </div>
             </div>
         </div>
