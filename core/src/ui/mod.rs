@@ -9,6 +9,7 @@ pub mod auth;
 pub mod engine;
 pub mod filters;
 pub mod home;
+pub mod lambda;
 pub mod shared;
 pub mod testers;
 

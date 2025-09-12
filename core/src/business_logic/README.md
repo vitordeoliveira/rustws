@@ -27,10 +27,11 @@ module_name/
 
 ### `repository.rs`
 
-- Database queries and data access
-- CRUD operations
-- Data mapping
-- Only include if module needs database access
+- Repository trait definitions
+- Data access interface contracts
+- Method signatures for CRUD operations
+- Only include if module needs data persistence
+- Implementations will be in infrastructure layer
 
 ### `service.rs`
 

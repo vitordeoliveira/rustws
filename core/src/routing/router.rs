@@ -23,6 +23,7 @@ use crate::{
 pub fn create_private_router() -> Router<AppState> {
     Router::new()
         .route("/", get(pages::home_handler))
+        .route("/lambda", get(pages::lambda_handler))
         .route_layer(login_required!(AuthBackend, login_url = "/login"))
 }
 
