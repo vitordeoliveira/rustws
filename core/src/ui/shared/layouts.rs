@@ -3,13 +3,14 @@
 use serde::Serialize;
 use tera::Context;
 
-use crate::error_handling::types::AppResult;
+use crate::{auth::dto::User, error_handling::types::AppResult};
 
 #[derive(Debug, Serialize)]
 pub struct BaseLayoutProps {
     pub title: String,
     pub description: Option<String>,
     pub keywords: Option<String>,
+    pub user: Option<User>,
 }
 
 impl Default for BaseLayoutProps {
@@ -18,6 +19,7 @@ impl Default for BaseLayoutProps {
             title: "Matrix".to_string(),
             description: None,
             keywords: None,
+            user: None,
         }
     }
 }
@@ -43,6 +45,12 @@ impl BaseLayoutProps {
     /// Set the page keywords (builder pattern)
     pub fn keywords<T: Into<String>>(mut self, keywords: T) -> Self {
         self.keywords = Some(keywords.into());
+        self
+    }
+
+    /// Set the user (builder pattern)
+    pub fn user(mut self, user: Option<User>) -> Self {
+        self.user = user;
         self
     }
 

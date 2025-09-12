@@ -1,6 +1,7 @@
 //! Home domain UI logic
 
 use crate::{
+    auth::dto::User,
     error_handling::types::AppResult,
     ui::{TeraEngine, TeraRenderer, Ui, shared::layouts::BaseLayoutProps},
 };
@@ -13,12 +14,13 @@ pub struct HomePageUi {
 }
 
 impl HomePageUi {
-    pub fn new() -> Self {
+    pub fn new(user: User) -> Self {
         Self {
             layout: BaseLayoutProps::new()
                 .title("RUSTWS Core - Infrastructure Dashboard")
                 .description("RUSTWS core infrastructure services - API Gateway, Lambda Functions, and Step Functions")
-                .keywords("rustws, api-gateway, lambda, step-functions, infrastructure, serverless"),
+                .keywords("rustws, api-gateway, lambda, step-functions, infrastructure, serverless")
+                .user(Some(user)),
         }
     }
 }

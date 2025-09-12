@@ -22,15 +22,14 @@ use crate::{
 
 pub fn create_private_router() -> Router<AppState> {
     Router::new()
+        .route("/", get(pages::home_handler))
+        .route_layer(login_required!(AuthBackend, login_url = "/login"))
 }
 
 pub fn create_auth_router() -> Router<AppState> {
     Router::new()
-        .route("/", get(pages::home_handler))
         .route("/login", get(pages::login_handler))
-        .route("/signup", get(pages::signup_handler))
         .route("/auth/login", post(pages::login_form_handler))
-        .route("/auth/signup", post(pages::signup_form_handler))
         .route("/auth/logout", post(pages::logout_handler))
 }
 

@@ -15,19 +15,10 @@ use crate::{
     error_handling::types::AppResult,
     state::AppState,
     ui::{
-        auth::{LoginPageUi, SignUpPageUi},
+        auth::LoginPageUi,
         Ui,
     },
 };
-
-const DEFAULT_CLIENT_ID: &str = "550e8400-e29b-41d4-a716-446655440000";
-
-#[derive(Deserialize)]
-pub struct SignupFormData {
-    pub email: String,
-    pub password: String,
-    pub confirm_password: String,
-}
 
 #[derive(Deserialize)]
 pub struct LoginFormData {
@@ -41,66 +32,6 @@ pub struct LoginFormData {
 pub async fn login_handler(State(state): State<AppState>) -> AppResult<Html<String>> {
     let login_ui = LoginPageUi::new();
     login_ui.render_html(&state.tera)
-}
-
-/// Sign-up page handler - delegates all UI concerns to UI layer
-#[instrument(skip_all, fields(handler = "signup", operation = "page_render"))]
-pub async fn signup_handler(State(state): State<AppState>) -> AppResult<Html<String>> {
-    let signup_ui = SignUpPageUi::new();
-    signup_ui.render_html(&state.tera)
-}
-
-/// Sign-up form submission handler - processes signup form data
-#[instrument(
-    skip_all,
-    fields(handler = "signup_form", operation = "form_submission")
-)]
-pub async fn signup_form_handler(
-    State(state): State<AppState>,
-    Form(form_data): Form<SignupFormData>,
-) -> AppResult<Redirect> {
-    tracing::info!(
-        email = %form_data.email,
-        "Processing signup form submission"
-    );
-
-    if form_data.password != form_data.confirm_password {
-        tracing::warn!("Password confirmation mismatch");
-        return Ok(Redirect::to("/signup"));
-    }
-
-    if form_data.password.len() < 8 {
-        tracing::warn!("Password too short");
-        return Ok(Redirect::to("/signup"));
-    }
-
-    let backend = AuthBackend {
-        db: state.pg_pool.clone(),
-    };
-
-    let client_id = uuid::Uuid::parse_str(DEFAULT_CLIENT_ID).expect("Invalid default client ID");
-
-    match backend
-        .create_user(client_id, &form_data.email, &form_data.password, None, None)
-        .await
-    {
-        Ok(user) => {
-            tracing::info!(
-                user_id = %user.user_id,
-                email = %form_data.email,
-                "User created successfully - redirecting to login"
-            );
-            Ok(Redirect::to("/login"))
-        }
-        Err(e) => {
-            tracing::error!(
-                email = %form_data.email,
-                error = %e,
-                "Failed to create user"
-            );
-            Ok(Redirect::to("/signup"))
-        }
-    }
 }
 
 /// Login form submission handler - processes login form data
