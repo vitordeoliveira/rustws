@@ -106,3 +106,20 @@ impl From<Lambda> for LambdaSummary {
         }
     }
 }
+
+/// Request to compile a lambda function
+#[derive(Debug, Deserialize)]
+pub struct CompileLambdaRequest {
+    pub lambda_name: String,
+}
+
+/// Response from lambda compilation
+#[derive(Debug, Serialize)]
+pub struct CompileLambdaResponse {
+    pub success: bool,
+    pub lambda_name: String,
+    pub wasm_size_bytes: Option<usize>,
+    pub wasm_path: Option<String>,
+    pub compilation_time_ms: u64,
+    pub message: String,
+}

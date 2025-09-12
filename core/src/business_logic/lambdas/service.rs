@@ -2,8 +2,9 @@
 
 use axum::extract::FromRequestParts;
 use axum::http::request::Parts;
+use std::time::Instant;
 
-use super::dto::LambdaSummary;
+use super::dto::{CompileLambdaRequest, CompileLambdaResponse, LambdaSummary};
 use super::repository::LambdaRepository;
 use crate::error_handling::types::{AppError, AppResult};
 use crate::infrastructure::lambdas::LambdaStorage;
@@ -26,6 +27,52 @@ where
     /// Get all lambda functions
     pub async fn get_all(&self) -> AppResult<Vec<LambdaSummary>> {
         self.repository.get_all().await
+    }
+
+    /// Compile a lambda function from source to WASM
+    pub async fn compile(&self, request: CompileLambdaRequest) -> AppResult<CompileLambdaResponse> {
+        let start_time = Instant::now();
+
+        match self
+            .repository
+            .compile_source_file(&request.lambda_name)
+            .await
+        {
+            Ok(wasm_bytes) => {
+                // Save the compiled WASM
+                let wasm_path = self
+                    .repository
+                    .save_compiled_wasm(&request.lambda_name, &wasm_bytes)
+                    .await?;
+
+                let compilation_time = start_time.elapsed().as_millis() as u64;
+
+                Ok(CompileLambdaResponse {
+                    success: true,
+                    lambda_name: request.lambda_name.clone(),
+                    wasm_size_bytes: Some(wasm_bytes.len()),
+                    wasm_path: Some(wasm_path.to_string_lossy().to_string()),
+                    compilation_time_ms: compilation_time,
+                    message: format!(
+                        "Successfully compiled '{}' to WASM ({} bytes)",
+                        request.lambda_name,
+                        wasm_bytes.len()
+                    ),
+                })
+            }
+            Err(e) => {
+                let compilation_time = start_time.elapsed().as_millis() as u64;
+
+                Ok(CompileLambdaResponse {
+                    success: false,
+                    lambda_name: request.lambda_name.clone(),
+                    wasm_size_bytes: None,
+                    wasm_path: None,
+                    compilation_time_ms: compilation_time,
+                    message: format!("Compilation failed: {}", e),
+                })
+            }
+        }
     }
 }
 

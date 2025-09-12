@@ -1,5 +1,6 @@
 //! Lambda repository trait for data access and WASM execution
 
+use std::path::PathBuf;
 use uuid::Uuid; // For future methods
 
 use super::dto::{
@@ -17,6 +18,12 @@ pub trait LambdaRepository: Send + Sync {
 
     /// Compile source code to WASM
     async fn compile(&self, source_code: &str, runtime: &str) -> AppResult<Vec<u8>>;
+
+    /// Compile source file to WASM
+    async fn compile_source_file(&self, lambda_name: &str) -> AppResult<Vec<u8>>;
+
+    /// Save compiled WASM bytes
+    async fn save_compiled_wasm(&self, lambda_name: &str, wasm_bytes: &[u8]) -> AppResult<PathBuf>;
 
     // /// Get a lambda function by ID
     // async fn get_by_id(&self, id: Uuid) -> AppResult<Option<Lambda>>;
