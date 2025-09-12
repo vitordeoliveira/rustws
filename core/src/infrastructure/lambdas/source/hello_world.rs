@@ -1,65 +1,70 @@
 //! Hello World Lambda Function - Rust Example
-//! 
+//!
 //! This is a simple lambda function that demonstrates:
 //! - Basic WASM module structure
 //! - Function exports for lambda runtime
-//! - Memory management in WASM context
-
-use std::ffi::{CStr, CString};
-use std::os::raw::c_char;
+//! - Simple numeric operations that work well in WASM
 
 /// Main handler function for the lambda
 /// This function will be called by the wasmer runtime
 #[no_mangle]
 pub extern "C" fn handler() -> i32 {
-    // Simple hello world logic
-    println!("Hello from RUSTWS Lambda!");
-    
-    // Return success code
-    0
+    // Simple computation that returns a meaningful result
+    42
 }
 
-/// Alternative entry point for compatibility
+/// Add two numbers - simple arithmetic
 #[no_mangle]
-pub extern "C" fn main() -> i32 {
-    handler()
+pub extern "C" fn add(a: i32, b: i32) -> i32 {
+    a + b
 }
 
-/// Process string input (example of memory handling)
+/// Multiply two numbers
 #[no_mangle]
-pub extern "C" fn process_string(input_ptr: *const c_char) -> *mut c_char {
-    if input_ptr.is_null() {
-        return std::ptr::null_mut();
+pub extern "C" fn multiply(a: i32, b: i32) -> i32 {
+    a * b
+}
+
+/// Fibonacci calculation (recursive)
+#[no_mangle]
+pub extern "C" fn fibonacci(n: i32) -> i32 {
+    if n <= 1 {
+        n
+    } else {
+        fibonacci(n - 1) + fibonacci(n - 2)
+    }
+}
+
+/// Simple greeting that returns a constant
+#[no_mangle]
+pub extern "C" fn get_greeting() -> i32 {
+    // Return a meaningful constant that fits in i32
+    // Magic number representing "RUSTWS"
+    123456789
+}
+
+/// Check if number is prime
+#[no_mangle]
+pub extern "C" fn is_prime(n: i32) -> i32 {
+    if n <= 1 {
+        return 0; // false
+    }
+    if n <= 3 {
+        return 1; // true
+    }
+    if n % 2 == 0 || n % 3 == 0 {
+        return 0; // false
     }
 
-    unsafe {
-        let input_cstr = CStr::from_ptr(input_ptr);
-        if let Ok(input_str) = input_cstr.to_str() {
-            let result = format!("Processed: {}", input_str);
-            if let Ok(result_cstring) = CString::new(result) {
-                return result_cstring.into_raw();
-            }
+    let mut i = 5;
+    while i * i <= n {
+        if n % i == 0 || n % (i + 2) == 0 {
+            return 0; // false
         }
+        i += 6;
     }
-
-    std::ptr::null_mut()
-}
-
-/// Free memory allocated by process_string
-#[no_mangle]
-pub extern "C" fn free_string(ptr: *mut c_char) {
-    if !ptr.is_null() {
-        unsafe {
-            let _ = CString::from_raw(ptr);
-        }
-    }
-}
-
-/// Get lambda metadata
-#[no_mangle]
-pub extern "C" fn get_version() -> *const c_char {
-    "1.0.0\0".as_ptr() as *const c_char
+    1 // true
 }
 
 // Compilation instructions:
-// rustc --target wasm32-unknown-unknown -O --crate-type=cdylib hello_world.rs -o hello_world.wasm
+// rustc --target wasm32-unknown-unknown -C opt-level=s -C panic=abort --crate-type=cdylib hello_world.rs -o hello_world.wasm

@@ -28,6 +28,10 @@ pub fn create_private_router() -> Router<AppState> {
             "/api/lambda/compile/{lambda_name}",
             get(api::lambdas::compile_lambda_handler),
         )
+        .route(
+            "/api/lambda/execute/{lambda_name}",
+            get(api::lambdas::execute_lambda_handler),
+        )
         .route_layer(login_required!(AuthBackend, login_url = "/login"))
 }
 

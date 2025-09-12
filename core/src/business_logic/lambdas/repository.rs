@@ -4,10 +4,11 @@ use std::path::PathBuf;
 use uuid::Uuid; // For future methods
 
 use super::dto::{
-    LambdaSummary,
+    ExecuteLambdaRequest,
+    ExecuteLambdaResponse,
     // Future DTOs for commented methods:
-    // CreateLambdaRequest, ExecuteLambdaRequest, ExecuteLambdaResponse,
-    // Lambda, UpdateLambdaRequest,
+    // CreateLambdaRequest, Lambda, UpdateLambdaRequest,
+    LambdaSummary,
 };
 use crate::error_handling::types::AppResult;
 
@@ -25,14 +26,14 @@ pub trait LambdaRepository: Send + Sync {
     /// Save compiled WASM bytes
     async fn save_compiled_wasm(&self, lambda_name: &str, wasm_bytes: &[u8]) -> AppResult<PathBuf>;
 
+    /// Execute a lambda function
+    async fn execute(&self, request: ExecuteLambdaRequest) -> AppResult<ExecuteLambdaResponse>;
+
     // /// Get a lambda function by ID
     // async fn get_by_id(&self, id: Uuid) -> AppResult<Option<Lambda>>;
 
     // /// Get a lambda function by name
     // async fn get_by_name(&self, name: &str) -> AppResult<Option<Lambda>>;
-
-    // /// Execute a lambda function
-    // async fn execute(&self, request: ExecuteLambdaRequest) -> AppResult<ExecuteLambdaResponse>;
 
     // /// Create a new lambda function
     // async fn create(&self, request: CreateLambdaRequest) -> AppResult<Lambda>;

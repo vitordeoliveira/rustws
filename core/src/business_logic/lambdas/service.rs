@@ -4,7 +4,10 @@ use axum::extract::FromRequestParts;
 use axum::http::request::Parts;
 use std::time::Instant;
 
-use super::dto::{CompileLambdaRequest, CompileLambdaResponse, LambdaSummary};
+use super::dto::{
+    CompileLambdaRequest, CompileLambdaResponse, ExecuteLambdaRequest, ExecuteLambdaResponse,
+    LambdaSummary,
+};
 use super::repository::LambdaRepository;
 use crate::error_handling::types::{AppError, AppResult};
 use crate::infrastructure::lambdas::LambdaStorage;
@@ -73,6 +76,11 @@ where
                 })
             }
         }
+    }
+
+    /// Execute a lambda function
+    pub async fn execute(&self, request: ExecuteLambdaRequest) -> AppResult<ExecuteLambdaResponse> {
+        self.repository.execute(request).await
     }
 }
 

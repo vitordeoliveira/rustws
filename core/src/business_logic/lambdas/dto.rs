@@ -60,15 +60,23 @@ pub struct ExecuteLambdaRequest {
 
 /// Response from lambda execution
 #[derive(Debug, Serialize)]
-pub struct ExecuteLambdaResponse {
-    pub output_data: Vec<u8>,
-    pub execution_time_ms: u64,
-    pub memory_used_mb: u32,
-    pub status: ExecutionStatus,
-    pub error_message: Option<String>,
+pub enum ExecuteLambdaResponse {
+    Success {
+        output_data: Vec<u8>,
+        // TODO: Add in the future
+        // memory_used_mb: u32,
+        // execution_time_ms: u64,
+    },
+    Failed {
+        error_message: String,
+        // TODO: Add in the future
+        // memory_used_mb: u32,
+        // execution_time_ms: u64,
+    },
 }
 
-/// Lambda execution status
+/// Lambda execution status for future use
+/// TODO: Use this enum in ExecuteLambdaResponse for more detailed status tracking
 #[derive(Debug, Serialize)]
 pub enum ExecutionStatus {
     Success,

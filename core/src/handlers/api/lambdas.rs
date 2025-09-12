@@ -9,7 +9,10 @@ use tracing::{error, info, instrument, warn};
 
 use crate::{
     auth::dto::AuthBackend,
-    business_logic::lambdas::{CompileLambdaRequest, CompileLambdaResponse, LambdasService},
+    business_logic::lambdas::{
+        CompileLambdaRequest, CompileLambdaResponse, ExecuteLambdaRequest, ExecuteLambdaResponse,
+        LambdasService,
+    },
     error_handling::types::AppResult,
     infrastructure::lambdas::LambdaStorage,
     state::AppState,
@@ -86,6 +89,82 @@ pub async fn compile_lambda_handler(
                 lambda_name = %lambda_name,
                 error = %e,
                 "Lambda compilation service error"
+            );
+            Err(e)
+        }
+    }
+}
+
+/// Execute a lambda function
+#[instrument(
+    skip_all,
+    fields(
+        handler = "execute_lambda", 
+        operation = "api_execute",
+        lambda_name = %lambda_name
+    )
+)]
+pub async fn execute_lambda_handler(
+    State(_state): State<AppState>,
+    auth_session: AuthSession<AuthBackend>,
+    lambda_service: LambdasService<LambdaStorage>,
+    Path(lambda_name): Path<String>,
+) -> AppResult<Json<ExecuteLambdaResponse>> {
+    let user = auth_session.user.unwrap(); // Ensure authenticated
+
+    info!(
+        lambda_name = %lambda_name,
+        "Lambda execution request received"
+    );
+
+    // Validate lambda name
+    if lambda_name.trim().is_empty() {
+        warn!(
+            lambda_name = %lambda_name,
+            "Invalid lambda name provided - empty or whitespace"
+        );
+        return Err(crate::error_handling::types::AppError::validation(
+            "Lambda name cannot be empty or contain only whitespace",
+        ));
+    }
+
+    // Create request from path parameter - no input data for GET requests
+    let request = ExecuteLambdaRequest {
+        function_name: Some(lambda_name.clone()),
+        input_data: Vec::new(), // Empty input for GET requests
+    };
+
+    info!(
+        lambda_name = %lambda_name,
+        "Starting lambda execution process"
+    );
+
+    // Use the service to execute the lambda
+    match lambda_service.execute(request).await {
+        Ok(response) => {
+            match &response {
+                ExecuteLambdaResponse::Success { output_data } => {
+                    info!(
+                        lambda_name = %lambda_name,
+                        output_size_bytes = output_data.len(),
+                        "Lambda execution completed successfully"
+                    );
+                }
+                ExecuteLambdaResponse::Failed { error_message } => {
+                    warn!(
+                        lambda_name = %lambda_name,
+                        error_message = %error_message,
+                        "Lambda execution failed"
+                    );
+                }
+            }
+            Ok(Json(response))
+        }
+        Err(e) => {
+            error!(
+                lambda_name = %lambda_name,
+                error = %e,
+                "Lambda execution service error"
             );
             Err(e)
         }

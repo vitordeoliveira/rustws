@@ -7,7 +7,9 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use uuid::Uuid;
 
-use crate::business_logic::lambdas::{LambdaRepository, LambdaStatus, LambdaSummary};
+use crate::business_logic::lambdas::{
+    ExecuteLambdaRequest, ExecuteLambdaResponse, LambdaRepository, LambdaStatus, LambdaSummary,
+};
 use crate::error_handling::types::{AppError, AppResult};
 
 /// Lambda repository implementation
@@ -53,7 +55,7 @@ impl LambdaStorage {
         fs::write(&source_path, source_code)
             .map_err(|e| AppError::internal(&format!("Failed to write source: {}", e)))?;
 
-        // Compile with rustc to WASM
+        // Compile with rustc to WASM using proper flags
         let wasm_output = temp_dir.join("output.wasm");
         let output = Command::new("rustc")
             .args([
@@ -61,7 +63,16 @@ impl LambdaStorage {
                 "wasm32-unknown-unknown",
                 "--crate-type",
                 "cdylib",
-                "-O",
+                "-C",
+                "opt-level=s", // Optimize for size
+                "-C",
+                "lto=yes", // Enable link-time optimization
+                "-C",
+                "panic=abort", // Use abort instead of unwind for WASM
+                "-C",
+                "strip=symbols", // Strip debug symbols
+                "--edition",
+                "2021", // Use Rust 2021 edition
                 source_path.to_str().unwrap(),
                 "-o",
                 wasm_output.to_str().unwrap(),
@@ -235,5 +246,101 @@ impl LambdaRepository for LambdaStorage {
             .map_err(|e| AppError::internal(&format!("Failed to save WASM file: {}", e)))?;
 
         Ok(wasm_path)
+    }
+
+    /// Execute a lambda function
+    async fn execute(&self, request: ExecuteLambdaRequest) -> AppResult<ExecuteLambdaResponse> {
+        // Determine which lambda to execute
+        let lambda_name = request
+            .function_name
+            .ok_or_else(|| AppError::validation("function_name is required for execution"))?;
+
+        // Get path to compiled WASM file
+        let wasm_dir = self.wasm_dir();
+        let wasm_path = wasm_dir.join(format!("{}.wasm", lambda_name));
+
+        if !wasm_path.exists() {
+            return Ok(ExecuteLambdaResponse::Failed {
+                error_message: format!(
+                    "WASM file not found for lambda '{}'. Compile the lambda first.",
+                    lambda_name
+                ),
+            });
+        }
+
+        // Read WASM bytes
+        let wasm_bytes = match fs::read(&wasm_path) {
+            Ok(bytes) => bytes,
+            Err(e) => {
+                return Ok(ExecuteLambdaResponse::Failed {
+                    error_message: format!("Failed to read WASM file: {}", e),
+                });
+            }
+        };
+
+        // Execute WASM using wasmer
+        match self.execute_wasm(&wasm_bytes, &request.input_data).await {
+            Ok(output) => Ok(ExecuteLambdaResponse::Success {
+                output_data: output,
+            }),
+            Err(e) => Ok(ExecuteLambdaResponse::Failed {
+                error_message: format!("WASM execution failed: {}", e),
+            }),
+        }
+    }
+}
+
+impl LambdaStorage {
+    /// Execute WASM bytecode using wasmer
+    async fn execute_wasm(&self, wasm_bytes: &[u8], input_data: &[u8]) -> AppResult<Vec<u8>> {
+        use wasmer::{Engine, Instance, Module, Store};
+
+        // Create wasmer engine and store using universal engine (avoids unwind issues)
+        let engine = Engine::default();
+        let mut store = Store::new(engine);
+
+        // Compile WASM module
+        let module = Module::new(&store, wasm_bytes)
+            .map_err(|e| AppError::validation(&format!("Failed to compile WASM module: {}", e)))?;
+
+        // Create instance
+        let instance = Instance::new(&mut store, &module, &wasmer::imports! {})
+            .map_err(|e| AppError::validation(&format!("Failed to create WASM instance: {}", e)))?;
+
+        // Get the exported handler function
+        let handler = instance
+            .exports
+            .get_function("handler")
+            .map_err(|e| AppError::validation(&format!("Handler function not found: {}", e)))?;
+
+        // For now, we'll implement a simple execution that calls the handler
+        // In the future, we can implement memory passing for input_data
+        let _input_data = input_data; // TODO: Pass input data to WASM function
+
+        // Call the handler function (assuming it takes no params for now)
+        let results = handler
+            .call(&mut store, &[])
+            .map_err(|e| AppError::validation(&format!("WASM function call failed: {}", e)))?;
+
+        // For now, return empty output data
+        // TODO: Extract output data from WASM memory or return values
+        let output_data = if results.is_empty() {
+            b"Hello from WASM!".to_vec()
+        } else {
+            // Convert first result to bytes if it's a number
+            match results[0].ty() {
+                wasmer::Type::I32 => {
+                    let val = results[0].unwrap_i32();
+                    val.to_le_bytes().to_vec()
+                }
+                wasmer::Type::I64 => {
+                    let val = results[0].unwrap_i64();
+                    val.to_le_bytes().to_vec()
+                }
+                _ => b"Unsupported return type".to_vec(),
+            }
+        };
+
+        Ok(output_data)
     }
 }
