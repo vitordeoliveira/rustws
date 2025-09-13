@@ -26,6 +26,10 @@ pub fn create_private_router() -> Router<AppState> {
         .route("/lambda", get(pages::lambda_handler))
         .route("/lambda/create", get(pages::create_lambda_handler))
         .route(
+            "/lambda/edit/{lambda_name}",
+            get(pages::edit_lambda_handler),
+        )
+        .route(
             "/lambda/delete/{lambda_name}",
             post(pages::delete_lambda_handler),
         )

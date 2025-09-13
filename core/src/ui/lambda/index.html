@@ -136,11 +136,11 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                         </svg>
                                     </button>
-                                    <button class="text-orange-600 hover:text-orange-700 hover:bg-orange-50 p-2 rounded-md cursor-pointer transition-all duration-200 transform hover:scale-105" title="Edit">
+                                    <a href="/lambda/edit/{{ lambda.name }}" class="text-orange-600 hover:text-orange-700 hover:bg-orange-50 p-2 rounded-md cursor-pointer transition-all duration-200 transform hover:scale-105" title="Edit">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
                                         </svg>
-                                    </button>
+                                    </a>
                                     <button class="text-blue-600 hover:text-blue-700 hover:bg-blue-50 p-2 rounded-md cursor-pointer transition-all duration-200 transform hover:scale-105" title="Test" onclick="testLambda('{{ lambda.name }}')">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1.5a2.5 2.5 0 010 5H9m-3-5a5 5 0 1110 0m-6 7v.01"></path>

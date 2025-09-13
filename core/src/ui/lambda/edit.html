@@ -1,0 +1,342 @@
+{% extends "shared/base.html" %}
+
+{% block content %}
+<!-- Header Section -->
+<div class="bg-gradient-to-r from-orange-500 to-red-600 text-white -mt-0">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-12">
+        <div class="text-center">
+            <h1 class="text-3xl md:text-4xl font-bold mb-4">
+                Edit Lambda Function
+            </h1>
+            <p class="text-lg text-orange-100 max-w-2xl mx-auto">
+                Modify your serverless function configuration and source code
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Lambda Form -->
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Back Navigation -->
+    <div class="mb-6">
+        <a href="/lambda" class="inline-flex items-center text-orange-600 hover:text-orange-700 font-medium transition-colors duration-200">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+            </svg>
+            Back to Lambda Functions
+        </a>
+    </div>
+
+    <!-- Form Card -->
+    <div class="bg-white rounded-lg border border-gray-200 shadow-sm">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-xl font-semibold text-gray-900">Edit Function Configuration</h2>
+            <p class="text-sm text-gray-600 mt-1">Modify your serverless lambda function settings and source code</p>
+        </div>
+
+        <form id="editLambdaForm" class="p-6 space-y-6">
+            <!-- Basic Information -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Function Name (readonly for editing) -->
+                <div>
+                    <label for="functionName" class="block text-sm font-medium text-gray-700 mb-2">
+                        Function Name
+                    </label>
+                    <input 
+                        type="text" 
+                        id="functionName" 
+                        name="functionName" 
+                        value="{{ lambda_name }}"
+                        readonly
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 text-gray-500 cursor-not-allowed"
+                    >
+                    <p class="text-xs text-gray-500 mt-1">Function name cannot be changed when editing</p>
+                </div>
+
+                <!-- Runtime -->
+                <div>
+                    <label for="runtime" class="block text-sm font-medium text-gray-700 mb-2">
+                        Runtime
+                    </label>
+                    <select 
+                        id="runtime" 
+                        name="runtime" 
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500"
+                    >
+                        <option value="rs" selected>Rust</option>
+                        <option value="js" disabled>Node.js (Coming Soon)</option>
+                        <option value="py" disabled>Python (Coming Soon)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Performance Settings -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Memory -->
+                <div>
+                    <label for="memory" class="block text-sm font-medium text-gray-700 mb-2">
+                        Memory (MB)
+                    </label>
+                    <select 
+                        id="memory" 
+                        name="memory"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500"
+                    >
+                        <option value="128" selected>128 MB</option>
+                        <option value="256">256 MB</option>
+                        <option value="512">512 MB</option>
+                        <option value="1024">1024 MB</option>
+                    </select>
+                </div>
+
+                <!-- Timeout -->
+                <div>
+                    <label for="timeout" class="block text-sm font-medium text-gray-700 mb-2">
+                        Timeout (seconds)
+                    </label>
+                    <input 
+                        type="number" 
+                        id="timeout" 
+                        name="timeout" 
+                        value="30"
+                        min="1" 
+                        max="900"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500"
+                    >
+                </div>
+            </div>
+
+            <!-- Description -->
+            <div>
+                <label for="description" class="block text-sm font-medium text-gray-700 mb-2">
+                    Description
+                </label>
+                <textarea 
+                    id="description" 
+                    name="description" 
+                    rows="3"
+                    placeholder="Brief description of what this function does..."
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500"
+                ></textarea>
+            </div>
+
+            <!-- Source Code -->
+            <div>
+                <div class="flex justify-between items-center mb-2">
+                    <label for="sourceCode" class="block text-sm font-medium text-gray-700">
+                        Source Code
+                    </label>
+                    <div class="flex gap-2">
+                        <button 
+                            type="button" 
+                            onclick="resetToOriginal()"
+                            class="text-sm text-gray-600 hover:text-gray-700 font-medium"
+                        >
+                            Reset to Original
+                        </button>
+                        <button 
+                            type="button" 
+                            onclick="loadTemplate()"
+                            class="text-sm text-orange-600 hover:text-orange-700 font-medium"
+                        >
+                            Load Template
+                        </button>
+                    </div>
+                </div>
+                <div class="relative">
+                    <textarea 
+                        id="sourceCode" 
+                        name="sourceCode" 
+                        required
+                        rows="20"
+                        placeholder="Loading source code..."
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500 font-mono text-sm"
+                        style="tab-size: 4;"
+                    >{{ current_source_code }}</textarea>
+                    <div class="absolute bottom-2 right-2 text-xs text-gray-400">
+                        Press Tab for indentation
+                    </div>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">
+                    Your function must export a <code class="bg-gray-100 px-1 rounded">handler</code> function that will be called by the runtime
+                </p>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="flex flex-col sm:flex-row justify-end gap-4 pt-6 border-t border-gray-200">
+                <button 
+                    type="button" 
+                    onclick="window.location.href='/lambda'"
+                    class="px-6 py-2 border border-gray-300 rounded-md text-gray-700 font-medium hover:bg-gray-50 transition-colors duration-200"
+                >
+                    Cancel
+                </button>
+                <button 
+                    type="submit"
+                    class="px-6 py-2 bg-orange-600 text-white rounded-md font-medium hover:bg-orange-700 transition-colors duration-200 flex items-center"
+                >
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                    </svg>
+                    Update Function
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Toast Notification -->
+<div id="toast" class="fixed top-4 right-4 z-50 hidden">
+    <div class="bg-white border-l-4 border-green-500 rounded-lg shadow-lg p-4 max-w-sm">
+        <div class="flex items-center">
+            <div class="flex-shrink-0">
+                <svg id="toast-icon" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                </svg>
+            </div>
+            <div class="ml-3">
+                <p id="toast-message" class="text-sm font-medium text-gray-900"></p>
+            </div>
+            <div class="ml-auto pl-3">
+                <button onclick="hideToast()" class="text-gray-400 hover:text-gray-500 p-1 rounded cursor-pointer transition-all duration-200 hover:bg-gray-100">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Store original source code for reset functionality
+const originalSourceCode = `{{ current_source_code }}`;
+
+// Toast notification functions
+function showToast(message, isSuccess = true) {
+    const toast = document.getElementById('toast');
+    const icon = document.getElementById('toast-icon');
+    const messageEl = document.getElementById('toast-message');
+    
+    messageEl.textContent = message;
+    
+    const toastDiv = toast.querySelector('div');
+    if (isSuccess) {
+        toastDiv.className = 'bg-white border-l-4 border-green-500 rounded-lg shadow-lg p-4 max-w-sm';
+        icon.className = 'w-5 h-5 text-green-500';
+        icon.innerHTML = '<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>';
+    } else {
+        toastDiv.className = 'bg-white border-l-4 border-red-500 rounded-lg shadow-lg p-4 max-w-sm';
+        icon.className = 'w-5 h-5 text-red-500';
+        icon.innerHTML = '<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>';
+    }
+    
+    toast.classList.remove('hidden');
+    setTimeout(hideToast, 5000);
+}
+
+function hideToast() {
+    document.getElementById('toast').classList.add('hidden');
+}
+
+// Reset to original source code
+function resetToOriginal() {
+    document.getElementById('sourceCode').value = originalSourceCode;
+    showToast('✅ Source code reset to original!', true);
+}
+
+// Load default Rust template
+function loadTemplate() {
+    const template = `//! Lambda Function - Rust Example
+//! 
+//! This is a template for creating WASM-compatible lambda functions
+
+/// Main handler function for the lambda
+/// This function will be called by the wasmer runtime
+#[no_mangle]
+pub extern "C" fn handler() -> i32 {
+    // Your lambda logic here
+    // Return an integer result
+    42
+}
+
+/// Add two numbers - example function
+#[no_mangle]
+pub extern "C" fn add(a: i32, b: i32) -> i32 {
+    a + b
+}
+
+// Your custom functions here
+// Add more functions as needed`;
+    
+    document.getElementById('sourceCode').value = template;
+    showToast('✅ Template loaded successfully!', true);
+}
+
+// Handle tab key in textarea for proper indentation
+document.getElementById('sourceCode').addEventListener('keydown', function(e) {
+    if (e.key === 'Tab') {
+        e.preventDefault();
+        const start = this.selectionStart;
+        const end = this.selectionEnd;
+        
+        // Insert 4 spaces at cursor position
+        this.value = this.value.substring(0, start) + '    ' + this.value.substring(end);
+        
+        // Move cursor to after the inserted spaces
+        this.selectionStart = this.selectionEnd = start + 4;
+    }
+});
+
+// Form submission (placeholder for future backend integration)
+document.getElementById('editLambdaForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const functionName = formData.get('functionName');
+    const sourceCode = formData.get('sourceCode');
+    
+    if (!sourceCode || sourceCode.trim() === '') {
+        showToast('❌ Please provide source code', false);
+        return;
+    }
+    
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    
+    try {
+        // Show loading state
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `
+            <svg class="animate-spin w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Updating...
+        `;
+        
+        showToast(`Updating lambda function '${functionName}'...`, true);
+        
+        // TODO: Replace with actual API call once backend endpoint is created
+        // For now, just simulate success after 2 seconds
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        showToast(`✅ Lambda function '${functionName}' updated successfully!`, true);
+        
+        // Redirect to lambda list after short delay
+        setTimeout(() => {
+            window.location.href = '/lambda';
+        }, 1500);
+        
+    } catch (error) {
+        console.error('Error updating lambda:', error);
+        showToast(`❌ Failed to update lambda function: ${error.message}`, false);
+        
+        // Restore button
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+    }
+});
+</script>
+
+{% endblock %}

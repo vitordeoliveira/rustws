@@ -59,3 +59,38 @@ impl Ui for CreateLambdaPageUi {
         tera.render_template("lambda/create.html", &context)
     }
 }
+
+#[derive(Debug, Serialize)]
+pub struct EditLambdaPageUi {
+    layout: BaseLayoutProps,
+    lambda_name: String,
+    current_source_code: String,
+}
+
+impl EditLambdaPageUi {
+    pub fn new(user: User, lambda_name: String, current_source_code: String) -> Self {
+        Self {
+            layout: BaseLayoutProps::new()
+                .title(&format!(
+                    "Edit Lambda Function: {} - RUSTWS Core",
+                    lambda_name
+                ))
+                .description(
+                    "Edit and update your serverless lambda function configuration and source code",
+                )
+                .keywords("lambda, serverless, edit, update, functions, rustws")
+                .user(Some(user)),
+            lambda_name,
+            current_source_code,
+        }
+    }
+}
+
+impl Ui for EditLambdaPageUi {
+    fn render_html(self, tera: &TeraEngine) -> AppResult<Html<String>> {
+        let mut context = self.layout.to_context()?;
+        context.insert("lambda_name", &self.lambda_name);
+        context.insert("current_source_code", &self.current_source_code);
+        tera.render_template("lambda/edit.html", &context)
+    }
+}
