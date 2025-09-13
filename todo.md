@@ -7,6 +7,21 @@
   - Ensure consistent development experience
   - Priority: High
 
+## Medium Priority
+
+- [ ] Clean core lambdas dto to use enums properly
+
+  - Refactor lambda DTOs to use proper enum types instead of current implementation
+  - Priority: Medium
+  - Urgency: Medium
+  - Context: Improve type safety and code clarity in lambda data transfer objects
+
+- [ ] Remove majority of not necessary js in the html files
+  - Clean up HTML files by removing unnecessary JavaScript code
+  - Priority: Medium
+  - Urgency: Medium
+  - Context: Reduce bundle size and improve page performance
+
 ## Low Priority
 
 - [ ] Sync cursor rules in the projects
