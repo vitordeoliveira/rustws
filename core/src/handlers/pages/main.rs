@@ -17,6 +17,7 @@ use crate::{
         Ui,
         home::HomePageUi,
         lambda::{CreateLambdaPageUi, EditLambdaPageUi, LambdaPageUi},
+        step_functions::{CreateStepFunctionPageUi, StepFunctionsPageUi, get_mock_step_functions},
     },
 };
 
@@ -147,4 +148,41 @@ pub async fn edit_lambda_handler(
             )))
         }
     }
+}
+
+/// Step Functions page handler - delegates all UI concerns to UI layer
+#[instrument(
+    skip_all,
+    fields(handler = "step_functions", operation = "page_render")
+)]
+pub async fn step_functions_handler(
+    State(state): State<AppState>,
+    auth_session: AuthSession<AuthBackend>,
+) -> AppResult<Html<String>> {
+    let user = auth_session.user.unwrap();
+
+    // Get mock step functions for UI demonstration
+    let step_functions = get_mock_step_functions();
+
+    let step_functions_page_ui = StepFunctionsPageUi::new(user, step_functions);
+    let html = step_functions_page_ui.render_html(&state.tera)?;
+
+    Ok(html)
+}
+
+/// Create step function page handler - renders step function creation form
+#[instrument(
+    skip_all,
+    fields(handler = "create_step_function", operation = "page_render")
+)]
+pub async fn create_step_function_handler(
+    State(state): State<AppState>,
+    auth_session: AuthSession<AuthBackend>,
+) -> AppResult<Html<String>> {
+    let user = auth_session.user.unwrap();
+
+    let create_step_function_page_ui = CreateStepFunctionPageUi::new(user);
+    let html = create_step_function_page_ui.render_html(&state.tera)?;
+
+    Ok(html)
 }

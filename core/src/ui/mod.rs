@@ -11,6 +11,7 @@ pub mod filters;
 pub mod home;
 pub mod lambda;
 pub mod shared;
+pub mod step_functions;
 pub mod testers;
 
 // Re-export engine types for convenient access
