@@ -1,3 +1,5 @@
 target/
 node_modules/
 wasm/
+source/
+!source/hello_world.rs

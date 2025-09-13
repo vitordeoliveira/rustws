@@ -35,3 +35,27 @@ impl Ui for LambdaPageUi {
         tera.render_template("lambda/index.html", &context)
     }
 }
+
+#[derive(Debug, Serialize)]
+pub struct CreateLambdaPageUi {
+    layout: BaseLayoutProps,
+}
+
+impl CreateLambdaPageUi {
+    pub fn new(user: User) -> Self {
+        Self {
+            layout: BaseLayoutProps::new()
+                .title("Create Lambda Function - RUSTWS Core")
+                .description("Create and deploy serverless lambda functions with automatic scaling")
+                .keywords("lambda, serverless, create, functions, deploy, rustws")
+                .user(Some(user)),
+        }
+    }
+}
+
+impl Ui for CreateLambdaPageUi {
+    fn render_html(self, tera: &TeraEngine) -> AppResult<Html<String>> {
+        let context = self.layout.to_context()?;
+        tera.render_template("lambda/create.html", &context)
+    }
+}

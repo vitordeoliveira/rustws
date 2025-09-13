@@ -10,7 +10,11 @@ use crate::{
     error_handling::types::AppResult,
     infrastructure::lambdas::LambdaStorage,
     state::AppState,
-    ui::{Ui, home::HomePageUi, lambda::LambdaPageUi},
+    ui::{
+        Ui,
+        home::HomePageUi,
+        lambda::{CreateLambdaPageUi, LambdaPageUi},
+    },
 };
 
 /// Home page handler - delegates all UI concerns to UI layer
@@ -40,6 +44,20 @@ pub async fn lambda_handler(
 
     let lambda_page_ui = LambdaPageUi::new(user, lambdas);
     let html = lambda_page_ui.render_html(&state.tera)?;
+
+    Ok(html)
+}
+
+/// Create lambda page handler - renders lambda creation form
+#[instrument(skip_all, fields(handler = "create_lambda", operation = "page_render"))]
+pub async fn create_lambda_handler(
+    State(state): State<AppState>,
+    auth_session: AuthSession<AuthBackend>,
+) -> AppResult<Html<String>> {
+    let user = auth_session.user.unwrap();
+
+    let create_lambda_page_ui = CreateLambdaPageUi::new(user);
+    let html = create_lambda_page_ui.render_html(&state.tera)?;
 
     Ok(html)
 }

@@ -24,6 +24,7 @@ pub fn create_private_router() -> Router<AppState> {
     Router::new()
         .route("/", get(pages::home_handler))
         .route("/lambda", get(pages::lambda_handler))
+        .route("/lambda/create", get(pages::create_lambda_handler))
         .route(
             "/api/lambda/compile/{lambda_name}",
             post(api::lambdas::compile_lambda_handler),
@@ -31,6 +32,10 @@ pub fn create_private_router() -> Router<AppState> {
         .route(
             "/api/lambda/execute/{lambda_name}",
             get(api::lambdas::execute_lambda_handler),
+        )
+        .route(
+            "/api/lambda/create",
+            post(api::lambdas::create_lambda_handler),
         )
         .route_layer(login_required!(AuthBackend, login_url = "/login"))
 }

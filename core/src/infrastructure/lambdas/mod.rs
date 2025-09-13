@@ -8,7 +8,8 @@ use std::process::Command;
 use uuid::Uuid;
 
 use crate::business_logic::lambdas::{
-    ExecuteLambdaRequest, ExecuteLambdaResponse, LambdaRepository, LambdaStatus, LambdaSummary,
+    CreateLambdaRequest, CreateLambdaResponse, ExecuteLambdaRequest, ExecuteLambdaResponse,
+    LambdaRepository, LambdaStatus, LambdaSummary,
 };
 use crate::error_handling::types::{AppError, AppResult};
 
@@ -296,6 +297,202 @@ impl LambdaRepository for LambdaStorage {
                 error_message: format!("WASM execution failed: {}", e),
             }),
         }
+    }
+
+    /// Create a new lambda function - saves source code and optionally compiles to WASM
+    async fn create(&self, request: CreateLambdaRequest) -> AppResult<CreateLambdaResponse> {
+        let start_time = std::time::Instant::now();
+
+        tracing::info!(
+            function_name = %request.function_name,
+            runtime = %request.runtime,
+            "Creating new lambda function"
+        );
+
+        // Validate function name (basic validation for file system safety)
+        if request.function_name.trim().is_empty() {
+            return Ok(CreateLambdaResponse {
+                success: false,
+                message: "Function name cannot be empty".to_string(),
+                function_name: request.function_name,
+                source_path: None,
+                wasm_path: None,
+                wasm_size_bytes: None,
+                compilation_time_ms: None,
+            });
+        }
+
+        // Check for valid identifier pattern
+        if !request
+            .function_name
+            .chars()
+            .all(|c| c.is_alphanumeric() || c == '_')
+        {
+            return Ok(CreateLambdaResponse {
+                success: false,
+                message: "Function name must contain only letters, numbers, and underscores"
+                    .to_string(),
+                function_name: request.function_name,
+                source_path: None,
+                wasm_path: None,
+                wasm_size_bytes: None,
+                compilation_time_ms: None,
+            });
+        }
+
+        // Determine file extension based on runtime
+        let file_extension = match request.runtime.as_str() {
+            "rs" | "rust" => "rs",
+            _ => {
+                return Ok(CreateLambdaResponse {
+                    success: false,
+                    message: format!("Unsupported runtime: {}", request.runtime),
+                    function_name: request.function_name,
+                    source_path: None,
+                    wasm_path: None,
+                    wasm_size_bytes: None,
+                    compilation_time_ms: None,
+                });
+            }
+        };
+
+        // Create source directory if it doesn't exist
+        let source_dir = self.source_dir();
+        if let Err(e) = fs::create_dir_all(&source_dir) {
+            tracing::error!(
+                function_name = %request.function_name,
+                error = %e,
+                "Failed to create source directory"
+            );
+            return Ok(CreateLambdaResponse {
+                success: false,
+                message: format!("Failed to create source directory: {}", e),
+                function_name: request.function_name,
+                source_path: None,
+                wasm_path: None,
+                wasm_size_bytes: None,
+                compilation_time_ms: None,
+            });
+        }
+
+        // Create WASM directory if it doesn't exist
+        let wasm_dir = self.wasm_dir();
+        if let Err(e) = fs::create_dir_all(&wasm_dir) {
+            tracing::error!(
+                function_name = %request.function_name,
+                error = %e,
+                "Failed to create WASM directory"
+            );
+            return Ok(CreateLambdaResponse {
+                success: false,
+                message: format!("Failed to create WASM directory: {}", e),
+                function_name: request.function_name,
+                source_path: None,
+                wasm_path: None,
+                wasm_size_bytes: None,
+                compilation_time_ms: None,
+            });
+        }
+
+        // Save source code to file
+        let source_file_name = format!("{}.{}", request.function_name, file_extension);
+        let source_path = source_dir.join(&source_file_name);
+
+        if let Err(e) = fs::write(&source_path, &request.source_code) {
+            tracing::error!(
+                function_name = %request.function_name,
+                source_path = %source_path.display(),
+                error = %e,
+                "Failed to save source code"
+            );
+            return Ok(CreateLambdaResponse {
+                success: false,
+                message: format!("Failed to save source code: {}", e),
+                function_name: request.function_name,
+                source_path: None,
+                wasm_path: None,
+                wasm_size_bytes: None,
+                compilation_time_ms: None,
+            });
+        }
+
+        tracing::info!(
+            function_name = %request.function_name,
+            source_path = %source_path.display(),
+            "Source code saved successfully"
+        );
+
+        // Attempt to compile to WASM
+        let (wasm_path, wasm_size_bytes, compilation_success) =
+            match self.compile(&request.source_code, &request.runtime).await {
+                Ok(wasm_bytes) => {
+                    // Save compiled WASM
+                    match self
+                        .save_compiled_wasm(&request.function_name, &wasm_bytes)
+                        .await
+                    {
+                        Ok(wasm_file_path) => {
+                            tracing::info!(
+                                function_name = %request.function_name,
+                                wasm_path = %wasm_file_path.display(),
+                                wasm_size = wasm_bytes.len(),
+                                "WASM compilation and save successful"
+                            );
+                            (
+                                Some(wasm_file_path.to_string_lossy().to_string()),
+                                Some(wasm_bytes.len() as u64),
+                                true,
+                            )
+                        }
+                        Err(e) => {
+                            tracing::warn!(
+                                function_name = %request.function_name,
+                                error = %e,
+                                "Failed to save compiled WASM, but source was saved"
+                            );
+                            (None, None, false)
+                        }
+                    }
+                }
+                Err(e) => {
+                    tracing::warn!(
+                        function_name = %request.function_name,
+                        error = %e,
+                        "Failed to compile source to WASM, but source was saved"
+                    );
+                    (None, None, false)
+                }
+            };
+
+        let compilation_time_ms = start_time.elapsed().as_millis() as u64;
+
+        let (success, message) = if compilation_success {
+            (
+                true,
+                format!(
+                    "Lambda '{}' created and compiled successfully",
+                    request.function_name
+                ),
+            )
+        } else {
+            (
+                true, // Still success since source was saved
+                format!(
+                    "Lambda '{}' created successfully, but compilation failed. Check logs for details.",
+                    request.function_name
+                ),
+            )
+        };
+
+        Ok(CreateLambdaResponse {
+            success,
+            message,
+            function_name: request.function_name,
+            source_path: Some(source_path.to_string_lossy().to_string()),
+            wasm_path,
+            wasm_size_bytes,
+            compilation_time_ms: Some(compilation_time_ms),
+        })
     }
 }
 

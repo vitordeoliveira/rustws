@@ -10,8 +10,8 @@ use tracing::{error, info, instrument, warn};
 use crate::{
     auth::dto::AuthBackend,
     business_logic::lambdas::{
-        CompileLambdaRequest, CompileLambdaResponse, ExecuteLambdaRequest, ExecuteLambdaResponse,
-        LambdasService,
+        CompileLambdaRequest, CompileLambdaResponse, CreateLambdaRequest, CreateLambdaResponse,
+        ExecuteLambdaRequest, ExecuteLambdaResponse, LambdasService,
     },
     error_handling::types::AppResult,
     infrastructure::lambdas::LambdaStorage,
@@ -165,6 +165,79 @@ pub async fn execute_lambda_handler(
                 lambda_name = %lambda_name,
                 error = %e,
                 "Lambda execution service error"
+            );
+            Err(e)
+        }
+    }
+}
+
+/// Create a new lambda function
+#[instrument(skip_all, fields(handler = "create_lambda", operation = "api_create"))]
+pub async fn create_lambda_handler(
+    State(_state): State<AppState>,
+    auth_session: AuthSession<AuthBackend>,
+    lambda_service: LambdasService<LambdaStorage>,
+    Json(request): Json<CreateLambdaRequest>,
+) -> AppResult<Json<CreateLambdaResponse>> {
+    let user = auth_session.user.unwrap(); // Ensure authenticated
+
+    info!(
+        function_name = %request.function_name,
+        runtime = %request.runtime,
+        "Lambda creation request received"
+    );
+
+    // Validate request
+    if request.function_name.trim().is_empty() {
+        warn!(
+            function_name = %request.function_name,
+            "Invalid function name provided - empty or whitespace"
+        );
+        return Err(crate::error_handling::types::AppError::validation(
+            "Function name cannot be empty or contain only whitespace",
+        ));
+    }
+
+    if request.source_code.trim().is_empty() {
+        warn!(
+            function_name = %request.function_name,
+            "No source code provided"
+        );
+        return Err(crate::error_handling::types::AppError::validation(
+            "Source code cannot be empty",
+        ));
+    }
+
+    info!(
+        function_name = %request.function_name,
+        "Starting lambda creation process"
+    );
+
+    // Use the service to create the lambda
+    match lambda_service.create(request).await {
+        Ok(response) => {
+            if response.success {
+                info!(
+                    function_name = %response.function_name,
+                    source_path = ?response.source_path,
+                    wasm_path = ?response.wasm_path,
+                    wasm_size = ?response.wasm_size_bytes,
+                    compilation_time_ms = ?response.compilation_time_ms,
+                    "Lambda creation completed successfully"
+                );
+            } else {
+                warn!(
+                    function_name = %response.function_name,
+                    message = %response.message,
+                    "Lambda creation completed with issues"
+                );
+            }
+            Ok(Json(response))
+        }
+        Err(e) => {
+            error!(
+                error = %e,
+                "Lambda creation service error"
             );
             Err(e)
         }

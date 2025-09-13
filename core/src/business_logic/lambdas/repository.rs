@@ -4,10 +4,12 @@ use std::path::PathBuf;
 use uuid::Uuid; // For future methods
 
 use super::dto::{
+    CreateLambdaRequest,
+    CreateLambdaResponse,
     ExecuteLambdaRequest,
     ExecuteLambdaResponse,
     // Future DTOs for commented methods:
-    // CreateLambdaRequest, Lambda, UpdateLambdaRequest,
+    // Lambda, UpdateLambdaRequest,
     LambdaSummary,
 };
 use crate::error_handling::types::AppResult;
@@ -35,8 +37,8 @@ pub trait LambdaRepository: Send + Sync {
     // /// Get a lambda function by name
     // async fn get_by_name(&self, name: &str) -> AppResult<Option<Lambda>>;
 
-    // /// Create a new lambda function
-    // async fn create(&self, request: CreateLambdaRequest) -> AppResult<Lambda>;
+    /// Create a new lambda function
+    async fn create(&self, request: CreateLambdaRequest) -> AppResult<CreateLambdaResponse>;
 
     // /// Update an existing lambda function
     // async fn update(&self, id: Uuid, request: UpdateLambdaRequest) -> AppResult<Lambda>;

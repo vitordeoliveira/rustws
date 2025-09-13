@@ -27,18 +27,6 @@ pub enum LambdaStatus {
     Error,
 }
 
-/// Request to create a new lambda function
-#[derive(Debug, Deserialize)]
-pub struct CreateLambdaRequest {
-    pub name: String,
-    pub description: Option<String>,
-    pub runtime: String,
-    pub memory_mb: u32,
-    pub timeout_seconds: u32,
-    pub wasm_bytes: Vec<u8>,
-    pub environment_vars: Option<std::collections::HashMap<String, String>>,
-}
-
 /// Request to update an existing lambda function
 #[derive(Debug, Deserialize)]
 pub struct UpdateLambdaRequest {
@@ -83,6 +71,55 @@ pub enum ExecutionStatus {
     Timeout,
     MemoryExceeded,
     RuntimeError,
+}
+
+/// Request to create a new lambda function
+#[derive(Debug, Deserialize)]
+pub struct CreateLambdaRequest {
+    /// Function name (must be valid identifier)
+    #[serde(rename = "functionName")]
+    pub function_name: String,
+
+    /// Runtime environment (e.g., "rs", "js", "py")
+    pub runtime: String,
+
+    /// Memory allocation in MB
+    pub memory: Option<u32>,
+
+    /// Timeout in seconds
+    pub timeout: Option<u32>,
+
+    /// Optional description
+    pub description: Option<String>,
+
+    /// Source code content
+    #[serde(rename = "sourceCode")]
+    pub source_code: String,
+}
+
+/// Response from creating a lambda function
+#[derive(Debug, Serialize)]
+pub struct CreateLambdaResponse {
+    /// Whether creation was successful
+    pub success: bool,
+
+    /// Success or error message
+    pub message: String,
+
+    /// Created function name
+    pub function_name: String,
+
+    /// File path where source was saved
+    pub source_path: Option<String>,
+
+    /// WASM file path if compilation succeeded
+    pub wasm_path: Option<String>,
+
+    /// Size of compiled WASM in bytes
+    pub wasm_size_bytes: Option<u64>,
+
+    /// Compilation time in milliseconds
+    pub compilation_time_ms: Option<u64>,
 }
 
 /// Lambda function summary for listing
