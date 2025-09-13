@@ -106,39 +106,45 @@ pub async fn delete_lambda_handler(
 pub async fn edit_lambda_handler(
     State(state): State<AppState>,
     auth_session: AuthSession<AuthBackend>,
+    lambda_service: LambdasService<LambdaStorage>,
     Path(lambda_name): Path<String>,
 ) -> AppResult<Html<String>> {
     let user = auth_session.user.unwrap();
 
-    // TODO: Replace with actual source code loading from business logic
-    // For now, using a placeholder source code for UI demonstration
-    let placeholder_source = format!(
-        r#"//! Lambda Function: {}
-//! 
-//! This is an existing lambda function
-
-/// Main handler function for the lambda
-/// This function will be called by the wasmer runtime
-#[no_mangle]
-pub extern "C" fn handler() -> i32 {{
-    // Your existing lambda logic here
-    // TODO: Load actual source code from file
-    42
-}}
-
-/// Example function - replace with your actual functions
-#[no_mangle]
-pub extern "C" fn example_function(input: i32) -> i32 {{
-    input * 2
-}}
-
-// Your existing custom functions here
-// (This is placeholder content until business logic is implemented)"#,
-        lambda_name
+    tracing::info!(
+        lambda_name = %lambda_name,
+        "Loading lambda for editing"
     );
 
-    let edit_lambda_page_ui = EditLambdaPageUi::new(user, lambda_name, placeholder_source);
-    let html = edit_lambda_page_ui.render_html(&state.tera)?;
+    // Load lambda data from business logic
+    let lambda = lambda_service.get_by_name(&lambda_name).await?;
 
-    Ok(html)
+    match lambda {
+        Some(lambda_data) => {
+            tracing::debug!(
+                lambda_name = %lambda_name,
+                source_length = lambda_data.source_code.len(),
+                has_wasm = lambda_data.wasm_bytes.is_some(),
+                status = ?lambda_data.status,
+                "Lambda data loaded successfully for editing"
+            );
+
+            let edit_lambda_page_ui =
+                EditLambdaPageUi::new(user, lambda_data.name, lambda_data.source_code);
+            let html = edit_lambda_page_ui.render_html(&state.tera)?;
+
+            Ok(html)
+        }
+        None => {
+            tracing::warn!(
+                lambda_name = %lambda_name,
+                "Lambda function not found for editing"
+            );
+
+            Err(crate::error_handling::types::AppError::not_found(&format!(
+                "Lambda function '{}' not found",
+                lambda_name
+            )))
+        }
+    }
 }

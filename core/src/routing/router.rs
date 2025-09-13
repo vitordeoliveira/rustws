@@ -5,7 +5,7 @@ use axum::{
     body::Body,
     extract::Request,
     middleware,
-    routing::{get, post},
+    routing::{get, post, put},
 };
 use axum_login::login_required;
 use tower_http::{services::ServeDir, trace::TraceLayer};
@@ -44,6 +44,10 @@ pub fn create_private_router() -> Router<AppState> {
         .route(
             "/api/lambda/create",
             post(api::lambdas::create_lambda_handler),
+        )
+        .route(
+            "/api/lambda/update/{lambda_name}",
+            put(api::lambdas::update_lambda_handler),
         )
         .route_layer(login_required!(AuthBackend, login_url = "/login"))
 }

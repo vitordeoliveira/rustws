@@ -3,13 +3,8 @@
 use std::path::PathBuf;
 
 use super::dto::{
-    CreateLambdaRequest,
-    CreateLambdaResponse,
-    ExecuteLambdaRequest,
-    ExecuteLambdaResponse,
-    // Future DTOs for commented methods:
-    // Lambda, UpdateLambdaRequest,
-    LambdaSummary,
+    CreateLambdaRequest, CreateLambdaResponse, ExecuteLambdaRequest, ExecuteLambdaResponse, Lambda,
+    LambdaSummary, UpdateLambdaRequest,
 };
 use crate::error_handling::types::AppResult;
 
@@ -33,8 +28,8 @@ pub trait LambdaRepository: Send + Sync {
     // /// Get a lambda function by ID
     // async fn get_by_id(&self, id: Uuid) -> AppResult<Option<Lambda>>;
 
-    // /// Get a lambda function by name
-    // async fn get_by_name(&self, name: &str) -> AppResult<Option<Lambda>>;
+    /// Get a lambda function by name
+    async fn get_by_name(&self, name: &str) -> AppResult<Option<Lambda>>;
 
     /// Create a new lambda function
     async fn create(&self, request: CreateLambdaRequest) -> AppResult<CreateLambdaResponse>;
@@ -42,6 +37,6 @@ pub trait LambdaRepository: Send + Sync {
     /// Delete a lambda function by name
     async fn delete(&self, lambda_name: &str) -> AppResult<()>;
 
-    // /// Update an existing lambda function
-    // async fn update(&self, id: Uuid, request: UpdateLambdaRequest) -> AppResult<Lambda>;
+    /// Update an existing lambda function
+    async fn update(&self, lambda_name: &str, request: UpdateLambdaRequest) -> AppResult<()>;
 }

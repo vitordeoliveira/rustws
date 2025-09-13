@@ -5,11 +5,12 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use tracing::instrument;
 use uuid::Uuid;
 
 use crate::business_logic::lambdas::{
-    CreateLambdaRequest, CreateLambdaResponse, ExecuteLambdaRequest, ExecuteLambdaResponse,
-    LambdaRepository, LambdaStatus, LambdaSummary,
+    CreateLambdaRequest, CreateLambdaResponse, ExecuteLambdaRequest, ExecuteLambdaResponse, Lambda,
+    LambdaRepository, LambdaStatus, LambdaSummary, UpdateLambdaRequest,
 };
 use crate::error_handling::types::{AppError, AppResult};
 
@@ -495,6 +496,179 @@ impl LambdaRepository for LambdaStorage {
         })
     }
 
+    /// Get a lambda function by name
+    async fn get_by_name(&self, name: &str) -> AppResult<Option<Lambda>> {
+        tracing::info!(
+            lambda_name = %name,
+            "Getting lambda function by name"
+        );
+
+        // Basic validation
+        if name.trim().is_empty() {
+            return Err(AppError::validation("Lambda name cannot be empty"));
+        }
+
+        // Validate lambda name pattern
+        if !name.chars().all(|c| c.is_alphanumeric() || c == '_') {
+            return Err(AppError::validation(
+                "Lambda name must contain only letters, numbers, and underscores",
+            ));
+        }
+
+        let source_dir = self.source_dir();
+        let wasm_dir = self.wasm_dir();
+
+        // Look for source file (mandatory)
+        let mut source_path = None;
+        let mut source_code = None;
+
+        // Try different extensions for the source file
+        for extension in ["rs", "rust"] {
+            let path = source_dir.join(format!("{}.{}", name, extension));
+            if path.exists() {
+                source_path = Some(path.clone());
+                match fs::read_to_string(&path) {
+                    Ok(content) => {
+                        source_code = Some(content);
+                        break;
+                    }
+                    Err(e) => {
+                        tracing::error!(
+                            lambda_name = %name,
+                            source_path = %path.display(),
+                            error = %e,
+                            "Failed to read source file"
+                        );
+                        return Err(AppError::validation(&format!(
+                            "Failed to read source file: {}",
+                            e
+                        )));
+                    }
+                }
+            }
+        }
+
+        // If no source file found, lambda doesn't exist
+        let source_code = match source_code {
+            Some(code) => code,
+            None => {
+                tracing::warn!(
+                    lambda_name = %name,
+                    "Lambda function not found - no source file exists"
+                );
+                return Ok(None);
+            }
+        };
+
+        // Try to load WASM file (optional)
+        let wasm_path = wasm_dir.join(format!("{}.wasm", name));
+        let wasm_bytes = if wasm_path.exists() {
+            match fs::read(&wasm_path) {
+                Ok(bytes) => {
+                    tracing::debug!(
+                        lambda_name = %name,
+                        wasm_size = bytes.len(),
+                        "Found compiled WASM file"
+                    );
+                    Some(bytes)
+                }
+                Err(e) => {
+                    tracing::warn!(
+                        lambda_name = %name,
+                        wasm_path = %wasm_path.display(),
+                        error = %e,
+                        "WASM file exists but failed to read - treating as None"
+                    );
+                    None
+                }
+            }
+        } else {
+            tracing::debug!(
+                lambda_name = %name,
+                "No WASM file found - lambda may not be compiled yet"
+            );
+            None
+        };
+
+        // Determine runtime from source file extension
+        let runtime = if let Some(ref path) = source_path {
+            match path.extension().and_then(|ext| ext.to_str()) {
+                Some("rs") | Some("rust") => "rust".to_string(),
+                _ => "unknown".to_string(),
+            }
+        } else {
+            "unknown".to_string()
+        };
+
+        // Determine status based on WASM availability
+        let has_wasm = wasm_bytes.is_some();
+        let status = if has_wasm {
+            LambdaStatus::Active
+        } else {
+            LambdaStatus::Inactive
+        };
+
+        // Get file metadata for timestamps
+        let metadata = source_path.as_ref().and_then(|path| path.metadata().ok());
+
+        let (created_at, updated_at) = if let Some(meta) = metadata {
+            let created = meta
+                .created()
+                .unwrap_or_else(|_| std::time::SystemTime::UNIX_EPOCH);
+            let modified = meta
+                .modified()
+                .unwrap_or_else(|_| std::time::SystemTime::UNIX_EPOCH);
+
+            let created_dt = chrono::DateTime::from_timestamp(
+                created
+                    .duration_since(std::time::SystemTime::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_secs() as i64,
+                0,
+            )
+            .unwrap_or_else(chrono::Utc::now);
+
+            let modified_dt = chrono::DateTime::from_timestamp(
+                modified
+                    .duration_since(std::time::SystemTime::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_secs() as i64,
+                0,
+            )
+            .unwrap_or_else(chrono::Utc::now);
+
+            (created_dt, modified_dt)
+        } else {
+            let now = chrono::Utc::now();
+            (now, now)
+        };
+
+        // Create Lambda object
+        let lambda = Lambda {
+            id: Uuid::new_v4(), // Generate a new UUID for this instance
+            name: name.to_string(),
+            description: None, // TODO: Extract description from comments or metadata
+            runtime,
+            memory_mb: 128,      // Default values - could be extracted from metadata
+            timeout_seconds: 30, // Default values - could be extracted from metadata
+            source_code,
+            wasm_bytes,
+            environment_vars: std::collections::HashMap::new(),
+            created_at,
+            updated_at,
+            status: status.clone(),
+        };
+
+        tracing::info!(
+            lambda_name = %name,
+            has_wasm = has_wasm,
+            status = ?status,
+            "Successfully retrieved lambda function"
+        );
+
+        Ok(Some(lambda))
+    }
+
     /// Delete a lambda function by name
     async fn delete(&self, lambda_name: &str) -> AppResult<()> {
         tracing::info!(
@@ -578,6 +752,103 @@ impl LambdaRepository for LambdaStorage {
         tracing::info!(
             lambda_name = %lambda_name,
             "Lambda function deleted successfully"
+        );
+
+        Ok(())
+    }
+
+    /// Update an existing lambda function
+    #[instrument(
+        skip_all,
+        fields(repository = "lambda_storage", operation = "update_lambda")
+    )]
+    async fn update(&self, lambda_name: &str, request: UpdateLambdaRequest) -> AppResult<()> {
+        tracing::info!(
+            lambda_name = %lambda_name,
+            "Updating lambda function"
+        );
+
+        // Basic validation
+        if lambda_name.trim().is_empty() {
+            return Err(AppError::validation("Lambda name cannot be empty"));
+        }
+
+        // Validate lambda name pattern
+        if !lambda_name.chars().all(|c| c.is_alphanumeric() || c == '_') {
+            return Err(AppError::validation(
+                "Lambda name must contain only letters, numbers, and underscores",
+            ));
+        }
+
+        let source_dir = self.source_dir();
+        let wasm_dir = self.wasm_dir();
+
+        // Find existing source file
+        let mut source_path = None;
+        for extension in ["rs", "rust"] {
+            let path = source_dir.join(format!("{}.{}", lambda_name, extension));
+            if path.exists() {
+                source_path = Some(path);
+                break;
+            }
+        }
+
+        let source_path = source_path.ok_or_else(|| {
+            AppError::not_found(&format!("Lambda function '{}' not found", lambda_name))
+        })?;
+
+        // Update source code if provided
+        if let Some(new_source_code) = request.source_code.as_ref() {
+            tracing::debug!(
+                lambda_name = %lambda_name,
+                source_path = %source_path.display(),
+                "Updating source code"
+            );
+
+            if let Err(e) = fs::write(&source_path, new_source_code) {
+                tracing::error!(
+                    lambda_name = %lambda_name,
+                    source_path = %source_path.display(),
+                    error = %e,
+                    "Failed to write updated source code"
+                );
+                return Err(AppError::validation(&format!(
+                    "Failed to update source code: {}",
+                    e
+                )));
+            }
+
+            tracing::info!(
+                lambda_name = %lambda_name,
+                source_size = new_source_code.len(),
+                "Source code updated successfully"
+            );
+
+            // If WASM file exists, delete it to force recompilation
+            let wasm_path = wasm_dir.join(format!("{}.wasm", lambda_name));
+            if wasm_path.exists() {
+                if let Err(e) = fs::remove_file(&wasm_path) {
+                    tracing::warn!(
+                        lambda_name = %lambda_name,
+                        wasm_path = %wasm_path.display(),
+                        error = %e,
+                        "Failed to remove existing WASM file - recompilation may be needed"
+                    );
+                } else {
+                    tracing::info!(
+                        lambda_name = %lambda_name,
+                        "Existing WASM file removed - recompilation required"
+                    );
+                }
+            }
+        }
+
+        // Update other metadata if provided (currently no-op as we don't store metadata separately)
+        // TODO: If we add metadata storage (JSON/TOML files), update them here
+
+        tracing::info!(
+            lambda_name = %lambda_name,
+            "Lambda function updated successfully"
         );
 
         Ok(())

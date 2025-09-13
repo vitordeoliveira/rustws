@@ -12,7 +12,8 @@ pub struct Lambda {
     pub runtime: String,
     pub memory_mb: u32,
     pub timeout_seconds: u32,
-    pub wasm_bytes: Vec<u8>,
+    pub source_code: String,
+    pub wasm_bytes: Option<Vec<u8>>,
     pub environment_vars: std::collections::HashMap<String, String>,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
@@ -34,6 +35,7 @@ pub struct UpdateLambdaRequest {
     pub description: Option<String>,
     pub memory_mb: Option<u32>,
     pub timeout_seconds: Option<u32>,
+    pub source_code: Option<String>,
     pub wasm_bytes: Option<Vec<u8>>,
     pub environment_vars: Option<std::collections::HashMap<String, String>>,
     pub status: Option<LambdaStatus>,
@@ -120,6 +122,19 @@ pub struct CreateLambdaResponse {
 
     /// Compilation time in milliseconds
     pub compilation_time_ms: Option<u64>,
+}
+
+/// Response from updating a lambda function
+#[derive(Debug, Serialize)]
+pub struct UpdateLambdaResponse {
+    /// Whether update was successful
+    pub success: bool,
+
+    /// Success or error message
+    pub message: String,
+
+    /// Updated function name
+    pub function_name: String,
 }
 
 /// Lambda function summary for listing

@@ -317,16 +317,37 @@ document.getElementById('editLambdaForm').addEventListener('submit', async funct
         
         showToast(`Updating lambda function '${functionName}'...`, true);
         
-        // TODO: Replace with actual API call once backend endpoint is created
-        // For now, just simulate success after 2 seconds
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // Call the update API endpoint
+        const response = await fetch(`/api/lambda/update/${functionName}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                source_code: sourceCode,
+                description: formData.get('description') || null,
+                memory_mb: parseInt(formData.get('memory')) || null,
+                timeout_seconds: parseInt(formData.get('timeout')) || null
+            })
+        });
         
-        showToast(`✅ Lambda function '${functionName}' updated successfully!`, true);
+        const result = await response.json();
         
-        // Redirect to lambda list after short delay
-        setTimeout(() => {
-            window.location.href = '/lambda';
-        }, 1500);
+        if (response.ok && result.success) {
+            showToast(`✅ ${result.message}`, true);
+            
+            // Redirect to lambda list after short delay
+            setTimeout(() => {
+                window.location.href = '/lambda';
+            }, 1500);
+        } else {
+            const errorMsg = result.message || 'Failed to update lambda function';
+            showToast(`❌ ${errorMsg}`, false);
+            
+            // Restore button on error
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        }
         
     } catch (error) {
         console.error('Error updating lambda:', error);

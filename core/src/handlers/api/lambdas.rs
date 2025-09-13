@@ -11,7 +11,8 @@ use crate::{
     auth::dto::AuthBackend,
     business_logic::lambdas::{
         CompileLambdaRequest, CompileLambdaResponse, CreateLambdaRequest, CreateLambdaResponse,
-        ExecuteLambdaRequest, ExecuteLambdaResponse, LambdasService,
+        ExecuteLambdaRequest, ExecuteLambdaResponse, LambdasService, UpdateLambdaRequest,
+        UpdateLambdaResponse,
     },
     error_handling::types::AppResult,
     infrastructure::lambdas::LambdaStorage,
@@ -234,6 +235,92 @@ pub async fn create_lambda_handler(
                 "Lambda creation service error"
             );
             Err(e)
+        }
+    }
+}
+
+/// Update an existing lambda function
+#[instrument(
+    skip_all,
+    fields(
+        handler = "update_lambda", 
+        operation = "api_update",
+        lambda_name = %lambda_name
+    )
+)]
+pub async fn update_lambda_handler(
+    State(_state): State<AppState>,
+    _auth_session: AuthSession<AuthBackend>,
+    lambda_service: LambdasService<LambdaStorage>,
+    Path(lambda_name): Path<String>,
+    Json(request): Json<UpdateLambdaRequest>,
+) -> AppResult<Json<UpdateLambdaResponse>> {
+    info!(
+        lambda_name = %lambda_name,
+        has_source_code = request.source_code.is_some(),
+        "Lambda update request received"
+    );
+
+    // Validate lambda name
+    if lambda_name.trim().is_empty() {
+        warn!(
+            lambda_name = %lambda_name,
+            "Invalid lambda name provided - empty or whitespace"
+        );
+        return Err(crate::error_handling::types::AppError::validation(
+            "Lambda name cannot be empty or contain only whitespace",
+        ));
+    }
+
+    // Validate source code if provided
+    if let Some(ref source_code) = request.source_code {
+        if source_code.trim().is_empty() {
+            warn!(
+                lambda_name = %lambda_name,
+                "Empty source code provided for update"
+            );
+            return Err(crate::error_handling::types::AppError::validation(
+                "Source code cannot be empty",
+            ));
+        }
+    }
+
+    info!(
+        lambda_name = %lambda_name,
+        "Starting lambda update process"
+    );
+
+    // Use the service to update the lambda
+    match lambda_service.update(&lambda_name, request).await {
+        Ok(()) => {
+            info!(
+                lambda_name = %lambda_name,
+                "Lambda update completed successfully"
+            );
+
+            let response = UpdateLambdaResponse {
+                success: true,
+                message: format!("Lambda function '{}' updated successfully", lambda_name),
+                function_name: lambda_name,
+            };
+
+            Ok(Json(response))
+        }
+        Err(e) => {
+            error!(
+                lambda_name = %lambda_name,
+                error = %e,
+                "Lambda update service error"
+            );
+
+            // Convert service error to update response for consistent API
+            let response = UpdateLambdaResponse {
+                success: false,
+                message: format!("Failed to update lambda '{}': {}", lambda_name, e),
+                function_name: lambda_name,
+            };
+
+            Ok(Json(response))
         }
     }
 }

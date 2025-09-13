@@ -6,7 +6,7 @@ use std::time::Instant;
 
 use super::dto::{
     CompileLambdaRequest, CompileLambdaResponse, CreateLambdaRequest, CreateLambdaResponse,
-    ExecuteLambdaRequest, ExecuteLambdaResponse, LambdaSummary,
+    ExecuteLambdaRequest, ExecuteLambdaResponse, Lambda, LambdaSummary, UpdateLambdaRequest,
 };
 use super::repository::LambdaRepository;
 use crate::error_handling::types::{AppError, AppResult};
@@ -30,6 +30,11 @@ where
     /// Get all lambda functions
     pub async fn get_all(&self) -> AppResult<Vec<LambdaSummary>> {
         self.repository.get_all().await
+    }
+
+    /// Get a lambda function by name
+    pub async fn get_by_name(&self, name: &str) -> AppResult<Option<Lambda>> {
+        self.repository.get_by_name(name).await
     }
 
     /// Compile a lambda function from source to WASM
@@ -91,6 +96,11 @@ where
     /// Delete a lambda function by name
     pub async fn delete(&self, lambda_name: &str) -> AppResult<()> {
         self.repository.delete(lambda_name).await
+    }
+
+    /// Update a lambda function
+    pub async fn update(&self, lambda_name: &str, request: UpdateLambdaRequest) -> AppResult<()> {
+        self.repository.update(lambda_name, request).await
     }
 }
 
