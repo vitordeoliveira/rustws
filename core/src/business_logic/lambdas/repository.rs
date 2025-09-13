@@ -1,7 +1,6 @@
 //! Lambda repository trait for data access and WASM execution
 
 use std::path::PathBuf;
-use uuid::Uuid; // For future methods
 
 use super::dto::{
     CreateLambdaRequest,

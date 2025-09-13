@@ -95,7 +95,7 @@ impl FromRequestParts<AppState> for LambdasService<LambdaStorage> {
 
     async fn from_request_parts(
         _parts: &mut Parts,
-        state: &AppState,
+        _state: &AppState,
     ) -> Result<Self, Self::Rejection> {
         let lambda_storage = LambdaStorage::new();
         Ok(Self::new(lambda_storage))

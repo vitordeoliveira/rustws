@@ -29,12 +29,10 @@ use crate::{
 )]
 pub async fn compile_lambda_handler(
     State(_state): State<AppState>,
-    auth_session: AuthSession<AuthBackend>,
+    _auth_session: AuthSession<AuthBackend>,
     lambda_service: LambdasService<LambdaStorage>,
     Path(lambda_name): Path<String>,
 ) -> AppResult<Json<CompileLambdaResponse>> {
-    let user = auth_session.user.unwrap(); // Ensure authenticated
-
     // Record user info in tracing span
 
     info!(
@@ -106,12 +104,10 @@ pub async fn compile_lambda_handler(
 )]
 pub async fn execute_lambda_handler(
     State(_state): State<AppState>,
-    auth_session: AuthSession<AuthBackend>,
+    _auth_session: AuthSession<AuthBackend>,
     lambda_service: LambdasService<LambdaStorage>,
     Path(lambda_name): Path<String>,
 ) -> AppResult<Json<ExecuteLambdaResponse>> {
-    let user = auth_session.user.unwrap(); // Ensure authenticated
-
     info!(
         lambda_name = %lambda_name,
         "Lambda execution request received"
@@ -175,12 +171,10 @@ pub async fn execute_lambda_handler(
 #[instrument(skip_all, fields(handler = "create_lambda", operation = "api_create"))]
 pub async fn create_lambda_handler(
     State(_state): State<AppState>,
-    auth_session: AuthSession<AuthBackend>,
+    _auth_session: AuthSession<AuthBackend>,
     lambda_service: LambdasService<LambdaStorage>,
     Json(request): Json<CreateLambdaRequest>,
 ) -> AppResult<Json<CreateLambdaResponse>> {
-    let user = auth_session.user.unwrap(); // Ensure authenticated
-
     info!(
         function_name = %request.function_name,
         runtime = %request.runtime,
