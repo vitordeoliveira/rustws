@@ -23,6 +23,7 @@ use crate::{
 pub fn create_private_router() -> Router<AppState> {
     Router::new()
         .route("/", get(pages::home_handler))
+        .route("/api-gateway", get(pages::api_gateway_handler))
         .route("/lambda", get(pages::lambda_handler))
         .route("/step-functions", get(pages::step_functions_handler))
         .route(

@@ -15,6 +15,7 @@ use crate::{
     state::AppState,
     ui::{
         Ui,
+        api_gateway::{ApiGatewayPageUi, get_mock_api_gateways},
         home::HomePageUi,
         lambda::{CreateLambdaPageUi, EditLambdaPageUi, LambdaPageUi},
         step_functions::{CreateStepFunctionPageUi, StepFunctionsPageUi, get_mock_step_functions},
@@ -183,6 +184,23 @@ pub async fn create_step_function_handler(
 
     let create_step_function_page_ui = CreateStepFunctionPageUi::new(user);
     let html = create_step_function_page_ui.render_html(&state.tera)?;
+
+    Ok(html)
+}
+
+/// API Gateway page handler - delegates all UI concerns to UI layer
+#[instrument(skip_all, fields(handler = "api_gateway", operation = "page_render"))]
+pub async fn api_gateway_handler(
+    State(state): State<AppState>,
+    auth_session: AuthSession<AuthBackend>,
+) -> AppResult<Html<String>> {
+    let user = auth_session.user.unwrap();
+
+    // Get mock API gateways for UI demonstration
+    let api_gateways = get_mock_api_gateways();
+
+    let api_gateway_page_ui = ApiGatewayPageUi::new(user, api_gateways);
+    let html = api_gateway_page_ui.render_html(&state.tera)?;
 
     Ok(html)
 }
