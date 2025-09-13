@@ -146,7 +146,6 @@ fn sanitize_svg(svg_content: &str) -> Result<String, String> {
 
     Ok(trimmed.to_string())
 }
-
 /// Get fallback icon when SVG sanitization fails
 fn get_fallback_icon() -> &'static str {
     r#"<svg class="w-4 h-4 mr-3 text-gray-400" fill="currentColor" viewBox="0 0 20 20">

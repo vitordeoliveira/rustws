@@ -25,6 +25,7 @@ pub fn create_private_router() -> Router<AppState> {
         .route("/", get(pages::home_handler))
         .route("/api-gateway", get(pages::api_gateway_handler))
         .route("/lambda", get(pages::lambda_handler))
+        .route("/monitoring", get(pages::monitoring_handler))
         .route("/step-functions", get(pages::step_functions_handler))
         .route(
             "/step-functions/create",

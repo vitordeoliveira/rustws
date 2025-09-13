@@ -18,6 +18,7 @@ use crate::{
         api_gateway::{ApiGatewayPageUi, get_mock_api_gateways},
         home::HomePageUi,
         lambda::{CreateLambdaPageUi, EditLambdaPageUi, LambdaPageUi},
+        monitoring::{MonitoringPageUi, get_mock_monitoring_data},
         step_functions::{CreateStepFunctionPageUi, StepFunctionsPageUi, get_mock_step_functions},
     },
 };
@@ -201,6 +202,31 @@ pub async fn api_gateway_handler(
 
     let api_gateway_page_ui = ApiGatewayPageUi::new(user, api_gateways);
     let html = api_gateway_page_ui.render_html(&state.tera)?;
+
+    Ok(html)
+}
+
+/// Monitoring page handler - delegates all UI concerns to UI layer
+#[instrument(skip_all, fields(handler = "monitoring", operation = "page_render"))]
+pub async fn monitoring_handler(
+    State(state): State<AppState>,
+    auth_session: AuthSession<AuthBackend>,
+) -> AppResult<Html<String>> {
+    let user = auth_session.user.unwrap();
+
+    // Get mock monitoring data for UI demonstration
+    let (system_metrics, service_health, recent_alerts, recent_logs, performance_metrics) =
+        get_mock_monitoring_data();
+
+    let monitoring_page_ui = MonitoringPageUi::new(
+        user,
+        system_metrics,
+        service_health,
+        recent_alerts,
+        recent_logs,
+        performance_metrics,
+    );
+    let html = monitoring_page_ui.render_html(&state.tera)?;
 
     Ok(html)
 }
