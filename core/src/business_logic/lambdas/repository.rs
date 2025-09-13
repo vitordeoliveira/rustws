@@ -39,9 +39,9 @@ pub trait LambdaRepository: Send + Sync {
     /// Create a new lambda function
     async fn create(&self, request: CreateLambdaRequest) -> AppResult<CreateLambdaResponse>;
 
+    /// Delete a lambda function by name
+    async fn delete(&self, lambda_name: &str) -> AppResult<()>;
+
     // /// Update an existing lambda function
     // async fn update(&self, id: Uuid, request: UpdateLambdaRequest) -> AppResult<Lambda>;
-
-    // /// Delete a lambda function
-    // async fn delete(&self, id: Uuid) -> AppResult<()>;
 }

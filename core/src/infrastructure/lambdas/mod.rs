@@ -494,6 +494,94 @@ impl LambdaRepository for LambdaStorage {
             compilation_time_ms: Some(compilation_time_ms),
         })
     }
+
+    /// Delete a lambda function by name
+    async fn delete(&self, lambda_name: &str) -> AppResult<()> {
+        tracing::info!(
+            lambda_name = %lambda_name,
+            "Deleting lambda function"
+        );
+
+        // Validate function name (basic validation for file system safety)
+        if lambda_name.trim().is_empty() {
+            return Err(AppError::validation("Function name cannot be empty"));
+        }
+
+        // Check for valid identifier pattern
+        if !lambda_name.chars().all(|c| c.is_alphanumeric() || c == '_') {
+            return Err(AppError::validation(
+                "Function name must contain only letters, numbers, and underscores",
+            ));
+        }
+
+        let source_dir = self.source_dir();
+        let wasm_dir = self.wasm_dir();
+
+        // Find and delete source file
+        let possible_extensions = ["rs", "rust"];
+        let mut source_deleted = false;
+
+        for ext in &possible_extensions {
+            let source_path = source_dir.join(format!("{}.{}", lambda_name, ext));
+            if source_path.exists() {
+                if let Err(e) = fs::remove_file(&source_path) {
+                    tracing::error!(
+                        lambda_name = %lambda_name,
+                        source_path = %source_path.display(),
+                        error = %e,
+                        "Failed to delete source file"
+                    );
+                    return Err(AppError::internal(&format!(
+                        "Failed to delete source file: {}",
+                        e
+                    )));
+                }
+                tracing::info!(
+                    lambda_name = %lambda_name,
+                    source_path = %source_path.display(),
+                    "Source file deleted successfully"
+                );
+                source_deleted = true;
+                break;
+            }
+        }
+
+        // Delete WASM file if it exists
+        let wasm_path = wasm_dir.join(format!("{}.wasm", lambda_name));
+        if wasm_path.exists() {
+            if let Err(e) = fs::remove_file(&wasm_path) {
+                tracing::error!(
+                    lambda_name = %lambda_name,
+                    wasm_path = %wasm_path.display(),
+                    error = %e,
+                    "Failed to delete WASM file"
+                );
+                return Err(AppError::internal(&format!(
+                    "Failed to delete WASM file: {}",
+                    e
+                )));
+            }
+            tracing::info!(
+                lambda_name = %lambda_name,
+                wasm_path = %wasm_path.display(),
+                "WASM file deleted successfully"
+            );
+        }
+
+        if !source_deleted {
+            return Err(AppError::not_found(&format!(
+                "Lambda '{}' not found. No source file exists for this lambda.",
+                lambda_name
+            )));
+        }
+
+        tracing::info!(
+            lambda_name = %lambda_name,
+            "Lambda function deleted successfully"
+        );
+
+        Ok(())
+    }
 }
 
 impl LambdaStorage {

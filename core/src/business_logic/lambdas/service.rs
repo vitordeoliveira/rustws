@@ -87,6 +87,11 @@ where
     pub async fn create(&self, request: CreateLambdaRequest) -> AppResult<CreateLambdaResponse> {
         self.repository.create(request).await
     }
+
+    /// Delete a lambda function by name
+    pub async fn delete(&self, lambda_name: &str) -> AppResult<()> {
+        self.repository.delete(lambda_name).await
+    }
 }
 
 /// Extract LambdasService directly from request using FromRequestParts

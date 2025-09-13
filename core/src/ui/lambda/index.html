@@ -146,7 +146,7 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1.5a2.5 2.5 0 010 5H9m-3-5a5 5 0 1110 0m-6 7v.01"></path>
                                         </svg>
                                     </button>
-                                    <button class="text-red-600 hover:text-red-700 hover:bg-red-50 p-2 rounded-md cursor-pointer transition-all duration-200 transform hover:scale-105" title="Delete">
+                                    <button class="text-red-600 hover:text-red-700 hover:bg-red-50 p-2 rounded-md cursor-pointer transition-all duration-200 transform hover:scale-105" title="Delete" onclick="deleteLambda('{{ lambda.name }}')">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                                         </svg>
@@ -382,6 +382,41 @@ async function testLambda(lambdaName) {
         console.error('Execution error:', error);
         showToast(`❌ Error executing ${lambdaName}: ${error.message}`, false);
     } finally {
+        // Restore button state
+        button.className = originalClasses;
+        button.disabled = false;
+    }
+}
+
+async function deleteLambda(lambdaName) {
+    // Confirm deletion
+    if (!confirm(`Are you sure you want to delete lambda function '${lambdaName}'? This action cannot be undone.`)) {
+        return;
+    }
+    
+    const button = event.target.closest('button');
+    const originalClasses = button.className;
+    
+    try {
+        // Show loading state
+        button.className = 'text-gray-400 hover:text-gray-500 hover:bg-gray-50 p-2 rounded-md cursor-wait transition-all duration-200';
+        button.disabled = true;
+        
+        showToast(`Deleting ${lambdaName}...`, true);
+        
+        // Create a form and submit it
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/lambda/delete/${lambdaName}`;
+        document.body.appendChild(form);
+        
+        // Submit the form which will reload the page with updated lambda list
+        form.submit();
+        
+    } catch (error) {
+        console.error('Delete error:', error);
+        showToast(`❌ Error deleting ${lambdaName}: ${error.message}`, false);
+        
         // Restore button state
         button.className = originalClasses;
         button.disabled = false;
