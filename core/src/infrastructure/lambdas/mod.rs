@@ -158,15 +158,24 @@ impl LambdaRepository for LambdaStorage {
                     .unwrap_or("unknown")
                     .to_string();
 
-                // Create a mock LambdaSummary for the source file
+                // Check if corresponding WASM file exists
+                let wasm_dir = self.wasm_dir();
+                let wasm_path = wasm_dir.join(format!("{}.wasm", name));
+                let status = if wasm_path.exists() {
+                    LambdaStatus::Active
+                } else {
+                    LambdaStatus::Inactive
+                };
+
+                // Create a LambdaSummary for the source file
                 let summary = LambdaSummary {
                     id: Uuid::new_v4(),
                     name,
                     description: Some(format!("Lambda function from source file")),
                     runtime,
-                    memory_mb: 128,                 // Default memory
-                    timeout_seconds: 30,            // Default timeout
-                    status: LambdaStatus::Inactive, // Source files are not compiled yet
+                    memory_mb: 128,      // Default memory
+                    timeout_seconds: 30, // Default timeout
+                    status,              // Active if WASM exists, Inactive otherwise
                     created_at: chrono::Utc::now(),
                     updated_at: chrono::Utc::now(),
                 };

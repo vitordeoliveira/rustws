@@ -33,7 +33,7 @@
             openssl
             gcc
             libiconv
-            # nodejs_24
+            nodejs_24
           ];
 
           shellHook = ''
