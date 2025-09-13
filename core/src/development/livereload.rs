@@ -6,7 +6,61 @@ use crate::ui::{TeraEngine, TeraRenderer};
 use axum::Router;
 use notify::{Event, RecommendedWatcher, Watcher};
 use std::path::Path;
+use std::process::Command;
 use tower_livereload::LiveReloadLayer;
+
+/// Compile Tailwind CSS using npx
+fn compile_tailwind() -> Result<(), String> {
+    let project_path =
+        std::env::current_dir().map_err(|e| format!("Failed to get current directory: {}", e))?;
+
+    let input_path = project_path.join("assets/src/main.css");
+    let output_path = project_path.join("assets/public/output.css");
+
+    // Check if input CSS file exists
+    if !input_path.exists() {
+        return Err(format!(
+            "Input CSS file not found: {}",
+            input_path.display()
+        ));
+    }
+
+    // Ensure output directory exists
+    if let Some(output_dir) = output_path.parent() {
+        std::fs::create_dir_all(output_dir)
+            .map_err(|e| format!("Failed to create output directory: {}", e))?;
+    }
+
+    tracing::debug!(
+        "🎨 Compiling Tailwind CSS: {} -> {}",
+        input_path.display(),
+        output_path.display()
+    );
+
+    let output = Command::new("npx")
+        .args([
+            "@tailwindcss/cli",
+            "-i",
+            input_path.to_str().unwrap(),
+            "-o",
+            output_path.to_str().unwrap(),
+            "--minify", // Minify CSS in production
+        ])
+        .output()
+        .map_err(|e| format!("Failed to execute npx command (is npx installed?): {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        return Err(format!(
+            "Tailwind CSS compilation failed:\nSTDERR: {}\nSTDOUT: {}",
+            stderr, stdout
+        ));
+    }
+
+    tracing::debug!("✅ Tailwind CSS compiled successfully");
+    Ok(())
+}
 
 /// Enable live reload for development
 /// Watches templates and static files for changes
@@ -18,11 +72,27 @@ pub fn enable_livereload(app: Router, tera: TeraEngine) -> AppResult<(Recommende
         let mut watcher = notify::recommended_watcher(move |res: Result<Event, _>| {
             if let Ok(event) = res {
                 if event.kind.is_modify() {
-                    tracing::warn!("🔄 File change detected, triggering reload");
+                    // Log the specific file that changed for debugging
+                    let changed_files: Vec<_> = event
+                        .paths
+                        .iter()
+                        .map(|p| p.display().to_string())
+                        .collect();
+                    tracing::warn!("🔄 File change detected: {:?}", changed_files);
+
+                    // Compile Tailwind CSS on file changes
+                    if let Err(e) = compile_tailwind() {
+                        tracing::error!("❌ Tailwind CSS compilation failed: {}", e);
+                    }
+
+                    // Reload templates in debug mode
                     #[cfg(debug_assertions)]
                     if let Err(e) = tera.reload_templates() {
-                        tracing::error!("Failed to reload templates: {}", e);
+                        tracing::error!("❌ Failed to reload templates: {}", e);
                     }
+
+                    // Trigger browser reload
+                    tracing::debug!("🌐 Triggering browser reload");
                     reloader.reload()
                 }
             }
@@ -65,6 +135,21 @@ pub fn enable_livereload(app: Router, tera: TeraEngine) -> AppResult<(Recommende
         }
         watcher
     };
+
+    // Initial Tailwind CSS compilation on startup
+    tracing::warn!("🚀 Running initial Tailwind CSS compilation...");
+    match compile_tailwind() {
+        Ok(_) => {
+            tracing::warn!("✅ Initial Tailwind CSS compilation completed successfully");
+        }
+        Err(e) => {
+            tracing::warn!("⚠️ Initial Tailwind CSS compilation failed: {}", e);
+            tracing::warn!("💡 To fix this, ensure:");
+            tracing::warn!("   1. Node.js and npm are installed");
+            tracing::warn!("   2. Run: npm install -D @tailwindcss/cli");
+            tracing::warn!("   3. Verify assets/src/main.css exists");
+        }
+    }
 
     let app_with_reloader = app.layer(livereload);
 

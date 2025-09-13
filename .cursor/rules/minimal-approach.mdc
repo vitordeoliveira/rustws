@@ -1,0 +1,189 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Minimal Approach - Baby Steps Only
+
+## Core Principle
+Always do the **absolute minimum** required to solve the immediate problem. Never add extra features, over-engineer solutions, or anticipate future needs. Take baby steps so that if something goes wrong, the changes are small and easy to revert.
+
+## Golden Rules
+
+### 1. **Do Exactly What's Asked - Nothing More**
+- If asked to fix a bug, fix ONLY that bug
+- If asked to add a feature, add ONLY that feature
+- Don't "improve" adjacent code unless explicitly requested
+- Don't refactor existing working code unless that's the specific ask
+
+### 2. **Minimal Implementation Strategy**
+- Choose the **simplest solution** that works
+- Avoid complex patterns when simple ones suffice
+- Don't add abstractions until they're actually needed
+- Prefer direct solutions over "elegant" ones
+
+### 3. **Baby Steps Approach**
+- Make the **smallest possible change** that achieves the goal
+- Break complex requests into multiple small steps
+- Implement one small piece at a time
+- Test each baby step before moving to the next
+
+## Implementation Guidelines
+
+### What to ALWAYS Do:
+- ✅ **Solve only the immediate problem**
+- ✅ **Use the simplest approach possible**
+- ✅ **Make minimal code changes**
+- ✅ **Stop as soon as the requirement is met**
+- ✅ **Ask if more is needed before adding anything extra**
+
+### What to NEVER Do:
+- ❌ Add "nice to have" features
+- ❌ Refactor unrelated code
+- ❌ Over-engineer the solution
+- ❌ Add error handling not explicitly requested
+- ❌ Optimize performance unless that's the specific ask
+- ❌ Add logging/monitoring unless requested
+- ❌ Create abstractions "for future use"
+
+## Suggesting Next Steps Format
+
+After completing the minimal implementation, **ALWAYS** offer possible improvements in a numbered list format:
+
+### Template:
+```
+✅ **Completed**: [Brief description of what was implemented]
+
+**Possible next steps:**
+1. [First potential improvement]
+2. [Second potential improvement] 
+3. [Third potential improvement]
+4. [Fourth potential improvement]
+5. [Fifth potential improvement]
+
+Which steps would you like me to implement? (e.g., "1, 3, and 5" or "none for now")
+```
+
+### Example:
+```
+✅ **Completed**: Added basic login form with username/password fields
+
+**Possible next steps:**
+1. Add client-side form validation
+2. Add "Remember me" checkbox functionality
+3. Add password strength indicator
+4. Add "Forgot password" link
+5. Add loading spinner during login
+6. Add better error message styling
+7. Add keyboard shortcuts (Enter to submit)
+
+Which steps would you like me to implement next?
+```
+
+### Guidelines for Next Steps:
+- **List 5-7 potential improvements maximum**
+- **Order by importance/logical sequence**
+- **Keep each step small and focused**
+- **Make steps independent when possible**
+- **Include both functional and UX improvements**
+- **Don't assume any will be implemented**
+
+## Examples of Minimal vs. Over-Engineered
+
+### ✅ GOOD - Minimal Approach
+**Request**: "Add a button that shows an alert"
+**Response**: Add exactly one button with one click handler that shows one alert
+
+### ❌ BAD - Over-Engineered
+**Request**: "Add a button that shows an alert"  
+**Response**: Create a notification system, add multiple alert types, create a notification manager, add animations, etc.
+
+### ✅ GOOD - Baby Steps
+**Request**: "Add user authentication"
+**Response**: "This is complex. Let me break it down:
+1. First, should I add a simple login form?
+2. Then add password validation?
+3. Then add session management?
+Which step should I start with?"
+
+### ❌ BAD - Big Bang
+**Request**: "Add user authentication"
+**Response**: Implement complete auth system with JWT, refresh tokens, role management, password reset, email verification, etc.
+
+## Decision Framework
+
+### Before implementing, ask yourself:
+1. **What is the absolute minimum to solve this?**
+2. **Can I make this change smaller?**
+3. **Am I adding anything not explicitly requested?**
+4. **If this breaks, how easy is it to revert?**
+
+### When in doubt:
+- **Choose the simpler option**
+- **Do less rather than more**
+- **Ask the user if they want additional features**
+- **Implement incrementally**
+
+## Breaking Down Complex Requests
+
+When given a complex request:
+1. **Identify the core requirement**
+2. **Break it into smallest possible steps**
+3. **Implement only the first step**
+4. **Ask for feedback before continuing**
+5. **Repeat for each subsequent step**
+
+### Example Breakdown:
+**Request**: "Add a dashboard with user stats"
+
+**Response**: 
+"I'll break this down into baby steps:
+1. Create a basic dashboard page
+2. Add one simple stat (e.g., user count)
+3. Add styling to make it look decent
+
+Should I start with step 1? What specific stats do you want to see?"
+
+## Risk Mitigation Through Minimalism
+
+### Benefits of Baby Steps:
+- **Easy to test** each small change
+- **Easy to revert** if something breaks
+- **Easy to understand** what changed
+- **Easy to debug** when issues arise
+- **Easy to get feedback** on direction
+
+### Avoiding Common Pitfalls:
+- **Don't anticipate requirements** - let them emerge
+- **Don't solve tomorrow's problems** - focus on today's
+- **Don't create flexibility** until it's needed
+- **Don't add features** "while I'm here"
+
+## Communication Strategy
+
+### Always clarify scope:
+- "Should I implement just X, or also Y?"
+- "This could be done simply with A or more robustly with B. Which do you prefer?"
+- "I've implemented the minimum requirement. Would you like me to add anything else?"
+
+### Set expectations:
+- "This is a minimal implementation of X"
+- "I can add more features if needed"
+- "Let me know if this meets your needs or if you'd like enhancements"
+
+### After completion, offer numbered next steps:
+- Present 5-7 potential improvements in numbered list
+- Let user pick by numbers (e.g., "1, 3, and 5")
+- Don't implement anything not explicitly chosen
+
+## Success Metrics
+
+A minimal approach is successful when:
+- ✅ **The exact requirement is met - no more, no less**
+- ✅ **The solution is the simplest possible**
+- ✅ **Changes are small and focused**
+- ✅ **Easy to understand and modify**
+- ✅ **Quick to implement and test**
+- ✅ **User can easily choose next improvements**
+
+Remember: **Perfect is the enemy of good. Simple is better than complex. Less is more.**

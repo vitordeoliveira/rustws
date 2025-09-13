@@ -1,0 +1,255 @@
+---
+description: Guidelines for managing TODO items in todo.md
+globs:
+alwaysApply: true
+---
+
+# TODO Management - Structured Task Tracking
+
+## Core Principle
+
+When adding items to `todo.md`, always ensure proper categorization with priority and urgency levels. Never modify other files when the request is specifically to add a TODO item - focus solely on the task management file.
+
+## Golden Rules
+
+### 1. **Always Ask for Priority and Urgency**
+
+When adding TODO items and these details are not provided:
+
+- ✅ **Always ask**: "What priority should this have? (High/Medium/Low)"
+- ✅ **Always ask**: "What's the urgency level? (Urgent/Normal/Low)"
+- ✅ **Ask for context**: "Any additional details or context for this task?"
+- ❌ **Never assume** priority or urgency levels
+
+### 2. **TODO-Only Operations**
+
+When requested to add a TODO item:
+
+- ✅ **ONLY modify** `todo.md`
+- ✅ **Focus solely** on task documentation
+- ❌ **NEVER update** any other files in the same operation
+- ❌ **NEVER implement** the task being added to the TODO
+- ❌ **NEVER refactor** or improve other parts of the codebase
+
+### 3. **Structured TODO Format**
+
+Each TODO item must include:
+
+- ✅ **Clear task description**
+- ✅ **Priority level** (High/Medium/Low)
+- ✅ **Urgency level** (Urgent/Normal/Low)
+- ✅ **Context or details** when relevant
+- ✅ **Proper section placement** based on priority
+
+## Required TODO Structure
+
+### Priority Sections
+
+```markdown
+## High Priority
+
+- [ ] Task description
+  - Priority: High
+  - Urgency: [Level]
+  - Context: [Details]
+
+## Medium Priority
+
+- [ ] Task description
+  - Priority: Medium
+  - Urgency: [Level]
+  - Context: [Details]
+
+## Low Priority
+
+- [ ] Task description
+  - Priority: Low
+  - Urgency: [Level]
+  - Context: [Details]
+```
+
+### Information to Gather
+
+Before adding any TODO item, collect:
+
+1. **Task Description** - What needs to be done?
+2. **Priority Level** - High/Medium/Low importance
+3. **Urgency Level** - Urgent/Normal/Low time sensitivity
+4. **Context** - Why is this needed? Any additional details?
+5. **Dependencies** - Does this rely on other tasks?
+
+## Implementation Guidelines
+
+### **When User Requests TODO Addition:**
+
+#### **Step 1: Information Gathering**
+
+If any of these are missing, ask:
+
+```
+To properly categorize this TODO item, I need:
+- Priority level (High/Medium/Low): [ask if not provided]
+- Urgency level (Urgent/Normal/Low): [ask if not provided]
+- Any additional context or details: [ask if not provided]
+```
+
+#### **Step 2: Proper Placement**
+
+- **High Priority** items go in "High Priority" section
+- **Medium Priority** items go in "Medium Priority" section
+- **Low Priority** items go in "Low Priority" section
+- Create sections if they don't exist
+
+#### **Step 3: Structured Entry**
+
+```markdown
+- [ ] [Clear task description]
+  - Priority: [High/Medium/Low]
+  - Urgency: [Urgent/Normal/Low]
+  - Context: [Additional details]
+  - [Any other relevant information]
+```
+
+## Question Templates
+
+### **For Missing Priority:**
+
+```
+"What priority should this TODO have?
+- High: Critical/important tasks
+- Medium: Moderately important tasks
+- Low: Nice-to-have or future tasks"
+```
+
+### **For Missing Urgency:**
+
+```
+"What's the urgency level for this task?
+- Urgent: Needs immediate attention
+- Normal: Standard timeline
+- Low: No rush, can be done later"
+```
+
+### **For Missing Context:**
+
+```
+"Any additional context or details I should include with this TODO?
+- Why is this needed?
+- Dependencies on other tasks?
+- Specific requirements or constraints?"
+```
+
+## Examples
+
+### ✅ **GOOD - Complete TODO Addition**
+
+**User Request**: "Add TODO: Implement user authentication"
+**AI Response**:
+
+```
+To properly categorize this TODO, I need:
+- Priority level (High/Medium/Low)?
+- Urgency level (Urgent/Normal/Low)?
+- Any additional context (auth method, security requirements, etc.)?
+```
+
+### ✅ **GOOD - User Provides All Details**
+
+**User Request**: "Add high priority, urgent TODO: Fix critical security vulnerability in login system, affects all users"
+**AI Response**: _Adds to High Priority section with proper formatting_
+
+### ❌ **BAD - Assuming Information**
+
+**User Request**: "Add TODO: Update documentation"
+**AI Response**: _Adds item without asking for priority/urgency levels_
+
+### ❌ **BAD - Implementing While Adding TODO**
+
+**User Request**: "Add TODO: Fix typo in header"
+**AI Response**: _Fixes the typo AND adds it to TODO_
+**Problem**: Should ONLY add to TODO, not implement
+
+## File Operation Rules
+
+### **ONLY Modify todo.md**
+
+When adding TODO items:
+
+- ✅ **Edit only**: `todo.md`
+- ❌ **Never edit**: Any other files
+- ❌ **Never create**: New files
+- ❌ **Never implement**: The task being added
+
+### **Focus on Task Management**
+
+- ✅ **Document the task** clearly and completely
+- ✅ **Categorize properly** by priority/urgency
+- ✅ **Provide sufficient context** for future implementation
+- ❌ **Don't solve the task** while documenting it
+
+## Priority and Urgency Matrix
+
+### **High Priority + Urgent**
+
+- Critical bugs affecting users
+- Security vulnerabilities
+- Blocking issues for other team members
+
+### **High Priority + Normal**
+
+- Important features for upcoming release
+- Significant improvements to core functionality
+- Architecture decisions
+
+### **High Priority + Low**
+
+- Important but not time-sensitive improvements
+- Refactoring of core components
+- Long-term strategic tasks
+
+### **Medium Priority + Urgent**
+
+- Minor bugs that affect user experience
+- Quick fixes that unblock development
+- Time-sensitive but not critical tasks
+
+### **Medium Priority + Normal**
+
+- Standard feature development
+- Moderate improvements
+- Regular maintenance tasks
+
+### **Medium Priority + Low**
+
+- Nice-to-have features
+- Minor optimizations
+- Documentation updates
+
+### **Low Priority + Any Urgency**
+
+- Future considerations
+- Experimental ideas
+- Optional enhancements
+- Learning and research tasks
+
+## Success Criteria
+
+A well-managed TODO addition includes:
+
+- ✅ **Complete information** (priority, urgency, context)
+- ✅ **Proper categorization** in correct section
+- ✅ **Clear task description** that's actionable
+- ✅ **Sufficient context** for future implementation
+- ✅ **ONLY todo.md modified** (no other files touched)
+
+## Failure Indicators
+
+Poor TODO management:
+
+- ❌ **Missing priority/urgency** information
+- ❌ **Vague task descriptions** that aren't actionable
+- ❌ **Wrong section placement** (priority mismatch)
+- ❌ **Other files modified** during TODO addition
+- ❌ **Task implemented** instead of just documented
+
+Remember: **TODO management is about planning and organization, not immediate implementation. Document first, implement later.**

@@ -1,0 +1,288 @@
+---
+description: When updating or creating routes
+alwaysApply: false
+---
+
+# Axum Path Parameter Syntax
+
+## Core Principle
+
+In Axum route definitions, always use curly brace syntax `{parameter}` instead of colon syntax `:parameter` for path parameters.
+
+## Golden Rules
+
+### 1. **Path Parameter Syntax**
+
+- ✅ **Always use `{parameter}`** - Curly brace syntax
+- ❌ **Never use `:parameter`** - Colon syntax
+
+### 2. **Consistent Application**
+
+- All route definitions must use curly brace syntax
+- All path parameters in route patterns must follow this convention
+- Apply this rule across all Axum route configurations
+
+## Implementation Guidelines
+
+### ✅ ALWAYS Do This:
+
+```rust
+// Correct path parameter syntax
+.route("/api/v1/modules/{module_id}/install", post(handlers::install_module))
+.route("/api/v1/content/{content_id}", patch(handlers::update_content))
+.route("/users/{user_id}", get(handlers::get_user))
+.route("/posts/{post_id}/comments/{comment_id}", get(handlers::get_comment))
+```
+
+### ❌ NEVER Do This:
+
+```rust
+// Incorrect path parameter syntax - DO NOT USE
+.route("/api/v1/modules/:module_id/install", post(handlers::install_module))
+.route("/api/v1/content/:content_id", patch(handlers::update_content))
+.route("/users/:user_id", get(handlers::get_user))
+.route("/posts/:post_id/comments/:comment_id", get(handlers::get_comment))
+```
+
+## Examples
+
+### Single Parameter:
+
+```rust
+// ✅ Correct
+.route("/users/{id}", get(get_user_handler))
+
+// ❌ Wrong
+.route("/users/:id", get(get_user_handler))
+```
+
+### Multiple Parameters:
+
+```rust
+// ✅ Correct
+.route("/api/v1/companies/{company_id}/users/{user_id}", get(get_company_user))
+
+// ❌ Wrong
+.route("/api/v1/companies/:company_id/users/:user_id", get(get_company_user))
+```
+
+### Nested Resources:
+
+```rust
+// ✅ Correct
+.route("/organizations/{org_id}/projects/{project_id}/tasks/{task_id}",
+       get(get_task_handler))
+
+// ❌ Wrong
+.route("/organizations/:org_id/projects/:project_id/tasks/:task_id",
+       get(get_task_handler))
+```
+
+## Handler Function Compatibility
+
+When using curly brace syntax in routes, the handler function parameter extraction remains the same:
+
+```rust
+// Route definition
+.route("/users/{user_id}", get(get_user_handler))
+
+// Handler function (unchanged)
+pub async fn get_user_handler(
+    Path(user_id): Path<String>,
+) -> Result<Json<User>, AppError> {
+    // Implementation
+}
+```
+
+## Migration Strategy
+
+### Converting Existing Routes:
+
+1. **Find all colon syntax**: Search for `:` in route definitions
+2. **Replace with curly braces**: Change `:parameter` to `{parameter}`
+3. **Verify handler functions**: Ensure Path extractors still work correctly
+4. **Test endpoints**: Confirm all routes respond correctly
+
+### Search and Replace Pattern:
+
+```bash
+# Find colon syntax in route definitions
+grep -r "\.route.*:" src/ --include="*.rs"
+
+# Replace pattern (example)
+# From: ":parameter"
+# To: "{parameter}"
+```
+
+## Benefits
+
+### 1. **Consistency**
+
+- Uniform parameter syntax across all routes
+- Easier to read and understand route patterns
+- Consistent with many other web frameworks
+
+### 2. **Clarity**
+
+- Curly brace syntax is more visually distinct
+- Easier to identify parameters in complex route patterns
+- Better alignment with URL template standards
+
+### 3. **Maintainability**
+
+- Consistent patterns make codebase easier to maintain
+- Reduces cognitive load when working with routes
+- Easier to spot parameter-related issues
+
+## Success Criteria
+
+A properly configured Axum router should:
+
+- ✅ **Use `{parameter}` syntax** for all path parameters
+- ✅ **Never use `:parameter` syntax** in route definitions
+- ✅ **Maintain compatibility** with existing handler functions
+- ✅ **Work correctly** with Axum's Path extractor
+
+Remember: **Curly braces for clarity, consistency for maintainability.**
+
+# Axum Path Parameter Syntax
+
+## Core Principle
+
+In Axum route definitions, always use curly brace syntax `{parameter}` instead of colon syntax `:parameter` for path parameters.
+
+## Golden Rules
+
+### 1. **Path Parameter Syntax**
+
+- ✅ **Always use `{parameter}`** - Curly brace syntax
+- ❌ **Never use `:parameter`** - Colon syntax
+
+### 2. **Consistent Application**
+
+- All route definitions must use curly brace syntax
+- All path parameters in route patterns must follow this convention
+- Apply this rule across all Axum route configurations
+
+## Implementation Guidelines
+
+### ✅ ALWAYS Do This:
+
+```rust
+// Correct path parameter syntax
+.route("/api/v1/modules/{module_id}/install", post(handlers::install_module))
+.route("/api/v1/content/{content_id}", patch(handlers::update_content))
+.route("/users/{user_id}", get(handlers::get_user))
+.route("/posts/{post_id}/comments/{comment_id}", get(handlers::get_comment))
+```
+
+### ❌ NEVER Do This:
+
+```rust
+// Incorrect path parameter syntax - DO NOT USE
+.route("/api/v1/modules/:module_id/install", post(handlers::install_module))
+.route("/api/v1/content/:content_id", patch(handlers::update_content))
+.route("/users/:user_id", get(handlers::get_user))
+.route("/posts/:post_id/comments/:comment_id", get(handlers::get_comment))
+```
+
+## Examples
+
+### Single Parameter:
+
+```rust
+// ✅ Correct
+.route("/users/{id}", get(get_user_handler))
+
+// ❌ Wrong
+.route("/users/:id", get(get_user_handler))
+```
+
+### Multiple Parameters:
+
+```rust
+// ✅ Correct
+.route("/api/v1/companies/{company_id}/users/{user_id}", get(get_company_user))
+
+// ❌ Wrong
+.route("/api/v1/companies/:company_id/users/:user_id", get(get_company_user))
+```
+
+### Nested Resources:
+
+```rust
+// ✅ Correct
+.route("/organizations/{org_id}/projects/{project_id}/tasks/{task_id}",
+       get(get_task_handler))
+
+// ❌ Wrong
+.route("/organizations/:org_id/projects/:project_id/tasks/:task_id",
+       get(get_task_handler))
+```
+
+## Handler Function Compatibility
+
+When using curly brace syntax in routes, the handler function parameter extraction remains the same:
+
+```rust
+// Route definition
+.route("/users/{user_id}", get(get_user_handler))
+
+// Handler function (unchanged)
+pub async fn get_user_handler(
+    Path(user_id): Path<String>,
+) -> Result<Json<User>, AppError> {
+    // Implementation
+}
+```
+
+## Migration Strategy
+
+### Converting Existing Routes:
+
+1. **Find all colon syntax**: Search for `:` in route definitions
+2. **Replace with curly braces**: Change `:parameter` to `{parameter}`
+3. **Verify handler functions**: Ensure Path extractors still work correctly
+4. **Test endpoints**: Confirm all routes respond correctly
+
+### Search and Replace Pattern:
+
+```bash
+# Find colon syntax in route definitions
+grep -r "\.route.*:" src/ --include="*.rs"
+
+# Replace pattern (example)
+# From: ":parameter"
+# To: "{parameter}"
+```
+
+## Benefits
+
+### 1. **Consistency**
+
+- Uniform parameter syntax across all routes
+- Easier to read and understand route patterns
+- Consistent with many other web frameworks
+
+### 2. **Clarity**
+
+- Curly brace syntax is more visually distinct
+- Easier to identify parameters in complex route patterns
+- Better alignment with URL template standards
+
+### 3. **Maintainability**
+
+- Consistent patterns make codebase easier to maintain
+- Reduces cognitive load when working with routes
+- Easier to spot parameter-related issues
+
+## Success Criteria
+
+A properly configured Axum router should:
+
+- ✅ **Use `{parameter}` syntax** for all path parameters
+- ✅ **Never use `:parameter` syntax** in route definitions
+- ✅ **Maintain compatibility** with existing handler functions
+- ✅ **Work correctly** with Axum's Path extractor
+
+Remember: **Curly braces for clarity, consistency for maintainability.**

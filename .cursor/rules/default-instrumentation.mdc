@@ -1,0 +1,321 @@
+---
+description: 
+globs: *.rs
+alwaysApply: false
+---
+# Default Function Instrumentation - Always Use #[instrument(skip_all)]
+
+## Core Principle
+Every function in Rust should have `#[instrument(skip_all)]` by default to enable request tracing correlation without cluttering logs with parameter data. This provides consistent observability while maintaining clean, readable traces.
+
+## Golden Rules
+
+### 1. **Default Instrumentation Pattern**
+- ✅ **Every function** gets `#[instrument(skip_all)]`
+- ✅ **Selective field inclusion** using `fields()` parameter
+- ✅ **Meaningful operation names** for business context
+- ✅ **Skip all parameters** by default to avoid noise
+
+### 2. **Consistent Application**
+- All public functions must be instrumented
+- All async functions must be instrumented  
+- All handler functions must be instrumented
+- All service layer functions must be instrumented
+
+### 3. **Clean Trace Context**
+- Functions inherit request span context automatically
+- No parameter data clutters the logs
+- Only business-relevant fields are included
+- Spans provide execution flow visibility
+
+## Implementation Guidelines
+
+### ❌ NEVER Do This:
+```rust
+// DON'T create functions without instrumentation
+pub async fn refresh_modules_handler(
+    renderer: HtmlRenderer,
+    state: State<AppState>,
+) -> AppResult<impl IntoResponse> {
+    // No tracing context!
+}
+
+// DON'T include all parameters (creates noise)
+#[instrument]
+pub async fn process_user_data(
+    user: User,           // This will be logged!
+    renderer: HtmlRenderer, // This will clutter logs!
+    state: State<AppState>, // This will be verbose!
+) -> AppResult<String> {
+    // Too much noise in logs
+}
+
+// DON'T use generic span names
+#[instrument(skip_all)]
+pub async fn handler() {  // Generic name
+    // Can't identify what this does
+}
+```
+
+### ✅ ALWAYS Do This:
+```rust
+// DO instrument every function with skip_all
+#[instrument(skip_all, fields(operation = "refresh_modules"))]
+pub async fn refresh_modules_handler(
+    renderer: HtmlRenderer,
+    state: State<AppState>,
+) -> AppResult<impl IntoResponse> {
+    tracing::info!("Starting module refresh");
+    // Clean spans with business context
+}
+
+// DO add relevant business fields
+#[instrument(skip_all, fields(
+    operation = "user_authentication",
+    auth_method = "password"
+))]
+pub async fn authenticate_user(
+    username: String,
+    password: String,
+    auth_service: AuthService,
+) -> AppResult<User> {
+    tracing::info!(username = %username, "Authenticating user");
+    // Only relevant data in logs
+}
+
+// DO use descriptive operation names
+#[instrument(skip_all, fields(operation = "database_migration"))]
+pub async fn run_pending_migrations(
+    pool: DatabasePool,
+) -> AppResult<()> {
+    // Clear purpose from span name
+}
+```
+
+## Function Categories and Patterns
+
+### 1. **Handler Functions**
+Web request handlers that process HTTP requests.
+
+```rust
+#[instrument(skip_all, fields(
+    handler = "modules_page",
+    operation = "page_render"
+))]
+pub async fn modules_handler(
+    renderer: HtmlRenderer, 
+    state: State<AppState>
+) -> AppResult<impl IntoResponse> {
+    tracing::info!("Rendering modules page");
+    // Handler logic
+}
+
+#[instrument(skip_all, fields(
+    handler = "refresh_modules",
+    operation = "user_action"
+))]
+pub async fn refresh_modules_handler(
+    renderer: HtmlRenderer,
+    state: State<AppState>,
+) -> AppResult<impl IntoResponse> {
+    tracing::info!("User triggered module refresh");
+    // Action logic
+}
+```
+
+### 2. **Service Layer Functions**
+Business logic and service operations.
+
+```rust
+#[instrument(skip_all, fields(
+    service = "module_service",
+    operation = "refresh_modules"
+))]
+pub async fn refresh_modules(app_state: &AppState) -> AppResult<ModuleRefreshResult> {
+    tracing::info!("Refreshing modules from API");
+    // Service logic
+}
+
+#[instrument(skip_all, fields(
+    service = "user_service", 
+    operation = "create_user"
+))]
+pub async fn create_user(user_data: CreateUserRequest) -> AppResult<User> {
+    tracing::info!(email = %user_data.email, "Creating new user");
+    // Creation logic
+}
+```
+
+### 3. **Repository/Data Layer Functions**
+Database and external API interactions.
+
+```rust
+#[instrument(skip_all, fields(
+    repository = "user_repository",
+    operation = "find_by_email"
+))]
+pub async fn find_user_by_email(
+    pool: &DatabasePool,
+    email: &str,
+) -> AppResult<Option<User>> {
+    tracing::debug!(email = %email, "Querying user by email");
+    // Database query
+}
+
+#[instrument(skip_all, fields(
+    api_client = "matrix_core",
+    operation = "fetch_modules"
+))]
+pub async fn fetch_all_modules(&self) -> AppResult<Modules> {
+    tracing::info!(base_url = %self.base_url, "Fetching modules from API");
+    // API call
+}
+```
+
+### 4. **Utility and Helper Functions**
+Supporting functions and utilities.
+
+```rust
+#[instrument(skip_all, fields(
+    utility = "template_renderer",
+    operation = "render_with_context"
+))]
+pub fn render_with_context(
+    &self,
+    template: &str,
+    context: &Context,
+) -> Result<String, tera::Error> {
+    tracing::debug!(template = %template, "Rendering template");
+    // Template rendering
+}
+
+#[instrument(skip_all, fields(
+    helper = "validation",
+    operation = "validate_email"
+))]
+pub fn validate_email_format(email: &str) -> bool {
+    tracing::debug!(email = %email, "Validating email format");
+    // Validation logic
+}
+```
+
+## Field Naming Conventions
+
+### Standard Field Names:
+- **`operation`** - What the function does (required)
+- **`service`** - Service layer identifier
+- **`handler`** - Handler function identifier  
+- **`repository`** - Data layer identifier
+- **`utility`** - Utility function identifier
+- **`api_client`** - External API client identifier
+
+### Business Context Fields:
+- **`user_id`** - User performing the action
+- **`resource_id`** - Resource being operated on
+- **`entity_type`** - Type of entity being processed
+- **`auth_method`** - Authentication method used
+- **`external_service`** - External service being called
+
+## Exception Cases
+
+### When NOT to Use skip_all:
+- **Test functions** - Use `#[instrument]` or no instrumentation
+- **Internal helper functions** called many times - May create too many spans
+- **Simple getters/setters** - Usually don't need instrumentation
+
+```rust
+// Exception: Simple getter (no instrumentation needed)
+pub fn get_config(&self) -> &AppConfig {
+    &self.config
+}
+
+// Exception: Test function
+#[tokio::test]
+async fn test_user_creation() {
+    // Test code - no instrumentation needed
+}
+
+// Exception: High-frequency internal helper
+fn format_timestamp(timestamp: SystemTime) -> String {
+    // Called very frequently, skip instrumentation
+}
+```
+
+## Benefits of This Approach
+
+### 1. **Request Correlation**
+- Every function automatically inherits request context
+- Easy to trace execution flow across function calls
+- Request ID appears in all function spans
+
+### 2. **Clean Logs**
+- No parameter data cluttering the output
+- Only business-relevant information logged
+- Easy to read and understand execution flow
+
+### 3. **Performance**
+- `skip_all` avoids expensive parameter serialization
+- Selective field inclusion adds only necessary context
+- Minimal overhead from instrumentation
+
+### 4. **Consistency**
+- Every function follows the same pattern
+- Easy to find and understand function purpose
+- Standardized observability across the codebase
+
+## Example Output
+
+With this pattern, your logs will look like:
+
+```
+INFO request{id=a1b2c3d4 method=POST uri=/action/refresh_modules}: refresh_modules_handler{handler="refresh_modules" operation="user_action"}: admin::handlers::actions: User triggered module refresh
+
+INFO request{id=a1b2c3d4 method=POST uri=/action/refresh_modules}: refresh_modules_handler{handler="refresh_modules" operation="user_action"}: refresh_modules{service="module_service" operation="refresh_modules"}: admin::business_logic::services::module: Refreshing modules from API
+
+INFO request{id=a1b2c3d4 method=POST uri=/action/refresh_modules}: refresh_modules_handler{handler="refresh_modules" operation="user_action"}: refresh_modules{service="module_service" operation="refresh_modules"}: fetch_all_modules{api_client="matrix_core" operation="fetch_modules"}: admin::infrastructure::http::client: Fetching modules from API
+```
+
+Notice how:
+- **Request ID** flows through all functions
+- **Function hierarchy** is clearly visible
+- **Business context** is preserved at each level
+- **No parameter noise** clutters the output
+
+## Migration Strategy
+
+### Converting Existing Functions:
+1. **Add instrumentation** to all functions without it
+2. **Replace existing `#[instrument]`** with `#[instrument(skip_all)]`
+3. **Add meaningful fields** for business context
+4. **Remove manual span creation** where instrumentation suffices
+5. **Test log output** to ensure context flows properly
+
+### Automation Commands:
+```bash
+# Find functions without instrumentation
+grep -n "pub async fn\|pub fn" src/ --include="*.rs" -A1 | grep -v "instrument"
+
+# Find functions with basic instrument (need skip_all)
+grep -n "#\[instrument\]" src/ --include="*.rs"
+```
+
+## Code Review Checklist
+
+When reviewing code, ensure:
+- [ ] All public functions have `#[instrument(skip_all)]`
+- [ ] Functions include meaningful `fields()` with `operation`
+- [ ] Field names follow established conventions
+- [ ] No sensitive data is included in span fields
+- [ ] Business context is appropriate for the function level
+
+## Success Criteria
+
+A properly instrumented codebase has:
+- ✅ **Every function** instrumented with `skip_all`
+- ✅ **Meaningful operation names** for business context
+- ✅ **Clean log output** without parameter noise
+- ✅ **Request correlation** flows through all function calls
+- ✅ **Consistent patterns** across all function types
+- ✅ **Appropriate business context** at each level
+
+Remember: **Instrument everything, skip everything by default, include only what matters. Consistent observability starts with consistent instrumentation.**

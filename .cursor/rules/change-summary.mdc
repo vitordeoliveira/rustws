@@ -1,0 +1,135 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Change Summary Before Implementation
+
+## Core Principle
+Always provide a detailed summary of planned changes and explicitly list all file operations before writing any code. This ensures transparency and gives the user opportunity to review and approve the approach.
+
+## Required Pre-Implementation Summary
+
+### 1. **Change Overview**
+Before any implementation, provide:
+- **Purpose**: What problem this solves or feature this adds
+- **Approach**: High-level strategy for implementation
+- **Impact**: What areas of the codebase will be affected
+- **Complexity**: Estimated difficulty level (Simple/Medium/Complex)
+
+### 2. **File Operations Manifest**
+**ALWAYS** explicitly list every file operation planned:
+
+#### Files to CREATE:
+- `path/to/new/file.rs` - Brief description of purpose
+- `path/to/another/file.html` - Brief description of purpose
+
+#### Files to EDIT:
+- `existing/file.rs` - What changes will be made (e.g., "Add new function", "Modify error handling")
+- `config/settings.toml` - What sections will be updated
+
+#### Files to DELETE:
+- `old/deprecated/file.rs` - Reason for deletion
+- `unused/template.html` - Why it's no longer needed
+
+#### Files to MOVE/RENAME:
+- `old/path/file.rs` → `new/path/file.rs` - Reason for move
+
+### 3. **Change Details by File**
+For each file that will be modified, specify:
+- **What** will be changed (functions, structs, configurations, etc.)
+- **Why** the change is necessary
+- **How** it connects to other changes
+
+### 4. **Dependencies and Side Effects**
+- New dependencies that will be added
+- Existing dependencies that might be affected
+- Database migrations or schema changes
+- Configuration changes required
+- Environment variables or secrets needed
+
+### 5. **Risk Assessment**
+- **Breaking Changes**: Will this break existing functionality?
+- **Backwards Compatibility**: Any compatibility concerns?
+- **Testing Impact**: What tests need to be updated/added?
+- **Deployment Considerations**: Any special deployment requirements?
+
+## Implementation Workflow
+
+### Step 1: Questions and Requirements
+Follow the thorough questioning rules first
+
+### Step 2: Change Summary (THIS RULE)
+Provide the comprehensive summary as outlined above
+
+### Step 3: User Approval
+**ALWAYS** ask for explicit confirmation:
+- "Does this summary look correct?"
+- "Are you okay with these file changes?"
+- "Should I proceed with this implementation plan?"
+
+### Step 4: Implementation
+Only after user approval, proceed with the actual code changes
+
+### Step 5: Post-Implementation Summary
+After completion, summarize what was actually done
+
+## Template Format
+
+```
+## Implementation Summary
+
+### Purpose
+[Brief description of what this accomplishes]
+
+### Approach
+[High-level implementation strategy]
+
+### File Operations
+**CREATE:**
+- `path/file.ext` - Description
+
+**EDIT:**
+- `path/file.ext` - Changes planned
+
+**DELETE:**
+- `path/file.ext` - Reason
+
+### Key Changes
+1. [File]: [Specific changes]
+2. [File]: [Specific changes]
+
+### Dependencies
+- New: [package@version]
+- Modified: [existing package requirements]
+
+### Risks & Considerations
+- [Potential breaking changes]
+- [Testing requirements]
+- [Deployment notes]
+
+**Ready to proceed? Please confirm if this plan looks good.**
+```
+
+## Exception Cases
+Skip detailed summary only for:
+- Single-line fixes or typos in one file
+- Extremely simple changes the user has explicitly pre-approved
+- Emergency hotfixes where speed is critical (still mention file being changed)
+
+## Success Criteria
+A good change summary should:
+- ✅ List every file that will be touched
+- ✅ Explain the purpose of each change
+- ✅ Identify potential risks or side effects
+- ✅ Get explicit user approval before implementation
+- ✅ Be clear enough that another developer could understand the plan
+
+## Anti-Patterns to Avoid
+- ❌ Starting to code without showing the plan
+- ❌ Vague descriptions like "update some files"
+- ❌ Forgetting to mention file deletions or renames
+- ❌ Not asking for confirmation before proceeding
+- ❌ Surprising the user with unexpected file changes
+
+Remember: **Transparency builds trust. Always show your work before doing your work.**

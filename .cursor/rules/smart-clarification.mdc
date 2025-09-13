@@ -1,0 +1,251 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Smart Clarification - Ask Questions When Needed
+
+## Core Principle
+Ask clarifying questions **only when genuinely needed** to remove ambiguity or prevent misunderstandings. Don't force questions when the request is clear. Focus on removing actual doubts rather than following a rigid questioning framework.
+
+## Golden Rules
+
+### 1. **Question When There's Real Doubt**
+- ✅ Ask when requirements are ambiguous or unclear
+- ✅ Ask when multiple interpretations are possible
+- ✅ Ask when missing critical information
+- ❌ Don't ask obvious or unnecessary questions
+
+### 2. **Quality Over Quantity**
+- ✅ Ask **few, focused questions** that matter
+- ✅ Each question should **remove specific doubt**
+- ✅ Questions should **prevent actual problems**
+- ❌ Don't ask questions just to ask questions
+
+### 3. **Context-Aware Questioning**
+- Previous conversation provides context
+- Code comments and existing patterns give clues
+- Simple requests often don't need questions
+- Complex or ambiguous requests may need clarification
+
+## When to Ask Questions
+
+### ✅ **ASK When:**
+```
+// User request is ambiguous
+"Add error handling to the function"
+→ DOUBT: Which function? What kind of error handling?
+→ QUESTION: "Which specific function needs error handling, and what types of errors should be handled?"
+
+// Multiple valid interpretations exist
+"Make the button work better"  
+→ DOUBT: Better how? Performance? UX? Functionality?
+→ QUESTION: "What specific improvement do you want for the button - styling, functionality, or performance?"
+
+// Missing critical context
+"Update the database schema"
+→ DOUBT: What changes? Which tables? Migration strategy?
+→ QUESTION: "What specific changes to the schema, and should I create a migration file?"
+```
+
+### ❌ **DON'T ASK When:**
+```
+// Request is clear and specific
+"Add #[instrument(skip_all)] to the refresh_modules_handler function"
+→ NO DOUBT: Exactly what to do and where
+→ ACTION: Just implement it
+
+// Previous context makes it clear
+[After discussing modules page]
+"Now add the same pattern to the content page"
+→ NO DOUBT: Apply the same pattern discussed
+→ ACTION: Implement the established pattern
+
+// Simple, obvious operations
+"Fix the typo in line 42: 'moduel' should be 'module'"
+→ NO DOUBT: Simple text correction
+→ ACTION: Fix the typo
+```
+
+## Smart Questioning Patterns
+
+### 1. **Remove Specific Doubts**
+Focus on removing **your actual uncertainty**, not following a checklist.
+
+```rust
+// ✅ GOOD - Addresses real doubt
+"I see you want to add validation. Should this be client-side, server-side, or both?"
+
+// ❌ BAD - Generic questioning
+"What are the performance requirements?"
+"Are there security considerations?" 
+"How should this be tested?"
+// (when none of these are actually unclear)
+```
+
+### 2. **One Question Per Real Doubt**
+Each question should resolve a specific ambiguity.
+
+```rust
+// ✅ GOOD - Focused questions
+"Should the error messages be user-facing or developer logs?"
+"Do you want this applied to all handlers or just the modules handler?"
+
+// ❌ BAD - Shotgun questioning  
+"What error handling do you want?"
+"How should errors be displayed?"
+"What about error codes?"
+"Should errors be logged?"
+"What about error recovery?"
+```
+
+### 3. **Context-Aware Clarification**
+Use existing context to minimize questions needed.
+
+```rust
+// ✅ GOOD - Uses context
+[After seeing existing error handling patterns in codebase]
+"I'll use the same AppError pattern as the other handlers. Should the error redirect back to the modules page?"
+
+// ❌ BAD - Ignores context
+"How do you want error handling implemented? What error types? What format?"
+```
+
+## Implementation Guidelines
+
+### **Before Asking Questions:**
+1. **Read the request carefully** - Is it actually unclear?
+2. **Check existing context** - Does previous conversation clarify?
+3. **Look at existing code** - Are there established patterns?
+4. **Identify genuine doubts** - What specifically am I unsure about?
+
+### **When Asking Questions:**
+- ✅ **Be specific** about what you're clarifying
+- ✅ **Explain your doubt** so user understands why you're asking
+- ✅ **Offer your assumption** if you have a reasonable default
+- ✅ **Keep it conversational** rather than interrogative
+
+### **Question Templates:**
+
+#### **Clarifying Ambiguity:**
+```
+"I want to make sure I understand - you want [my interpretation], correct?"
+"By [ambiguous term], do you mean [option A] or [option B]?"
+"Should this [specific doubt about approach/scope]?"
+```
+
+#### **Offering Assumptions:**
+```
+"I'll implement [reasonable assumption] unless you prefer [alternative]?"
+"I'm assuming [assumption based on context] - let me know if that's wrong."
+"Based on the existing pattern, I'll [approach] - sound good?"
+```
+
+#### **Explaining Doubts:**
+```
+"I'm not sure about [specific aspect] because [reason for confusion]."
+"There are two ways to handle this: [A] or [B]. Which do you prefer?"
+"I see [potential issue/consideration] - how should I handle that?"
+```
+
+## Examples of Smart Clarification
+
+### **Example 1: Clear Request**
+**User:** "Add tracing to the refresh_modules_handler"
+
+**✅ Smart Response:**
+```
+I'll add #[instrument(skip_all, fields(operation = "refresh_modules"))] to the handler and add a tracing::info! call. 
+```
+
+**❌ Forced Questioning:**
+```
+- What kind of tracing do you want?
+- What fields should be included?
+- What log level?
+- Should I add error tracing too?
+- How should this integrate with existing logging?
+```
+
+### **Example 2: Ambiguous Request**
+**User:** "Make the error handling better"
+
+**✅ Smart Response:**
+```
+I see several error handling areas that could be improved. Are you referring to:
+- The error messages shown to users?
+- The error logging for developers? 
+- The error recovery/retry logic?
+
+Or did you have something specific in mind?
+```
+
+**❌ Generic Questioning:**
+```
+- What specific error handling improvements do you want?
+- What are the requirements?
+- Who are the users?
+- What's the current behavior vs expected?
+- Are there performance considerations?
+```
+
+### **Example 3: Using Context**
+**User:** [After implementing several handlers with same pattern]
+"Now do the same for the content handler"
+
+**✅ Smart Response:**
+```
+I'll apply the same instrumentation and error handling pattern we used for the modules handlers to the content handler.
+```
+
+**❌ Ignoring Context:**
+```
+- What pattern should I follow?
+- Which specific changes do you want?
+- Should this match the existing handlers?
+```
+
+## Exception Cases
+
+### **Always Ask When:**
+- **Security implications** - Better to double-check sensitive operations
+- **Data loss potential** - Confirm destructive operations
+- **Breaking changes** - Verify impact on existing functionality
+- **User-facing changes** - Confirm UX/UI modifications
+
+### **Never Ask When:**
+- **Following established patterns** - Use existing conventions
+- **Simple mechanical changes** - Typos, formatting, obvious fixes
+- **Continuation of previous work** - Context is already established
+- **User explicitly said "just do it"** - Respect their preference
+
+## Success Criteria
+
+Good clarification practice results in:
+- ✅ **Fewer questions** but **more valuable ones**
+- ✅ **Questions that prevent actual problems**
+- ✅ **Faster implementation** with confidence
+- ✅ **User satisfaction** with relevant questioning
+- ✅ **Reduced back-and-forth** due to smart assumptions
+
+Poor clarification practice results in:
+- ❌ **Question fatigue** from too many inquiries
+- ❌ **Obvious questions** that slow down workflow
+- ❌ **Analysis paralysis** from over-questioning
+- ❌ **User frustration** with unnecessary delays
+
+## Benefits of Smart Clarification
+
+### **For Users:**
+- **Faster results** with fewer unnecessary questions
+- **Relevant questions** that actually matter
+- **Maintained confidence** in AI understanding
+- **Reduced cognitive load** from obvious questions
+
+### **For Implementation:**
+- **Better outcomes** by focusing on real ambiguities
+- **Faster development** with fewer delays
+- **Context-aware solutions** that fit existing patterns
+- **Higher quality** by addressing genuine concerns
+
+Remember: **Ask questions to remove doubt, not to follow a process. Smart clarification prevents problems without creating friction.**

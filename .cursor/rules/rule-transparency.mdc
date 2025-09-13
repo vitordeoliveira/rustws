@@ -1,0 +1,126 @@
+---
+description: Always show which rules are being applied before starting any task
+globs: 
+alwaysApply: true
+---
+
+# Rule Transparency - Always Show Applied Rules
+
+## Core Principle
+Before starting any task or implementation, **ALWAYS** explicitly identify and display which workspace rules are being applied. This ensures transparency, consistency, and helps the user understand the approach being taken.
+
+## Required Rule Declaration Format
+
+### At the start of EVERY response, include:
+```
+🔧 **APPLYING RULES:**
+- [Rule Name 1]: [Brief description of how it applies]
+- [Rule Name 2]: [Brief description of how it applies]  
+- [Rule Name 3]: [Brief description of how it applies]
+```
+
+### Example Rule Declaration:
+```
+🔧 **APPLYING RULES:**
+- Change Summary Before Implementation: Will provide detailed summary of all file changes before coding
+- HTMX UI Update Patterns: Will prioritize hx-get + hx-select over creating new components
+- Minimal Approach: Will implement only what's requested, nothing extra
+```
+
+## When to Show Rules
+
+### ALWAYS show rules for:
+- ✅ **Any code changes or implementations**
+- ✅ **File creation, editing, or deletion**
+- ✅ **Architecture or design decisions**
+- ✅ **Refactoring tasks**
+- ✅ **Bug fixes and debugging**
+- ✅ **Any technical recommendations**
+
+### Optional for:
+- Simple questions or clarifications
+- Pure information requests without implementation
+- Basic troubleshooting that doesn't involve code changes
+
+## Rule Selection Guidelines
+
+### How to identify applicable rules:
+1. **Read the user's request carefully**
+2. **Identify the type of task** (coding, refactoring, creating, etc.)
+3. **Check which workspace rules apply** to that type of task
+4. **List the most relevant rules** (typically 2-5 rules)
+5. **Briefly explain how each rule will guide the approach**
+
+### Priority order for rule selection:
+1. **Task-specific rules** (e.g., HTMX patterns for frontend work)
+2. **Process rules** (e.g., Change Summary Before Implementation)
+3. **Quality rules** (e.g., Minimal Approach)
+4. **General guidelines** (e.g., coding standards)
+
+## Examples of Rule Application
+
+### Example 1: Adding a new feature
+```
+🔧 **APPLYING RULES:**
+- Change Summary Before Implementation: Will provide detailed summary of files to create/modify
+- Minimal Approach: Will implement only the requested feature, no extras
+- HTMX UI Update Patterns: Will use hx-get + hx-select instead of creating new components
+```
+
+### Example 2: Refactoring code
+```
+🔧 **APPLYING RULES:**
+- Change Summary Before Implementation: Will list all files being refactored and why
+- Minimal Approach: Will make only necessary changes to achieve the goal
+```
+
+### Example 3: Bug fix
+```
+🔧 **APPLYING RULES:**
+- Minimal Approach: Will fix only the specific bug, no additional improvements
+- Change Summary Before Implementation: Will explain what files need changes
+```
+
+## Benefits of Rule Transparency
+
+### For the User:
+- **Predictable outcomes** - Know what approach will be taken
+- **Understanding of decisions** - See why certain choices are made
+- **Opportunity to redirect** - Can ask for different rules if needed
+- **Learning** - Understand the reasoning behind implementations
+
+### For Development:
+- **Consistency** - Ensures same patterns are followed
+- **Quality** - Rules guide toward better practices
+- **Efficiency** - Clear guidelines reduce decision time
+- **Maintainability** - Consistent approaches are easier to maintain
+
+## Rule Override
+
+### User can override rules by:
+- Explicitly requesting different approach
+- Asking to ignore specific rules for this task
+- Providing their own guidelines that take precedence
+
+### Example override request:
+"Ignore the minimal approach rule and add extra error handling and logging"
+
+## Implementation Checklist
+
+Before starting any task:
+- [ ] ✅ **Read user request thoroughly**
+- [ ] ✅ **Identify applicable workspace rules**
+- [ ] ✅ **Display rules using the standard format**
+- [ ] ✅ **Explain how each rule will guide the approach**
+- [ ] ✅ **Proceed with implementation following the stated rules**
+
+## Success Criteria
+
+A good rule declaration should:
+- ✅ **List 2-5 most relevant rules**
+- ✅ **Briefly explain how each applies to this specific task**
+- ✅ **Use the standard format with 🔧 emoji**
+- ✅ **Be clear and concise**
+- ✅ **Help the user understand the approach**
+
+Remember: **Transparency builds trust. Always show your rules before showing your work.** 

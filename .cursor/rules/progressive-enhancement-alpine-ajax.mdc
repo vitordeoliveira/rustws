@@ -1,0 +1,348 @@
+---
+description: 
+globs: *.html
+alwaysApply: false
+---
+# Progressive Enhancement with Alpine AJAX - HTML First Approach
+
+## Core Principle
+Always build your UI with **pure HTML first** that works without JavaScript, then progressively enhance with Alpine AJAX. This ensures accessibility, graceful degradation, and a better user experience for all users regardless of their JavaScript capabilities.
+
+## Golden Rules
+
+### 1. **HTML First, AJAX Second**
+- ✅ **Start with working HTML** - forms submit, links navigate
+- ✅ **Ensure full functionality** without JavaScript
+- ✅ **Add Alpine AJAX as enhancement** only after HTML works
+- ✅ **Graceful degradation** when JavaScript is disabled
+
+### 2. **Progressive Enhancement Workflow**
+1. **Build functional HTML** (forms, links, navigation)
+2. **Test without JavaScript** - everything should work
+3. **Add Alpine AJAX attributes** for enhanced UX
+4. **Test with JavaScript** - enhanced experience
+
+### 3. **Focus Management**
+- ✅ **Use `x-autofocus`** to maintain keyboard accessibility
+- ✅ **Preserve focus state** during AJAX updates
+- ✅ **Consider screen readers** and keyboard navigation
+
+## Implementation Guidelines
+
+### ❌ NEVER Start With AJAX
+```html
+<!-- DON'T: AJAX-only approach -->
+<div x-data="{ items: [] }" x-init="fetchItems()">
+  <div x-show="loading">Loading...</div>
+  <template x-for="item in items">
+    <div x-text="item.name"></div>
+  </template>
+</div>
+<!-- Breaks without JavaScript! -->
+```
+
+### ✅ ALWAYS Start With HTML
+```html
+<!-- DO: HTML-first approach -->
+<div class="items-list">
+  {% for item in items %}
+    <div class="item">{{ item.name }}</div>
+  {% endfor %}
+</div>
+
+<!-- Then enhance with AJAX -->
+<form method="POST" action="/items" 
+      x-target="items-list" 
+      x-merge="append">
+  <input name="name" required x-autofocus>
+  <button type="submit">Add Item</button>
+</form>
+```
+
+## Progressive Enhancement Patterns
+
+### 1. **Form Enhancement Pattern**
+
+#### Step 1: Pure HTML Form
+```html
+<!-- Works without JavaScript -->
+<form method="POST" action="/content/update">
+  <input type="hidden" name="id" value="{{ content.id }}">
+  <input name="title" value="{{ content.title }}" required>
+  <textarea name="content" required>{{ content.content }}</textarea>
+  <button type="submit">Save</button>
+</form>
+```
+
+#### Step 2: Add Alpine AJAX Enhancement
+```html
+<!-- Enhanced with AJAX -->
+<form method="POST" action="/content/update"
+      x-target="content-panel"
+      x-merge="replace">
+  <input type="hidden" name="id" value="{{ content.id }}">
+  <input name="title" value="{{ content.title }}" required x-autofocus>
+  <textarea name="content" required>{{ content.content }}</textarea>
+  <button type="submit">Save</button>
+</form>
+```
+
+### 2. **Navigation Enhancement Pattern**
+
+#### Step 1: Standard Links
+```html
+<!-- Works without JavaScript -->
+<nav>
+  <a href="/dashboard">Dashboard</a>
+  <a href="/modules">Modules</a>
+  <a href="/content">Content</a>
+</nav>
+```
+
+#### Step 2: Add AJAX Navigation
+```html
+<!-- Enhanced with AJAX -->
+<nav>
+  <a href="/dashboard" x-target="main-content" x-target.push>Dashboard</a>
+  <a href="/modules" x-target="main-content" x-target.push>Modules</a>
+  <a href="/content" x-target="main-content" x-target.push>Content</a>
+</nav>
+
+<main id="main-content">
+  {% block content %}{% endblock %}
+</main>
+```
+
+### 3. **List Management Pattern**
+
+#### Step 1: Server-Rendered List
+```html
+<!-- Works without JavaScript -->
+<div id="module-list">
+  {% for module in modules %}
+    <div class="module-card">
+      <h3>{{ module.name }}</h3>
+      <form method="POST" action="/modules/{{ module.id }}/install">
+        <button type="submit">Install</button>
+      </form>
+    </div>
+  {% endfor %}
+</div>
+```
+
+#### Step 2: Add AJAX Updates
+```html
+<!-- Enhanced with AJAX -->
+<div id="module-list">
+  {% for module in modules %}
+    <div class="module-card">
+      <h3>{{ module.name }}</h3>
+      <form method="POST" action="/modules/{{ module.id }}/install"
+            x-target="module-list"
+            x-merge="replace">
+        <button type="submit">Install</button>
+      </form>
+    </div>
+  {% endfor %}
+</div>
+```
+
+## Focus Management Best Practices
+
+### 1. **Form Focus Patterns**
+```html
+<!-- Maintain focus after form submission -->
+<form method="POST" action="/content/create"
+      x-target="content-list"
+      x-merge="prepend">
+  <input name="title" required x-autofocus>
+  <textarea name="content" required></textarea>
+  <button type="submit">Create</button>
+</form>
+```
+
+### 2. **Edit Mode Focus**
+```html
+<!-- Focus on edit field when entering edit mode -->
+<div id="content-item-{{ item.id }}">
+  {% if editing %}
+    <form method="POST" action="/content/{{ item.id }}/update"
+          x-target="content-item-{{ item.id }}"
+          x-merge="replace">
+      <input name="title" value="{{ item.title }}" x-autofocus>
+      <button type="submit">Save</button>
+      <a href="/content">Cancel</a>
+    </form>
+  {% else %}
+    <h3>{{ item.title }}</h3>
+    <a href="/content/{{ item.id }}/edit"
+       x-target="content-item-{{ item.id }}"
+       x-merge="replace">Edit</a>
+  {% endif %}
+</div>
+```
+
+### 3. **Modal/Dialog Focus**
+```html
+<!-- Disable autofocus for custom focus management -->
+<a href="/content/{{ item.id }}/preview" 
+   x-target.nofocus="dialog-content" 
+   @ajax:before="$dispatch('dialog:open')">
+  Preview
+</a>
+
+<dialog x-data="dialog" @dialog:open="open()" @dialog:close="close()">
+  <div id="dialog-content">
+    <!-- Content loaded here -->
+  </div>
+</dialog>
+```
+
+## Alpine AJAX Attribute Patterns
+
+### 1. **Target and Merge Strategies**
+```html
+<!-- Replace entire content -->
+<form x-target="content-panel" x-merge="replace">
+
+<!-- Append new items to list -->
+<form x-target="items-list" x-merge="append">
+
+<!-- Prepend notifications -->
+<form x-target="notifications" x-merge="prepend">
+
+<!-- Update without replacing wrapper -->
+<form x-target="status-display" x-merge="update">
+```
+
+### 2. **History Management**
+```html
+<!-- Push new history entry -->
+<a href="/page" x-target="main" x-target.push>
+
+<!-- Replace current URL -->
+<form action="/search" x-target="results" x-target.replace>
+
+<!-- No history change -->
+<form action="/quick-action" x-target="status">
+```
+
+### 3. **Redirect Handling**
+```html
+<!-- Follow redirects with AJAX -->
+<form action="/update" x-target="content">
+
+<!-- Force full page reload on redirect -->
+<form action="/create" x-target.nofollow="content">
+```
+
+## Testing Strategy
+
+### 1. **Disable JavaScript Testing**
+```bash
+# Test with JavaScript disabled
+# All forms should submit and work
+# All links should navigate properly
+# All functionality should be accessible
+```
+
+### 2. **Progressive Enhancement Checklist**
+- [ ] ✅ **Forms submit without JavaScript**
+- [ ] ✅ **Links navigate without JavaScript**
+- [ ] ✅ **All content is accessible without JavaScript**
+- [ ] ✅ **AJAX enhances but doesn't replace functionality**
+- [ ] ✅ **Focus management works with keyboard navigation**
+- [ ] ✅ **Screen readers can navigate the interface**
+
+## Common Anti-Patterns to Avoid
+
+### ❌ AJAX-Only Functionality
+```html
+<!-- DON'T: Only works with JavaScript -->
+<button @click="deleteItem(id)" x-data>Delete</button>
+```
+
+### ✅ Progressive Enhancement
+```html
+<!-- DO: Works without JavaScript, enhanced with AJAX -->
+<form method="POST" action="/items/{{ id }}/delete"
+      x-target="item-{{ id }}"
+      x-merge="remove"
+      onsubmit="return confirm('Are you sure?')">
+  <button type="submit">Delete</button>
+</form>
+```
+
+### ❌ Client-Side Only State
+```html
+<!-- DON'T: State only exists in JavaScript -->
+<div x-data="{ items: [] }" x-init="loadItems()">
+```
+
+### ✅ Server-Rendered State
+```html
+<!-- DO: State comes from server, enhanced with AJAX -->
+<div id="items-container">
+  {% for item in items %}
+    <div class="item">{{ item.name }}</div>
+  {% endfor %}
+</div>
+```
+
+## Implementation Workflow
+
+### Step 1: Build Pure HTML
+1. **Create working forms** that submit to server endpoints
+2. **Create navigation links** that work without JavaScript
+3. **Ensure all functionality** is accessible via HTML
+4. **Test thoroughly** with JavaScript disabled
+
+### Step 2: Add Alpine AJAX Enhancement
+1. **Add `x-target` attributes** to forms and links
+2. **Choose appropriate merge strategies** (`replace`, `append`, etc.)
+3. **Add `x-autofocus`** for accessibility
+4. **Configure history management** (`push`, `replace`)
+
+### Step 3: Enhance User Experience
+1. **Add loading states** and transitions
+2. **Implement focus management** for complex interactions
+3. **Add error handling** for AJAX failures
+4. **Test with assistive technologies**
+
+## Benefits of This Approach
+
+### 1. **Accessibility**
+- **Works for all users** regardless of JavaScript support
+- **Screen reader compatible** with proper focus management
+- **Keyboard navigation** works correctly
+- **Follows web standards** and best practices
+
+### 2. **Performance**
+- **Faster initial load** with server-rendered HTML
+- **Progressive enhancement** improves perceived performance
+- **Graceful degradation** on slow connections
+- **SEO friendly** with proper HTML structure
+
+### 3. **Maintainability**
+- **Clear separation** between base functionality and enhancements
+- **Easier debugging** when issues arise
+- **Simpler testing** with clear fallback behavior
+- **Future-proof** against JavaScript changes
+
+### 4. **User Experience**
+- **Consistent behavior** across different environments
+- **Smooth interactions** with AJAX enhancements
+- **Reliable functionality** even when JavaScript fails
+- **Inclusive design** that works for everyone
+
+## Success Criteria
+
+A properly progressive enhanced interface should:
+- ✅ **Work completely** without JavaScript enabled
+- ✅ **Enhance smoothly** when JavaScript is available
+- ✅ **Maintain focus** appropriately during interactions
+- ✅ **Follow web accessibility guidelines**
+- ✅ **Provide clear feedback** for all user actions
+- ✅ **Degrade gracefully** when AJAX fails
+
+Remember: **HTML first, AJAX second. Build for everyone, enhance for those who can benefit. Progressive enhancement ensures your application works for all users while providing an enhanced experience when possible.**

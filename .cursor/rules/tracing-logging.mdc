@@ -1,0 +1,198 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Use Tracing Instead of Print Macros
+
+## Core Principle
+Always use structured logging with tracing instead of print macros for error reporting and debugging. Never use `eprintln!`, `println!`, or `dbg!` for error handling - use the appropriate tracing macros instead.
+
+## Golden Rules
+
+### 1. **Use Tracing Macros for All Logging**
+- ✅ `tracing::error!()` instead of `eprintln!()`
+- ✅ `tracing::warn!()` instead of print warnings
+- ✅ `tracing::info!()` instead of `println!()` for information
+- ✅ `tracing::debug!()` instead of `dbg!()` for debugging
+
+### 2. **Structured Logging with Fields**
+- Add context fields to provide meaningful information
+- Use `%` for Display formatting and `?` for Debug formatting
+- Include relevant identifiers (request_id, user_id, etc.)
+
+### 3. **Appropriate Log Levels**
+- **ERROR**: System errors, failures, exceptions
+- **WARN**: Unexpected conditions, validation failures, deprecated usage
+- **INFO**: Normal operation events, request completion
+- **DEBUG**: Detailed debugging information, development-only
+
+## Implementation Guidelines
+
+### ❌ NEVER Do This:
+```rust
+// DON'T use print macros for errors
+eprintln!("Error refreshing modules: {:?}", err);
+println!("Failed to connect to database");
+dbg!(user_data);
+
+// DON'T use simple string messages
+tracing::error!("Something went wrong");
+```
+
+### ✅ ALWAYS Do This:
+```rust
+// Use structured tracing with context
+tracing::error!(
+    error = %err,
+    operation = "refresh_modules",
+    "Failed to refresh modules"
+);
+
+tracing::warn!(
+    user_id = %user.id,
+    field = "email",
+    message = %validation_error,
+    "Validation failed for user input"
+);
+
+tracing::info!(
+    request_id = %request_id,
+    method = %method,
+    uri = %uri,
+    duration_ms = duration.as_millis(),
+    "Request completed successfully"
+);
+```
+
+## Conversion Examples
+
+### Error Handling
+```rust
+// ❌ BEFORE
+eprintln!("Error refreshing modules: {:?}", err);
+
+// ✅ AFTER
+tracing::error!(
+    error = %err,
+    operation = "refresh_modules",
+    context = "user_initiated_refresh",
+    "Failed to refresh modules from API"
+);
+```
+
+### General Information
+```rust
+// ❌ BEFORE
+println!("Starting server on port {}", port);
+
+// ✅ AFTER
+tracing::info!(
+    port = port,
+    service = "admin_server",
+    "Server starting successfully"
+);
+```
+
+### Debugging
+```rust
+// ❌ BEFORE
+dbg!(&user_data);
+
+// ✅ AFTER
+tracing::debug!(
+    user_data = ?user_data,
+    operation = "user_processing",
+    "Processing user data"
+);
+```
+
+## Context Fields Guidelines
+
+### Always Include:
+- **Operation context**: What was being attempted
+- **Identifiers**: request_id, user_id, resource_id, etc.
+- **Error details**: Specific error information
+- **Business context**: Why this operation matters
+
+### Examples:
+```rust
+tracing::error!(
+    error = %database_error,
+    table = "users",
+    operation = "insert",
+    user_id = %user.id,
+    context = "user_registration",
+    "Database operation failed"
+);
+
+tracing::warn!(
+    field = "password",
+    user_id = %user.id,
+    attempt_count = retry_count,
+    context = "authentication",
+    "Password validation failed"
+);
+```
+
+## Benefits of Tracing
+
+### 1. **Request Correlation**
+- Automatic request ID correlation through spans
+- Easy to trace entire request lifecycle
+- Structured context inheritance
+
+### 2. **Production Ready**
+- Configurable log levels
+- JSON output for log aggregation
+- Integration with monitoring systems
+
+### 3. **Development Friendly**
+- Rich context information
+- Searchable and filterable logs
+- Performance insights
+
+### 4. **Maintainability**
+- Consistent logging patterns
+- Easier debugging
+- Better error tracking
+
+## Migration Strategy
+
+### When Refactoring:
+1. **Identify all print macros** in the codebase
+2. **Convert one by one** with appropriate context
+3. **Add structured fields** for better searchability
+4. **Use appropriate log levels** based on severity
+
+### Search Patterns to Replace:
+```bash
+# Find problematic patterns
+grep -r "eprintln!" src/
+grep -r "println!" src/ | grep -v test
+grep -r "dbg!" src/
+```
+
+## Exception Cases
+
+### Only Use Print Macros For:
+- ✅ **Test output** - test assertions and debug prints
+- ✅ **CLI tools** - direct user feedback in command-line tools
+- ✅ **Build scripts** - build.rs compilation messages
+
+### Never Use Print Macros For:
+- ❌ **Error handling** in application code
+- ❌ **Debug information** in libraries
+- ❌ **Status updates** in server applications
+- ❌ **API responses** or web applications
+
+## Success Criteria
+
+Code follows tracing best practices when:
+- ✅ **No print macros** for error handling
+- ✅ **Structured fields** provide context
+- ✅ **Appropriate log levels** are used
+- ✅ **Request correlation** works automatically
+- ✅ **Production-ready** logging configuration
+
+Remember: **Structured logging is professional logging. Print macros are for development toys.**
