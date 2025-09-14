@@ -1,0 +1,16 @@
+{
+  "Comment": "Clean lambda chaining - each lambda defines its own input/output contract",
+  "StartAt": "FirstHelloWorld",
+  "States": {
+    "FirstHelloWorld": {
+      "Type": "Task",
+      "Resource": "rustws:lambda:hello_world",
+      "Next": "SecondHelloWorld"
+    },
+    "SecondHelloWorld": {
+      "Type": "Task", 
+      "Resource": "rustws:lambda:hello_world",
+      "End": true
+    }
+  }
+}
