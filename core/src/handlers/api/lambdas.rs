@@ -125,10 +125,22 @@ pub async fn execute_lambda_handler(
         ));
     }
 
-    // Create request from path parameter - no input data for GET requests
+    // Create sample HelloWorld input for testing
+    let sample_input = serde_json::json!({
+        "text": "Test input from API",
+        "count": 42
+    });
+
+    let input_data = serde_json::to_vec(&sample_input).map_err(|e| {
+        crate::error_handling::types::AppError::internal(&format!(
+            "Failed to serialize input: {}",
+            e
+        ))
+    })?;
+
     let request = ExecuteLambdaRequest {
         function_name: Some(lambda_name.clone()),
-        input_data: Vec::new(), // Empty input for GET requests
+        input_data,
     };
 
     info!(

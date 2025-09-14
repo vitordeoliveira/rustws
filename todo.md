@@ -17,10 +17,17 @@
   - Context: Improve type safety and code clarity in lambda data transfer objects
 
 - [ ] Remove majority of not necessary js in the html files
+
   - Clean up HTML files by removing unnecessary JavaScript code
   - Priority: Medium
   - Urgency: Medium
   - Context: Reduce bundle size and improve page performance
+
+- [ ] Check and improve the compile_rust to WASM in lambdas mod.rs
+  - Enhance the compilation process to support dependency files for lambdas
+  - Priority: Medium
+  - Urgency: Medium
+  - Context: Allow lambdas to have custom dependencies beyond the current hardcoded serde setup
 
 ## Low Priority
 

@@ -52,35 +52,47 @@ impl LambdaStorage {
         fs::create_dir_all(&temp_dir)
             .map_err(|e| AppError::internal(&format!("Failed to create temp dir: {}", e)))?;
 
-        // Write source code to temp file
-        let source_path = temp_dir.join("main.rs");
-        fs::write(&source_path, source_code)
+        // Create src directory
+        let src_dir = temp_dir.join("src");
+        fs::create_dir_all(&src_dir)
+            .map_err(|e| AppError::internal(&format!("Failed to create src dir: {}", e)))?;
+
+        // Create Cargo.toml with serde dependencies
+        let cargo_toml = r#"[package]
+name = "lambda_function"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.145"
+
+
+[profile.release]
+opt-level = "s"
+lto = true
+panic = "abort"
+strip = "symbols"
+"#;
+
+        let cargo_toml_path = temp_dir.join("Cargo.toml");
+        fs::write(&cargo_toml_path, cargo_toml)
+            .map_err(|e| AppError::internal(&format!("Failed to write Cargo.toml: {}", e)))?;
+
+        // Write source code to lib.rs
+        let lib_path = src_dir.join("lib.rs");
+        fs::write(&lib_path, source_code)
             .map_err(|e| AppError::internal(&format!("Failed to write source: {}", e)))?;
 
-        // Compile with rustc to WASM using proper flags
-        let wasm_output = temp_dir.join("output.wasm");
-        let output = Command::new("rustc")
-            .args([
-                "--target",
-                "wasm32-unknown-unknown",
-                "--crate-type",
-                "cdylib",
-                "-C",
-                "opt-level=s", // Optimize for size
-                "-C",
-                "lto=yes", // Enable link-time optimization
-                "-C",
-                "panic=abort", // Use abort instead of unwind for WASM
-                "-C",
-                "strip=symbols", // Strip debug symbols
-                "--edition",
-                "2021", // Use Rust 2021 edition
-                source_path.to_str().unwrap(),
-                "-o",
-                wasm_output.to_str().unwrap(),
-            ])
+        // Compile with cargo to WASM
+        let output = Command::new("cargo")
+            .args(["build", "--target", "wasm32-unknown-unknown", "--release"])
+            .current_dir(&temp_dir)
             .output()
-            .map_err(|e| AppError::internal(&format!("Failed to run rustc: {}", e)))?;
+            .map_err(|e| AppError::internal(&format!("Failed to run cargo: {}", e)))?;
 
         if !output.status.success() {
             let error = String::from_utf8_lossy(&output.stderr);
@@ -92,7 +104,13 @@ impl LambdaStorage {
         }
 
         // Read compiled WASM bytes
-        let wasm_bytes = fs::read(&wasm_output)
+        let wasm_path = temp_dir
+            .join("target")
+            .join("wasm32-unknown-unknown")
+            .join("release")
+            .join("lambda_function.wasm");
+
+        let wasm_bytes = fs::read(&wasm_path)
             .map_err(|e| AppError::internal(&format!("Failed to read WASM output: {}", e)))?;
 
         // Cleanup temporary directory
@@ -101,8 +119,19 @@ impl LambdaStorage {
         Ok(wasm_bytes)
     }
 
-    /// Check if rustc with WASM target is available
+    /// Check if cargo with WASM target is available
     fn check_rust_wasm_toolchain(&self) -> AppResult<()> {
+        // Check if cargo is available
+        let cargo_check = Command::new("cargo")
+            .args(["--version"])
+            .output()
+            .map_err(|e| AppError::internal(&format!("Cargo not found: {}", e)))?;
+
+        if !cargo_check.status.success() {
+            return Err(AppError::internal("Cargo is required but not available"));
+        }
+
+        // Check if WASM target is available
         let output = Command::new("rustc")
             .args(["--print", "target-list"])
             .output()
@@ -856,9 +885,15 @@ impl LambdaRepository for LambdaStorage {
 }
 
 impl LambdaStorage {
-    /// Execute WASM bytecode using wasmer
+    /// Execute WASM bytecode using wasmer with structured data support
+    #[instrument(
+        skip_all,
+        fields(infrastructure = "lambda_storage", operation = "execute_wasm")
+    )]
     async fn execute_wasm(&self, wasm_bytes: &[u8], input_data: &[u8]) -> AppResult<Vec<u8>> {
-        use wasmer::{Engine, Instance, Module, Store};
+        use wasmer::{Engine, Instance, Module, Store, Value};
+
+        tracing::info!("Executing WASM lambda with structured data support");
 
         // Create wasmer engine and store using universal engine (avoids unwind issues)
         let engine = Engine::default();
@@ -878,33 +913,127 @@ impl LambdaStorage {
             .get_function("handler")
             .map_err(|e| AppError::validation(&format!("Handler function not found: {}", e)))?;
 
-        // For now, we'll implement a simple execution that calls the handler
-        // In the future, we can implement memory passing for input_data
-        let _input_data = input_data; // TODO: Pass input data to WASM function
+        // Get WASM memory for input/output operations
+        let memory = instance
+            .exports
+            .get_memory("memory")
+            .map_err(|_| AppError::validation("WASM memory not found"))?;
 
-        // Call the handler function (assuming it takes no params for now)
+        // Allocate memory for input data
+        let input_len = input_data.len();
+        let input_ptr = {
+            // Get current memory size in pages (64KB each)
+            let memory_view = memory.view(&store);
+            let current_size = memory_view.data_size() as usize;
+
+            // Use current memory end as input pointer
+            let ptr = current_size;
+
+            // Grow memory if needed to accommodate input
+            let needed_pages = ((ptr + input_len + 65535) / 65536) - (current_size / 65536);
+            if needed_pages > 0 {
+                memory.grow(&mut store, needed_pages as u32).map_err(|e| {
+                    AppError::validation(&format!("Failed to grow WASM memory: {}", e))
+                })?;
+            }
+
+            ptr
+        };
+
+        // Write input data to WASM memory
+        {
+            let memory_view = memory.view(&store);
+            for (i, &byte) in input_data.iter().enumerate() {
+                memory_view
+                    .write_u8((input_ptr + i) as u64, byte)
+                    .map_err(|e| {
+                        AppError::validation(&format!(
+                            "Failed to write input to WASM memory: {}",
+                            e
+                        ))
+                    })?;
+            }
+        }
+
+        // Allocate memory for output buffer (max 1MB)
+        let max_output_len = 1024 * 1024; // 1MB max output
+        let output_ptr = {
+            let memory_view = memory.view(&store);
+            let current_size = memory_view.data_size() as usize;
+            let ptr = current_size;
+
+            // Grow memory if needed to accommodate output buffer
+            let needed_pages = ((ptr + max_output_len + 65535) / 65536) - (current_size / 65536);
+            if needed_pages > 0 {
+                memory.grow(&mut store, needed_pages as u32).map_err(|e| {
+                    AppError::validation(&format!("Failed to grow WASM memory for output: {}", e))
+                })?;
+            }
+
+            ptr
+        };
+
+        tracing::debug!(
+            input_len = input_len,
+            input_ptr = input_ptr,
+            output_ptr = output_ptr,
+            max_output_len = max_output_len,
+            "Calling handler with pointer-based interface"
+        );
+
+        // Call the handler function with pointer-based interface
         let results = handler
-            .call(&mut store, &[])
+            .call(
+                &mut store,
+                &[
+                    Value::I32(input_ptr as i32),      // ptr_in
+                    Value::I32(input_len as i32),      // len_in
+                    Value::I32(output_ptr as i32),     // ptr_out
+                    Value::I32(max_output_len as i32), // max_out_len
+                ],
+            )
             .map_err(|e| AppError::validation(&format!("WASM function call failed: {}", e)))?;
 
-        // For now, return empty output data
-        // TODO: Extract output data from WASM memory or return values
-        let output_data = if results.is_empty() {
-            b"Hello from WASM!".to_vec()
-        } else {
-            // Convert first result to bytes if it's a number
-            match results[0].ty() {
-                wasmer::Type::I32 => {
-                    let val = results[0].unwrap_i32();
-                    val.to_le_bytes().to_vec()
-                }
-                wasmer::Type::I64 => {
-                    let val = results[0].unwrap_i64();
-                    val.to_le_bytes().to_vec()
-                }
-                _ => b"Unsupported return type".to_vec(),
+        if results.is_empty() {
+            return Err(AppError::validation("Handler function returned no results"));
+        }
+
+        // Extract the actual output length from results
+        let actual_output_len = match results[0] {
+            Value::I32(len) => len as usize,
+            _ => {
+                return Err(AppError::validation(
+                    "Handler function must return output length (i32)",
+                ));
             }
         };
+
+        if actual_output_len > max_output_len {
+            return Err(AppError::validation(&format!(
+                "Handler returned invalid output length: {} > {}",
+                actual_output_len, max_output_len
+            )));
+        }
+
+        // Read the output data from WASM memory
+        let output_data = {
+            let memory_view = memory.view(&store);
+            let mut output_bytes = Vec::with_capacity(actual_output_len);
+
+            for i in 0..actual_output_len {
+                let byte = memory_view.read_u8((output_ptr + i) as u64).map_err(|e| {
+                    AppError::validation(&format!("Failed to read output from WASM memory: {}", e))
+                })?;
+                output_bytes.push(byte);
+            }
+
+            output_bytes
+        };
+
+        tracing::debug!(
+            output_len = actual_output_len,
+            "Successfully received output from lambda"
+        );
 
         Ok(output_data)
     }

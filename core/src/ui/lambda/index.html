@@ -367,11 +367,15 @@ async function testLambda(lambdaName) {
         if (response.ok) {
             if (result.Success) {
                 const outputData = result.Success.output_data;
-                // Convert bytes back to number for display (assuming i32 little-endian)
-                const value = outputData.length >= 4 ? 
-                    outputData[0] + (outputData[1] << 8) + (outputData[2] << 16) + (outputData[3] << 24) : 
-                    'Binary data';
-                showToast(`✅ ${lambdaName} executed successfully! Result: ${value}`, true);
+                // Parse JSON output from HelloWorld struct
+                try {
+                    const jsonString = new TextDecoder().decode(new Uint8Array(outputData));
+                    const helloWorldResult = JSON.parse(jsonString);
+                    showToast(`✅ ${lambdaName} executed successfully! Text: "${helloWorldResult.text}", Count: ${helloWorldResult.count}`, true);
+                } catch (parseError) {
+                    console.error('Failed to parse JSON output:', parseError);
+                    showToast(`✅ ${lambdaName} executed successfully! Output: ${outputData.length} bytes`, true);
+                }
             } else if (result.Failed) {
                 showToast(`❌ Execution failed: ${result.Failed.error_message}`, false);
             }
