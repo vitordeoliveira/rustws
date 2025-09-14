@@ -46,7 +46,7 @@ pub fn create_private_router() -> Router<AppState> {
         )
         .route(
             "/api/lambda/execute/{lambda_name}",
-            get(api::lambdas::execute_lambda_handler),
+            post(api::lambdas::execute_lambda_handler),
         )
         .route(
             "/api/lambda/create",

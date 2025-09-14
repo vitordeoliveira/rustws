@@ -94,7 +94,7 @@ pub async fn compile_lambda_handler(
     }
 }
 
-/// Execute a lambda function
+/// Execute a lambda function with custom JSON input
 #[instrument(
     skip_all,
     fields(
@@ -108,10 +108,11 @@ pub async fn execute_lambda_handler(
     _auth_session: AuthSession<AuthBackend>,
     lambda_service: LambdasService<LambdaStorage>,
     Path(lambda_name): Path<String>,
+    Json(input_json): Json<serde_json::Value>,
 ) -> AppResult<Json<ExecuteLambdaResponse>> {
     info!(
         lambda_name = %lambda_name,
-        "Lambda execution request received"
+        "Lambda execution request received with custom input"
     );
 
     // Validate lambda name
@@ -125,18 +126,21 @@ pub async fn execute_lambda_handler(
         ));
     }
 
-    // Create sample HelloWorld input for testing
-    let sample_input = serde_json::json!({
-        "text": "Test input from API",
-        "count": 42
-    });
-
-    let input_data = serde_json::to_vec(&sample_input).map_err(|e| {
-        crate::error_handling::types::AppError::internal(&format!(
-            "Failed to serialize input: {}",
-            e
-        ))
+    // Convert input JSON to bytes for lambda execution
+    let input_data = serde_json::to_vec(&input_json).map_err(|e| {
+        warn!(
+            lambda_name = %lambda_name,
+            error = %e,
+            "Failed to serialize input JSON"
+        );
+        crate::error_handling::types::AppError::validation(&format!("Invalid input JSON: {}", e))
     })?;
+
+    info!(
+        lambda_name = %lambda_name,
+        input_size_bytes = input_data.len(),
+        "Input JSON serialized successfully"
+    );
 
     let request = ExecuteLambdaRequest {
         function_name: Some(lambda_name.clone()),

@@ -230,28 +230,63 @@ function hideToast() {
 }
 
 // Load default Rust template
-function loadTemplate() {
-    const template = `//! Lambda Function - Rust Example
-//! 
-//! This is a template for creating WASM-compatible lambda functions
+        function loadTemplate() {
+            const template = `//! Lambda Function - Rust Example
+//!
+//! This lambda demonstrates structured data input/output using JSON serialization.
+//! Focus on customizing the lambda_fn - the handler is standardized infrastructure.
 
-/// Main handler function for the lambda
-/// This function will be called by the wasmer runtime
-#[no_mangle]
-pub extern "C" fn handler() -> i32 {
-    // Your lambda logic here
-    // Return an integer result
-    42
+use serde::{Deserialize, Serialize};
+
+/// Input structure - define what data your lambda expects
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct LambdaInput {
+    pub message: String,
+    pub count: i32,
 }
 
-/// Add two numbers - example function
-#[no_mangle]
-pub extern "C" fn add(a: i32, b: i32) -> i32 {
-    a + b
+/// Output structure - define what data your lambda returns
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LambdaOutput {
+    pub result: String,
+    pub processed_count: i32,
+    pub timestamp: String,
 }
 
-// Your custom functions here
-// Add more functions as needed`;
+/// Main handler function - STANDARDIZED, DON'T CHANGE THIS
+/// Handles all WASM interface complexity (pointers, serialization, etc.)
+#[no_mangle]
+pub extern "C" fn handler(
+    ptr_in: *const u8,
+    len_in: usize,
+    ptr_out: *mut u8,
+    max_out_len: usize,
+) -> usize {
+    let input_slice = unsafe { std::slice::from_raw_parts(ptr_in, len_in) };
+    let input: LambdaInput = serde_json::from_slice(input_slice).unwrap();
+
+    let output = lambda_fn(input);
+    let output_bytes = serde_json::to_vec(&output).unwrap();
+
+    let copy_len = std::cmp::min(max_out_len, output_bytes.len());
+    unsafe {
+        std::ptr::copy_nonoverlapping(output_bytes.as_ptr(), ptr_out, copy_len);
+    }
+    copy_len
+}
+
+/// YOUR BUSINESS LOGIC GOES HERE - CUSTOMIZE THIS FUNCTION!
+/// Takes your input type and returns your output type
+fn lambda_fn(input: LambdaInput) -> LambdaOutput {
+    // Example business logic - replace with your own!
+    let processed_result = input.count * 2 + input.message.len() as i32;
+    
+    LambdaOutput {
+        result: format!("Processed: {}. Calculated: {}", input.message, processed_result),
+        processed_count: processed_result,
+        timestamp: "2024-01-01T00:00:00Z".to_string(), // Static timestamp for demo
+    }
+}`;
     
     document.getElementById('sourceCode').value = template;
     showToast('✅ Template loaded successfully!', true);
