@@ -1,4 +1,10 @@
+use std::fs;
 use std::path::{Path, PathBuf};
+use tracing::instrument;
+
+use crate::business_logic::workflows::{WorkflowRepository, WorkflowStatus, WorkflowSummary};
+use crate::error_handling::types::{AppError, AppResult};
+use crate::infrastructure::step_functions::workflow::Workflow;
 
 pub mod workflow;
 
@@ -36,5 +42,119 @@ impl StepFunctionStorage {
 impl Default for StepFunctionStorage {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl WorkflowRepository for StepFunctionStorage {
+    #[instrument(
+        skip_all,
+        fields(repository = "step_functions", operation = "get_all_workflows")
+    )]
+    async fn get_all(&self) -> AppResult<Vec<WorkflowSummary>> {
+        let workflows_dir = self.workflows_dir();
+
+        // Return empty list if workflows directory doesn't exist
+        if !workflows_dir.exists() {
+            tracing::info!("Workflows directory does not exist, returning empty list");
+            return Ok(Vec::new());
+        }
+
+        let entries = fs::read_dir(&workflows_dir).map_err(|e| {
+            AppError::internal(&format!("Failed to read workflows directory: {}", e))
+        })?;
+
+        let mut summaries = Vec::new();
+        for entry in entries {
+            let entry = entry.map_err(|e| {
+                AppError::internal(&format!("Failed to read directory entry: {}", e))
+            })?;
+            let path = entry.path();
+
+            // Only process JSON files
+            if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("json") {
+                match self.process_workflow_file(&path).await {
+                    Ok(Some(summary)) => {
+                        tracing::debug!(workflow_name = %summary.name, "Found workflow");
+                        summaries.push(summary);
+                    }
+                    Ok(None) => {
+                        tracing::warn!(file = ?path, "Skipped invalid workflow file");
+                    }
+                    Err(e) => {
+                        tracing::error!(file = ?path, error = %e, "Failed to process workflow file");
+                        // Continue processing other files even if one fails
+                    }
+                }
+            }
+        }
+
+        tracing::info!(count = summaries.len(), "Found workflows");
+        Ok(summaries)
+    }
+}
+
+impl StepFunctionStorage {
+    /// Process a single workflow JSON file and create a WorkflowSummary
+    #[instrument(skip_all, fields(operation = "process_workflow_file"))]
+    async fn process_workflow_file(&self, path: &Path) -> AppResult<Option<WorkflowSummary>> {
+        // Extract workflow name from filename
+        let name = path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("unknown")
+            .to_string();
+
+        // Read and parse the workflow JSON file
+        let content = fs::read_to_string(path).map_err(|e| {
+            AppError::internal(&format!("Failed to read workflow file '{}': {}", name, e))
+        })?;
+
+        // Parse JSON to validate structure and extract metadata
+        let workflow: Workflow = serde_json::from_str(&content).map_err(|e| {
+            AppError::internal(&format!(
+                "Failed to parse workflow '{}' as JSON: {}",
+                name, e
+            ))
+        })?;
+
+        // Get file metadata for timestamps
+        let metadata = fs::metadata(path).map_err(|e| {
+            AppError::internal(&format!(
+                "Failed to read file metadata for '{}': {}",
+                name, e
+            ))
+        })?;
+
+        // Convert file times to chrono DateTime
+        let created_at = metadata
+            .created()
+            .or_else(|_| metadata.modified())
+            .map(|time| chrono::DateTime::<chrono::Utc>::from(time))
+            .unwrap_or_else(|_| chrono::Utc::now());
+
+        let updated_at = metadata
+            .modified()
+            .map(|time| chrono::DateTime::<chrono::Utc>::from(time))
+            .unwrap_or_else(|_| chrono::Utc::now());
+
+        // Validate workflow structure to determine status
+        let status = match workflow.validate() {
+            Ok(_) => WorkflowStatus::Active,
+            Err(_) => WorkflowStatus::Error,
+        };
+
+        // Count the number of states
+        let state_count = workflow.states.len() as u32;
+
+        let summary = WorkflowSummary {
+            name,
+            description: workflow.comment,
+            status,
+            state_count,
+            created_at,
+            updated_at,
+        };
+
+        Ok(Some(summary))
     }
 }

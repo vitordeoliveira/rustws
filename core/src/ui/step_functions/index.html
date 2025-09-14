@@ -17,15 +17,15 @@
                 <div class="bg-white/10 rounded-lg p-6 backdrop-blur-sm">
                     <div class="flex items-center space-x-4">
                         <div class="text-center">
-                            <div class="text-2xl font-bold">{{ step_functions | length }}</div>
+                            <div class="text-2xl font-bold">{{ workflows | length }}</div>
                             <div class="text-sm text-cyan-200">Workflows</div>
                         </div>
                         <div class="w-px h-12 bg-white/20"></div>
                         <div class="text-center">
                             <div class="text-2xl font-bold">
                                 {% set active_count = 0 %}
-                                {% for sf in step_functions %}
-                                    {% if sf.status == "Active" %}
+                                {% for workflow in workflows %}
+                                    {% if workflow.status == "Active" %}
                                         {% set_global active_count = active_count + 1 %}
                                     {% endif %}
                                 {% endfor %}
@@ -46,7 +46,7 @@
         <div class="flex items-center space-x-4">
             <h2 class="text-xl font-semibold text-gray-900">Workflow Management</h2>
             <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-cyan-100 text-cyan-800">
-                {{ step_functions | length }} workflow{{ step_functions | length | pluralize }}
+                {{ workflows | length }} workflow{{ workflows | length | pluralize }}
             </span>
         </div>
         
@@ -66,25 +66,25 @@
 
 <!-- Step Functions List -->
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
-    {% if step_functions %}
+    {% if workflows %}
         <div class="grid gap-6">
-            {% for sf in step_functions %}
+            {% for workflow in workflows %}
                 <div class="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
                     <div class="p-6">
                         <div class="flex items-start justify-between">
                             <div class="flex-1">
                                 <div class="flex items-center space-x-3 mb-2">
-                                    <h3 class="text-lg font-semibold text-gray-900">{{ sf.name }}</h3>
+                                    <h3 class="text-lg font-semibold text-gray-900">{{ workflow.name }}</h3>
                                     
                                     <!-- Status Badge -->
-                                    {% if sf.status == "Active" %}
+                                    {% if workflow.status == "Active" %}
                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                             <svg class="w-2 h-2 mr-1 fill-current" viewBox="0 0 8 8">
                                                 <circle cx="4" cy="4" r="3"></circle>
                                             </svg>
                                             Active
                                         </span>
-                                    {% elif sf.status == "Draft" %}
+                                    {% elif workflow.status == "Draft" %}
                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
                                             <svg class="w-2 h-2 mr-1 fill-current" viewBox="0 0 8 8">
                                                 <circle cx="4" cy="4" r="3"></circle>
@@ -101,26 +101,26 @@
                                     {% endif %}
                                 </div>
                                 
-                                {% if sf.description %}
-                                    <p class="text-sm text-gray-600 mb-4">{{ sf.description }}</p>
+                                {% if workflow.description %}
+                                    <p class="text-sm text-gray-600 mb-4">{{ workflow.description }}</p>
                                 {% endif %}
                                 
                                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                                     <div>
                                         <span class="text-gray-500">ID:</span>
-                                        <span class="font-mono text-gray-900 ml-1">{{ sf.id }}</span>
+                                        <span class="font-mono text-gray-900 ml-1">{{ workflow.name }}</span>
                                     </div>
                                     <div>
                                         <span class="text-gray-500">Created:</span>
-                                        <span class="text-gray-900 ml-1">{{ sf.created_at | date(format="%Y-%m-%d") }}</span>
+                                        <span class="text-gray-900 ml-1">{{ workflow.created_at | date(format="%Y-%m-%d") }}</span>
                                     </div>
                                     <div>
                                         <span class="text-gray-500">Updated:</span>
-                                        <span class="text-gray-900 ml-1">{{ sf.updated_at | date(format="%Y-%m-%d") }}</span>
+                                        <span class="text-gray-900 ml-1">{{ workflow.updated_at | date(format="%Y-%m-%d") }}</span>
                                     </div>
                                     <div>
                                         <span class="text-gray-500">Status:</span>
-                                        <span class="text-gray-900 ml-1">{{ sf.status }}</span>
+                                        <span class="text-gray-900 ml-1">{{ workflow.status }}</span>
                                     </div>
                                 </div>
                             </div>
@@ -129,14 +129,14 @@
                             <div class="flex items-center space-x-2 ml-4">
                                 <div class="flex items-center space-x-1">
                                     <!-- Execute -->
-                                    <button class="text-blue-600 hover:text-blue-700 hover:bg-blue-50 p-2 rounded-md cursor-pointer transition-all duration-200 transform hover:scale-105" title="Execute" onclick="executeStepFunction('{{ sf.name }}')">
+                                    <button class="text-blue-600 hover:text-blue-700 hover:bg-blue-50 p-2 rounded-md cursor-pointer transition-all duration-200 transform hover:scale-105" title="Execute" onclick="executeStepFunction('{{ workflow.name }}')">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1.5a2.5 2.5 0 010 5H9m-3-5a5 5 0 1110 0m-6 7v.01"></path>
                                         </svg>
                                     </button>
                                     
                                     <!-- View Definition -->
-                                    <button class="text-gray-600 hover:text-gray-700 hover:bg-gray-50 p-2 rounded-md cursor-pointer transition-all duration-200 transform hover:scale-105" title="View Definition" onclick="viewDefinition('{{ sf.name }}')">
+                                    <button class="text-gray-600 hover:text-gray-700 hover:bg-gray-50 p-2 rounded-md cursor-pointer transition-all duration-200 transform hover:scale-105" title="View Definition" onclick="viewDefinition('{{ workflow.name }}')">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
@@ -144,14 +144,14 @@
                                     </button>
                                     
                                     <!-- Edit -->
-                                    <a href="/step-functions/edit/{{ sf.name }}" class="text-orange-600 hover:text-orange-700 hover:bg-orange-50 p-2 rounded-md cursor-pointer transition-all duration-200 transform hover:scale-105" title="Edit">
+                                    <a href="/step-functions/edit/{{ workflow.name }}" class="text-orange-600 hover:text-orange-700 hover:bg-orange-50 p-2 rounded-md cursor-pointer transition-all duration-200 transform hover:scale-105" title="Edit">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
                                         </svg>
                                     </a>
                                     
                                     <!-- Delete -->
-                                    <button class="text-red-600 hover:text-red-700 hover:bg-red-50 p-2 rounded-md cursor-pointer transition-all duration-200 transform hover:scale-105" title="Delete" onclick="deleteStepFunction('{{ sf.name }}')">
+                                    <button class="text-red-600 hover:text-red-700 hover:bg-red-50 p-2 rounded-md cursor-pointer transition-all duration-200 transform hover:scale-105" title="Delete" onclick="deleteStepFunction('{{ workflow.name }}')">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                                         </svg>
@@ -235,8 +235,8 @@
 <script>
 // Store step function definitions
 const stepFunctionDefinitions = {
-    {% for sf in step_functions %}
-    "{{ sf.name }}": {{ sf.definition | safe }},
+    {% for workflow in workflows %}
+    "{{ workflow.name }}": "{{ workflow.state_count }} states",
     {% endfor %}
 };
 

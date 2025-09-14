@@ -9,9 +9,9 @@ use tracing::instrument;
 
 use crate::{
     auth::dto::AuthBackend,
-    business_logic::lambdas::LambdasService,
+    business_logic::{lambdas::LambdasService, workflows::WorkflowsService},
     error_handling::types::AppResult,
-    infrastructure::lambdas::LambdaStorage,
+    infrastructure::{lambdas::LambdaStorage, step_functions::StepFunctionStorage},
     state::AppState,
     ui::{
         Ui,
@@ -19,7 +19,7 @@ use crate::{
         home::HomePageUi,
         lambda::{CreateLambdaPageUi, EditLambdaPageUi, LambdaPageUi},
         monitoring::{MonitoringPageUi, get_mock_monitoring_data},
-        step_functions::{CreateStepFunctionPageUi, StepFunctionsPageUi, get_mock_step_functions},
+        step_functions::{CreateStepFunctionPageUi, StepFunctionsPageUi},
     },
 };
 
@@ -160,13 +160,14 @@ pub async fn edit_lambda_handler(
 pub async fn step_functions_handler(
     State(state): State<AppState>,
     auth_session: AuthSession<AuthBackend>,
+    workflows_service: WorkflowsService<StepFunctionStorage>,
 ) -> AppResult<Html<String>> {
     let user = auth_session.user.unwrap();
 
-    // Get mock step functions for UI demonstration
-    let step_functions = get_mock_step_functions();
+    // Get workflow data from service
+    let workflows = workflows_service.get_all().await?;
 
-    let step_functions_page_ui = StepFunctionsPageUi::new(user, step_functions);
+    let step_functions_page_ui = StepFunctionsPageUi::new(user, workflows);
     let html = step_functions_page_ui.render_html(&state.tera)?;
 
     Ok(html)
