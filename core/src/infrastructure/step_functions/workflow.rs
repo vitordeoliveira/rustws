@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use tracing::instrument;
 
 /// Main workflow definition structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -57,23 +58,7 @@ pub struct TaskState {
     #[serde(rename = "End", skip_serializing_if = "Option::is_none")]
     pub end: Option<bool>,
 
-    /// JSON path to select input data
-    #[serde(rename = "InputPath", skip_serializing_if = "Option::is_none")]
-    pub input_path: Option<String>,
-
-    /// JSON path to select output data
-    #[serde(rename = "OutputPath", skip_serializing_if = "Option::is_none")]
-    pub output_path: Option<String>,
-
-    /// JSON path where to store the task result
-    #[serde(rename = "ResultPath", skip_serializing_if = "Option::is_none")]
-    pub result_path: Option<String>,
-
-    /// Static parameters to pass to the task
-    #[serde(rename = "Parameters", skip_serializing_if = "Option::is_none")]
-    pub parameters: Option<serde_json::Value>,
-
-    /// Retry configuration
+    /// Retry configuration for error handling
     #[serde(rename = "Retry", skip_serializing_if = "Option::is_none")]
     pub retry: Option<Vec<RetryConfig>>,
 
@@ -233,6 +218,7 @@ impl Workflow {
     }
 
     /// Validate the workflow structure
+    #[instrument(skip_all, fields(operation = "validate_workflow"))]
     pub fn validate(&self) -> Result<(), String> {
         // Check if start state exists
         if !self.states.contains_key(&self.start_at) {
@@ -250,6 +236,7 @@ impl Workflow {
         Ok(())
     }
 
+    #[instrument(skip_all, fields(operation = "validate_state", state_name = %name))]
     fn validate_state(&self, name: &str, state: &State) -> Result<(), String> {
         match state {
             State::Task(task) => {
@@ -310,36 +297,42 @@ impl Workflow {
     }
 }
 
-// Helper functions for common state creation
+// Helper functions for common state creation - RUSTWS Clean Approach
 impl TaskState {
     /// Create a simple task state with resource and next
+    /// Clean RUSTWS approach - just connect lambdas, no transformation fields
     pub fn new(resource: String, next: String) -> Self {
         Self {
             resource,
             next: Some(next),
             end: None,
-            input_path: None,
-            output_path: None,
-            result_path: None,
-            parameters: None,
             retry: None,
             catch: None,
         }
     }
 
     /// Create a terminal task state (with End: true)
+    /// Clean RUSTWS approach - minimal fields for terminal states
     pub fn terminal(resource: String) -> Self {
         Self {
             resource,
             next: None,
             end: Some(true),
-            input_path: None,
-            output_path: None,
-            result_path: None,
-            parameters: None,
             retry: None,
             catch: None,
         }
+    }
+
+    /// Add retry configuration to task state
+    pub fn with_retry(mut self, retry: Vec<RetryConfig>) -> Self {
+        self.retry = Some(retry);
+        self
+    }
+
+    /// Add catch configuration to task state  
+    pub fn with_catch(mut self, catch: Vec<CatchConfig>) -> Self {
+        self.catch = Some(catch);
+        self
     }
 }
 
