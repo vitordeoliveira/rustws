@@ -2,7 +2,10 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use tracing::instrument;
 
-use crate::business_logic::workflows::{WorkflowRepository, WorkflowStatus, WorkflowSummary};
+use crate::business_logic::workflows::{
+    ExecuteWorkflowRequest, ExecuteWorkflowResponse, WorkflowRepository, WorkflowStatus,
+    WorkflowSummary,
+};
 use crate::error_handling::types::{AppError, AppResult};
 use crate::infrastructure::step_functions::workflow::Workflow;
 
@@ -90,6 +93,44 @@ impl WorkflowRepository for StepFunctionStorage {
 
         tracing::info!(count = summaries.len(), "Found workflows");
         Ok(summaries)
+    }
+
+    #[instrument(
+        skip_all,
+        fields(
+            repository = "step_functions", 
+            operation = "execute_workflow",
+            workflow_name = %request.workflow_name
+        )
+    )]
+    async fn execute(&self, request: ExecuteWorkflowRequest) -> AppResult<ExecuteWorkflowResponse> {
+        tracing::info!(
+            workflow_name = %request.workflow_name,
+            "Workflow execution request received"
+        );
+
+        // TODO: Implement workflow execution logic
+        // This is a placeholder implementation that will be expanded later
+
+        let start_time = std::time::Instant::now();
+
+        // For now, return a simple success response
+        let execution_time = start_time.elapsed().as_millis() as u64;
+
+        tracing::info!(
+            workflow_name = %request.workflow_name,
+            execution_time_ms = execution_time,
+            "Workflow execution completed (placeholder)"
+        );
+
+        Ok(ExecuteWorkflowResponse::Success {
+            output_data: serde_json::json!({
+                "message": format!("Workflow '{}' executed successfully", request.workflow_name),
+                "input_received": request.input_data
+            }),
+            execution_time_ms: execution_time,
+            states_executed: vec![format!("{}_placeholder_state", request.workflow_name)],
+        })
     }
 }
 

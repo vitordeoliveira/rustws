@@ -209,6 +209,41 @@
     </div>
 </div>
 
+<!-- Execution Result Modal -->
+<div id="executionResultModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-lg shadow-lg max-w-4xl w-full max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-center p-6 border-b border-gray-200">
+                <h3 class="text-lg font-medium text-gray-900">Workflow Execution Result: <span id="executedWorkflowName" class="text-blue-600"></span></h3>
+                <button onclick="closeExecutionResultModal()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="p-6 flex-1 overflow-auto">
+                <div class="mb-4">
+                    <h4 class="text-sm font-semibold text-gray-700 mb-2">JSON Output:</h4>
+                    <pre id="executionJsonContent" class="bg-gray-50 p-4 rounded-md overflow-auto text-sm font-mono border border-gray-200"></pre>
+                </div>
+                <div class="mt-4 pt-4 border-t border-gray-200">
+                    <h4 class="text-sm font-semibold text-gray-700 mb-2">Execution Details:</h4>
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <span class="text-gray-500">Status:</span>
+                            <span id="executionStatus" class="ml-2 font-semibold"></span>
+                        </div>
+                        <div>
+                            <span class="text-gray-500">Output Size:</span>
+                            <span id="executionSize" class="ml-2 font-mono"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Toast Notification -->
 <div id="toast" class="fixed top-4 right-4 z-50 hidden">
     <div class="bg-white border-l-4 border-green-500 rounded-lg shadow-lg p-4 max-w-sm">
@@ -267,14 +302,67 @@ function hideToast() {
     document.getElementById('toast').classList.add('hidden');
 }
 
-// Execute step function
-async function executeStepFunction(stepFunctionName) {
-    showToast(`🚀 Executing step function '${stepFunctionName}'...`, true);
+// Execute step function with custom JSON input
+async function executeStepFunction(workflowName) {
+    // Prompt user for JSON input
+    const inputJson = prompt(
+        `Enter JSON input for ${workflowName} workflow:\n\nExample:\n{"message": "Hello from workflow", "data": {"key": "value"}}`,
+        '{"message": "Hello from workflow", "data": {"key": "value"}}'
+    );
     
-    // TODO: Replace with actual API call
-    setTimeout(() => {
-        showToast(`✅ Step function '${stepFunctionName}' executed successfully!`, true);
-    }, 2000);
+    // User cancelled the prompt
+    if (inputJson === null) {
+        return;
+    }
+    
+    // Validate JSON input
+    let parsedInput;
+    try {
+        parsedInput = JSON.parse(inputJson);
+    } catch (error) {
+        showToast(`❌ Invalid JSON input: ${error.message}`, false);
+        return;
+    }
+    
+    try {
+        showToast(`🚀 Executing workflow '${workflowName}' with custom input...`, true);
+        
+        const response = await fetch(`/api/workflow/execute/${workflowName}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(parsedInput)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            if (result.Success) {
+                const { output_data, execution_time_ms, states_executed } = result.Success;
+                
+                // Show formatted JSON in modal-like display
+                showExecutionResultModal(workflowName, JSON.stringify(output_data, null, 2), output_data, JSON.stringify(output_data).length, `Success (${execution_time_ms}ms)`);
+                
+                // Also show success toast
+                showToast(`✅ Workflow '${workflowName}' executed successfully in ${execution_time_ms}ms!`, true);
+            } else if (result.Failed) {
+                const errorJson = JSON.stringify({ 
+                    error: result.Failed.error_message,
+                    failed_at_state: result.Failed.failed_at_state,
+                    execution_time_ms: result.Failed.execution_time_ms 
+                }, null, 2);
+                
+                showExecutionResultModal(workflowName, errorJson, null, errorJson.length, 'Failed');
+                showToast(`❌ Workflow execution failed: ${result.Failed.error_message}`, false);
+            }
+        } else {
+            showToast(`❌ Error executing workflow '${workflowName}'`, false);
+        }
+    } catch (error) {
+        console.error('Workflow execution error:', error);
+        showToast(`❌ Error executing workflow: ${error.message}`, false);
+    }
 }
 
 // View definition
@@ -288,6 +376,39 @@ function viewDefinition(stepFunctionName) {
 
 function closeDefinitionModal() {
     document.getElementById('definitionModal').classList.add('hidden');
+}
+
+// Execution Result Modal Functions
+function showExecutionResultModal(workflowName, jsonString, parsedJson, outputSize, status) {
+    // Set modal content
+    document.getElementById('executedWorkflowName').textContent = workflowName;
+    
+    // Format JSON for display
+    let formattedJson;
+    if (parsedJson) {
+        formattedJson = JSON.stringify(parsedJson, null, 2);
+    } else {
+        formattedJson = jsonString; // Use raw string if parsing failed
+    }
+    
+    document.getElementById('executionJsonContent').textContent = formattedJson;
+    document.getElementById('executionStatus').textContent = status;
+    document.getElementById('executionSize').textContent = `${outputSize} bytes`;
+    
+    // Set status color
+    const statusElement = document.getElementById('executionStatus');
+    if (status.includes('Success')) {
+        statusElement.className = 'ml-2 font-semibold text-green-600';
+    } else {
+        statusElement.className = 'ml-2 font-semibold text-red-600';
+    }
+    
+    // Show modal
+    document.getElementById('executionResultModal').classList.remove('hidden');
+}
+
+function closeExecutionResultModal() {
+    document.getElementById('executionResultModal').classList.add('hidden');
 }
 
 // Delete step function

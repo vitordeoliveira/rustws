@@ -4,7 +4,7 @@ use axum::extract::FromRequestParts;
 use axum::http::request::Parts;
 use tracing::instrument;
 
-use super::dto::WorkflowSummary;
+use super::dto::{ExecuteWorkflowRequest, ExecuteWorkflowResponse, WorkflowSummary};
 use super::repository::WorkflowRepository;
 use crate::error_handling::types::{AppError, AppResult};
 use crate::infrastructure::step_functions::StepFunctionStorage;
@@ -65,11 +65,15 @@ where
     //     self.repository.validate(workflow_name).await
     // }
     //
-    // /// Execute a workflow with input data
-    // #[instrument(skip_all, fields(service = "workflows", operation = "execute"))]
-    // pub async fn execute(&self, request: ExecuteWorkflowRequest) -> AppResult<ExecuteWorkflowResponse> {
-    //     self.repository.execute(request).await
-    // }
+    /// Execute a workflow with input data
+    #[instrument(skip_all, fields(service = "workflows", operation = "execute"))]
+    pub async fn execute(
+        &self,
+        request: ExecuteWorkflowRequest,
+    ) -> AppResult<ExecuteWorkflowResponse> {
+        tracing::info!(workflow_name = %request.workflow_name, "Executing workflow through service");
+        self.repository.execute(request).await
+    }
 }
 
 /// Extract WorkflowsService directly from request using FromRequestParts

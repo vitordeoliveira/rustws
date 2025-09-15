@@ -22,3 +22,25 @@ pub enum WorkflowStatus {
     Draft,
     Error,
 }
+
+/// Request to execute a workflow
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExecuteWorkflowRequest {
+    pub workflow_name: String,
+    pub input_data: serde_json::Value,
+}
+
+/// Response from workflow execution
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ExecuteWorkflowResponse {
+    Success {
+        output_data: serde_json::Value,
+        execution_time_ms: u64,
+        states_executed: Vec<String>,
+    },
+    Failed {
+        error_message: String,
+        failed_at_state: Option<String>,
+        execution_time_ms: u64,
+    },
+}

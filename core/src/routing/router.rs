@@ -56,6 +56,10 @@ pub fn create_private_router() -> Router<AppState> {
             "/api/lambda/update/{lambda_name}",
             put(api::lambdas::update_lambda_handler),
         )
+        .route(
+            "/api/workflow/execute/{workflow_name}",
+            post(api::workflows::execute_workflow_handler),
+        )
         .route_layer(login_required!(AuthBackend, login_url = "/login"))
 }
 

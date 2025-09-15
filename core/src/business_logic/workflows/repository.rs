@@ -1,9 +1,11 @@
 //! Workflow repository trait for step function management and execution
 
 use super::dto::{
-    WorkflowSummary,
-    // CreateWorkflowRequest, CreateWorkflowResponse, ExecuteWorkflowRequest, ExecuteWorkflowResponse,
+    // CreateWorkflowRequest, CreateWorkflowResponse,
+    ExecuteWorkflowRequest,
+    ExecuteWorkflowResponse,
     // UpdateWorkflowRequest, Workflow, WorkflowValidationResult,
+    WorkflowSummary,
 };
 use crate::error_handling::types::AppResult;
 
@@ -43,9 +45,9 @@ pub trait WorkflowRepository: Send + Sync {
     // /// Useful for validating before saving (e.g., in create/update operations)
     // async fn validate_json(&self, workflow_json: &str) -> AppResult<WorkflowValidationResult>;
 
-    // /// Execute a workflow with input data
-    // /// Runs the step function workflow and returns execution results
-    // async fn execute(&self, request: ExecuteWorkflowRequest) -> AppResult<ExecuteWorkflowResponse>;
+    /// Execute a workflow with input data
+    /// Runs the step function workflow and returns execution results
+    async fn execute(&self, request: ExecuteWorkflowRequest) -> AppResult<ExecuteWorkflowResponse>;
 
     // /// Check if a workflow exists by name
     // /// Utility method for quick existence checks
