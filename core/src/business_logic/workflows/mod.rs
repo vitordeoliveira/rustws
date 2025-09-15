@@ -7,4 +7,4 @@ pub mod service;
 // Re-export for convenient access
 pub use dto::*;
 pub use repository::*;
-pub use service::*;
+pub(crate) use service::WorkflowsService;

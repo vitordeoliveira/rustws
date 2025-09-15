@@ -64,7 +64,7 @@ pub async fn execute_workflow_handler(
         Ok(response) => {
             match &response {
                 ExecuteWorkflowResponse::Success {
-                    output_data,
+                    output_data: _,
                     execution_time_ms,
                     states_executed,
                 } => {

@@ -25,15 +25,6 @@ pub struct Resource {
 }
 
 impl Resource {
-    /// Create a new Resource
-    pub fn new(namespace: String, service_type: ServiceType, resource_name: String) -> Self {
-        Self {
-            namespace,
-            service_type,
-            resource_name,
-        }
-    }
-
     /// Parse a resource URN string and extract the lambda name
     /// Expected format: "rustws:lambda:function_name"
     /// Returns just the function name part

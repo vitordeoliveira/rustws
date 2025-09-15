@@ -1,12 +1,12 @@
 use argon2::{
     Argon2,
-    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
+    password_hash::{PasswordHash, PasswordVerifier},
 };
 use axum_login::{AuthUser, AuthnBackend};
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
-use crate::error_handling::{AppError, types::AppResult};
+use crate::error_handling::AppError;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct User {
@@ -34,56 +34,7 @@ pub struct AuthBackend {
     pub db: sqlx::PgPool,
 }
 
-impl AuthBackend {
-    #[instrument(skip_all, fields(service = "auth_backend", operation = "create_user"))]
-    pub async fn create_user(
-        &self,
-        client_id: uuid::Uuid,
-        email: &str,
-        password: &str,
-        role: Option<&str>,
-        is_owner: Option<bool>,
-    ) -> AppResult<User> {
-        tracing::info!(email = %email, client_id = %client_id, "Creating new user");
-
-        let user_id = uuid::Uuid::new_v4();
-        let user_role = role.unwrap_or("user");
-        let is_owner_flag = is_owner.unwrap_or(false);
-
-        let salt = SaltString::generate(&mut OsRng);
-        let argon2 = Argon2::default();
-        let password_hash = argon2
-            .hash_password(password.as_bytes(), &salt)
-            .map_err(|e| AppError::internal(&format!("Password hashing failed: {}", e)))?
-            .to_string();
-
-        tracing::debug!("Password hashed successfully");
-
-        sqlx::query!(
-            r#"
-            INSERT INTO users.users (id, email, hashed_password, role, is_owner)
-            VALUES ($1, $2, $3, $4, $5)
-            "#,
-            user_id,
-            email,
-            password_hash,
-            user_role,
-            is_owner_flag
-        )
-        .execute(&self.db)
-        .await?;
-
-        tracing::info!(user_id = %user_id, email = %email, "User created successfully");
-
-        Ok(User {
-            user_id,
-            role: user_role.to_string(),
-            remember_me: false,
-            password_hash: password_hash.clone(),
-            is_owner: is_owner_flag,
-        })
-    }
-}
+impl AuthBackend {}
 
 pub struct Credentials {
     pub email: String,

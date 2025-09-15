@@ -31,14 +31,7 @@ pub enum LambdaStatus {
 /// Request to update an existing lambda function
 #[derive(Debug, Deserialize)]
 pub struct UpdateLambdaRequest {
-    pub name: Option<String>,
-    pub description: Option<String>,
-    pub memory_mb: Option<u32>,
-    pub timeout_seconds: Option<u32>,
     pub source_code: Option<String>,
-    pub wasm_bytes: Option<Vec<u8>>,
-    pub environment_vars: Option<std::collections::HashMap<String, String>>,
-    pub status: Option<LambdaStatus>,
 }
 
 /// Request to execute a lambda function
@@ -65,16 +58,6 @@ pub enum ExecuteLambdaResponse {
     },
 }
 
-/// Lambda execution status for future use
-/// TODO: Use this enum in ExecuteLambdaResponse for more detailed status tracking
-#[derive(Debug, Serialize)]
-pub enum ExecutionStatus {
-    Success,
-    Timeout,
-    MemoryExceeded,
-    RuntimeError,
-}
-
 /// Request to create a new lambda function
 #[derive(Debug, Deserialize)]
 pub struct CreateLambdaRequest {
@@ -84,15 +67,6 @@ pub struct CreateLambdaRequest {
 
     /// Runtime environment (e.g., "rs", "js", "py")
     pub runtime: String,
-
-    /// Memory allocation in MB
-    pub memory: Option<u32>,
-
-    /// Timeout in seconds
-    pub timeout: Option<u32>,
-
-    /// Optional description
-    pub description: Option<String>,
 
     /// Source code content
     #[serde(rename = "sourceCode")]

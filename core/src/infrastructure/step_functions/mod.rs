@@ -37,21 +37,6 @@ impl StepFunctionStorage {
         }
     }
 
-    /// Create a new StepFunctionStorage with custom base path and default lambda storage
-    pub fn with_base_path<P: AsRef<Path>>(path: P) -> Self {
-        Self {
-            base_path: path.as_ref().to_path_buf(),
-            lambda_storage: LambdaStorage::new(),
-        }
-    }
-
-    /// Create a new StepFunctionStorage with custom lambda storage
-    pub fn with_lambda_storage(lambda_storage: LambdaStorage) -> Self {
-        Self {
-            base_path: PathBuf::from("src/infrastructure/step_functions"),
-            lambda_storage,
-        }
-    }
 
     /// Get the workflows directory path
     pub fn workflows_dir(&self) -> PathBuf {

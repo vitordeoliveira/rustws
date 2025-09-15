@@ -3,7 +3,7 @@
 //! This module provides the concrete implementation of lambda repository
 
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::Command;
 use tracing::instrument;
 use uuid::Uuid;
@@ -12,7 +12,6 @@ use crate::business_logic::lambdas::{
     CreateLambdaRequest, CreateLambdaResponse, ExecuteLambdaRequest, ExecuteLambdaResponse, Lambda,
     LambdaRepository, LambdaStatus, LambdaSummary, UpdateLambdaRequest,
 };
-use crate::business_logic::resource::Resource;
 use crate::error_handling::types::{AppError, AppResult};
 
 /// Metrics tracking for lambda executions
@@ -65,15 +64,6 @@ impl LambdaStorage {
         storage
     }
 
-    /// Create lambda storage with custom base path
-    pub fn with_base_path<P: AsRef<Path>>(path: P) -> Self {
-        let mut storage = Self {
-            base_path: path.as_ref().to_path_buf(),
-            metrics: LambdasMetrics::default(),
-        };
-        storage.metrics = storage.load_metrics();
-        storage
-    }
 
     /// Get path to source files directory
     fn source_dir(&self) -> PathBuf {
@@ -839,40 +829,6 @@ impl LambdaRepository for LambdaStorage {
         Ok(Some(lambda))
     }
 
-    /// Get a lambda function by resource identifier
-    /// Used by step functions to resolve lambda resources in workflow definitions
-    #[instrument(skip_all, fields(lambda_resource = %resource, infrastructure = "lambda_storage", operation = "get_lambda_by_resource"))]
-    async fn get_lambda_by_resource(&self, resource: &str) -> AppResult<Option<Lambda>> {
-        tracing::info!(
-            lambda_resource = %resource,
-            "Getting lambda function by resource identifier"
-        );
-
-        // Parse lambda name from resource URN
-        let lambda_name = match Resource::parse_lambda_name(resource) {
-            Some(name) => {
-                tracing::debug!(
-                    lambda_resource = %resource,
-                    lambda_name = %name,
-                    "Successfully extracted lambda name from resource"
-                );
-                name
-            }
-            None => {
-                tracing::warn!(
-                    lambda_resource = %resource,
-                    "Failed to parse lambda name from resource"
-                );
-                return Err(AppError::validation(&format!(
-                    "Invalid lambda resource format: '{}'",
-                    resource
-                )));
-            }
-        };
-
-        // Delegate to get_by_name
-        self.get_by_name(&lambda_name).await
-    }
 
     /// Delete a lambda function by name
     async fn delete(&self, lambda_name: &str) -> AppResult<()> {
