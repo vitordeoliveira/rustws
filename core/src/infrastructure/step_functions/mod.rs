@@ -295,24 +295,18 @@ impl StepFunctionStorage {
         Ok(Some(workflow))
     }
 
-    /// Execute workflow states sequentially with shared memory context
+    /// Execute workflow states sequentially
     #[instrument(skip_all, fields(operation = "execute_workflow_states"))]
     async fn execute_workflow_states(
         &self,
         workflow: &Workflow,
         initial_input: serde_json::Value,
     ) -> Result<(serde_json::Value, Vec<String>), (String, Option<String>)> {
-        use wasmer::{Engine, Store};
-
         tracing::info!(
             start_at = %workflow.start_at,
             states_count = workflow.states.len(),
-            "Starting workflow execution with shared memory context"
+            "Starting workflow execution"
         );
-
-        // Create shared wasmer engine and store for all lambda executions
-        let engine = Engine::default();
-        let mut _store = Store::new(engine); // Store for future shared memory usage
 
         let mut current_input = initial_input;
         let mut current_state_name = workflow.start_at.clone();

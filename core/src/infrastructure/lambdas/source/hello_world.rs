@@ -63,6 +63,10 @@ pub extern "C" fn handler(
 /// Business logic function that developers write
 /// Takes HelloWorld input and returns HelloWorld output
 fn lambda_fn(input: HelloWorld) -> HelloWorld {
+    if input.count > 50 {
+        panic!("Count is too high");
+    };
+
     HelloWorld {
         text: format!(
             "Processed: {} (original count: {})",
