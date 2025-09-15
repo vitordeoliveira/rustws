@@ -64,7 +64,6 @@ impl LambdaStorage {
         storage
     }
 
-
     /// Get path to source files directory
     fn source_dir(&self) -> PathBuf {
         self.base_path.join("source")
@@ -134,12 +133,6 @@ impl LambdaStorage {
         );
 
         Ok(())
-    }
-
-    /// Get current lambda execution metrics
-    #[instrument(skip_all, fields(operation = "get_metrics"))]
-    pub fn get_metrics(&self) -> &LambdasMetrics {
-        &self.metrics
     }
 
     /// Compile Rust source code to WASM
@@ -828,7 +821,6 @@ impl LambdaRepository for LambdaStorage {
 
         Ok(Some(lambda))
     }
-
 
     /// Delete a lambda function by name
     async fn delete(&self, lambda_name: &str) -> AppResult<()> {

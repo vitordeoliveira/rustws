@@ -196,27 +196,6 @@ pub struct CatchConfig {
 }
 
 impl Workflow {
-    /// Create a new empty workflow
-    pub fn new(start_at: String) -> Self {
-        Self {
-            comment: None,
-            start_at,
-            states: HashMap::new(),
-        }
-    }
-
-    /// Add a comment to the workflow
-    pub fn with_comment(mut self, comment: String) -> Self {
-        self.comment = Some(comment);
-        self
-    }
-
-    /// Add a state to the workflow
-    pub fn add_state(mut self, name: String, state: State) -> Self {
-        self.states.insert(name, state);
-        self
-    }
-
     /// Validate the workflow structure
     #[instrument(skip_all, fields(operation = "validate_workflow"))]
     pub fn validate(&self) -> Result<(), String> {
@@ -294,72 +273,5 @@ impl Workflow {
         }
 
         Ok(())
-    }
-}
-
-// Helper functions for common state creation - RUSTWS Clean Approach
-impl TaskState {
-    /// Create a simple task state with resource and next
-    /// Clean RUSTWS approach - just connect lambdas, no transformation fields
-    pub fn new(resource: String, next: String) -> Self {
-        Self {
-            resource,
-            next: Some(next),
-            end: None,
-            retry: None,
-            catch: None,
-        }
-    }
-
-    /// Create a terminal task state (with End: true)
-    /// Clean RUSTWS approach - minimal fields for terminal states
-    pub fn terminal(resource: String) -> Self {
-        Self {
-            resource,
-            next: None,
-            end: Some(true),
-            retry: None,
-            catch: None,
-        }
-    }
-
-    /// Add retry configuration to task state
-    pub fn with_retry(mut self, retry: Vec<RetryConfig>) -> Self {
-        self.retry = Some(retry);
-        self
-    }
-
-    /// Add catch configuration to task state  
-    pub fn with_catch(mut self, catch: Vec<CatchConfig>) -> Self {
-        self.catch = Some(catch);
-        self
-    }
-}
-
-impl ChoiceRule {
-    /// Create a string equality choice rule
-    pub fn string_equals(variable: String, value: String, next: String) -> Self {
-        Self {
-            variable,
-            next,
-            string_equals: Some(value),
-            boolean_equals: None,
-            numeric_equals: None,
-            numeric_greater_than: None,
-            numeric_less_than: None,
-        }
-    }
-
-    /// Create a boolean equality choice rule
-    pub fn boolean_equals(variable: String, value: bool, next: String) -> Self {
-        Self {
-            variable,
-            next,
-            string_equals: None,
-            boolean_equals: Some(value),
-            numeric_equals: None,
-            numeric_greater_than: None,
-            numeric_less_than: None,
-        }
     }
 }
