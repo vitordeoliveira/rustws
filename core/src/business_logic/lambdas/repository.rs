@@ -31,6 +31,10 @@ pub trait LambdaRepository: Send + Sync {
     /// Get a lambda function by name
     async fn get_by_name(&self, name: &str) -> AppResult<Option<Lambda>>;
 
+    /// Get a lambda function by resource identifier
+    /// Used by step functions to resolve lambda resources in workflow definitions
+    async fn get_lambda_by_resource(&self, resource: &str) -> AppResult<Option<Lambda>>;
+
     /// Create a new lambda function
     async fn create(&self, request: CreateLambdaRequest) -> AppResult<CreateLambdaResponse>;
 
