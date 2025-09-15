@@ -19,7 +19,7 @@ pub mod workflow;
 ///
 /// Manages workflow definitions stored as JSON files in the filesystem.
 /// Similar to LambdaStorage but for step function workflows.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct StepFunctionStorage {
     /// Base path for step functions infrastructure
     base_path: PathBuf,
@@ -119,7 +119,10 @@ impl WorkflowRepository for StepFunctionStorage {
             workflow_name = %request.workflow_name
         )
     )]
-    async fn execute(&self, request: ExecuteWorkflowRequest) -> AppResult<ExecuteWorkflowResponse> {
+    async fn execute(
+        &mut self,
+        request: ExecuteWorkflowRequest,
+    ) -> AppResult<ExecuteWorkflowResponse> {
         tracing::info!(
             workflow_name = %request.workflow_name,
             "Workflow execution request received"
@@ -298,7 +301,7 @@ impl StepFunctionStorage {
     /// Execute workflow states sequentially
     #[instrument(skip_all, fields(operation = "execute_workflow_states"))]
     async fn execute_workflow_states(
-        &self,
+        &mut self,
         workflow: &Workflow,
         initial_input: serde_json::Value,
     ) -> Result<(serde_json::Value, Vec<String>), (String, Option<String>)> {
@@ -414,7 +417,7 @@ impl StepFunctionStorage {
     /// Execute a single task state by calling the referenced lambda function
     #[instrument(skip_all, fields(operation = "execute_task_state", resource = %task_state.resource))]
     async fn execute_task_state(
-        &self,
+        &mut self,
         task_state: &TaskState,
         input_data: &serde_json::Value,
     ) -> AppResult<serde_json::Value> {

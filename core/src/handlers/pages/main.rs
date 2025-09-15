@@ -47,8 +47,9 @@ pub async fn lambda_handler(
 
     // Get lambda data from service
     let lambdas = lambda_service.get_all().await?;
+    let metrics = lambda_service.get_metrics().clone();
 
-    let lambda_page_ui = LambdaPageUi::new(user, lambdas);
+    let lambda_page_ui = LambdaPageUi::new(user, lambdas, metrics);
     let html = lambda_page_ui.render_html(&state.tera)?;
 
     Ok(html)
@@ -96,9 +97,10 @@ pub async fn delete_lambda_handler(
 
     // Get updated lambda list (after potential deletion)
     let lambdas = lambda_service.get_all().await?;
+    let metrics = lambda_service.get_metrics().clone();
 
     // Render lambda index page with updated list
-    let lambda_page_ui = LambdaPageUi::new(user, lambdas);
+    let lambda_page_ui = LambdaPageUi::new(user, lambdas, metrics);
     let html = lambda_page_ui.render_html(&state.tera)?;
 
     Ok(html)

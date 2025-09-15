@@ -68,7 +68,7 @@ where
     /// Execute a workflow with input data
     #[instrument(skip_all, fields(service = "workflows", operation = "execute"))]
     pub async fn execute(
-        &self,
+        &mut self,
         request: ExecuteWorkflowRequest,
     ) -> AppResult<ExecuteWorkflowResponse> {
         tracing::info!(workflow_name = %request.workflow_name, "Executing workflow through service");

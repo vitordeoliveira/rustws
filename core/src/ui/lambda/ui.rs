@@ -4,6 +4,7 @@ use crate::{
     auth::dto::User,
     business_logic::lambdas::LambdaSummary,
     error_handling::types::AppResult,
+    infrastructure::lambdas::LambdasMetrics,
     ui::{TeraEngine, TeraRenderer, Ui, shared::layouts::BaseLayoutProps},
 };
 use axum::response::Html;
@@ -13,10 +14,11 @@ use serde::Serialize;
 pub struct LambdaPageUi {
     layout: BaseLayoutProps,
     lambdas: Vec<LambdaSummary>,
+    metrics: LambdasMetrics,
 }
 
 impl LambdaPageUi {
-    pub fn new(user: User, lambdas: Vec<LambdaSummary>) -> Self {
+    pub fn new(user: User, lambdas: Vec<LambdaSummary>, metrics: LambdasMetrics) -> Self {
         Self {
             layout: BaseLayoutProps::new()
                 .title("Lambda Functions - RUSTWS Core")
@@ -24,6 +26,7 @@ impl LambdaPageUi {
                 .keywords("lambda, serverless, functions, compute, scaling")
                 .user(Some(user)),
             lambdas,
+            metrics,
         }
     }
 }
@@ -32,6 +35,7 @@ impl Ui for LambdaPageUi {
     fn render_html(self, tera: &TeraEngine) -> AppResult<Html<String>> {
         let mut context = self.layout.to_context()?;
         context.insert("lambdas", &self.lambdas);
+        context.insert("metrics", &self.metrics);
         tera.render_template("lambda/index.html", &context)
     }
 }

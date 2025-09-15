@@ -29,7 +29,7 @@ use crate::{
 pub async fn execute_workflow_handler(
     State(_state): State<AppState>,
     _auth_session: AuthSession<AuthBackend>,
-    workflows_service: WorkflowsService<StepFunctionStorage>,
+    mut workflows_service: WorkflowsService<StepFunctionStorage>,
     Path(workflow_name): Path<String>,
     Json(input_json): Json<serde_json::Value>,
 ) -> AppResult<Json<ExecuteWorkflowResponse>> {

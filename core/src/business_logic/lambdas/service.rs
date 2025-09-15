@@ -10,7 +10,7 @@ use super::dto::{
 };
 use super::repository::LambdaRepository;
 use crate::error_handling::types::{AppError, AppResult};
-use crate::infrastructure::lambdas::LambdaStorage;
+use crate::infrastructure::lambdas::{LambdaStorage, LambdasMetrics};
 use crate::state::AppState;
 
 /// Lambda service for managing lambda functions
@@ -84,7 +84,10 @@ where
     }
 
     /// Execute a lambda function
-    pub async fn execute(&self, request: ExecuteLambdaRequest) -> AppResult<ExecuteLambdaResponse> {
+    pub async fn execute(
+        &mut self,
+        request: ExecuteLambdaRequest,
+    ) -> AppResult<ExecuteLambdaResponse> {
         self.repository.execute(request).await
     }
 
@@ -101,6 +104,11 @@ where
     /// Update a lambda function
     pub async fn update(&self, lambda_name: &str, request: UpdateLambdaRequest) -> AppResult<()> {
         self.repository.update(lambda_name, request).await
+    }
+
+    /// Get lambda execution metrics
+    pub fn get_metrics(&self) -> &LambdasMetrics {
+        self.repository.get_metrics()
     }
 }
 

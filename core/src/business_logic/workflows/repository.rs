@@ -47,7 +47,7 @@ pub trait WorkflowRepository: Send + Sync {
 
     /// Execute a workflow with input data
     /// Runs the step function workflow and returns execution results
-    async fn execute(&self, request: ExecuteWorkflowRequest) -> AppResult<ExecuteWorkflowResponse>;
+    async fn execute(&mut self, request: ExecuteWorkflowRequest) -> AppResult<ExecuteWorkflowResponse>;
 
     // /// Check if a workflow exists by name
     // /// Utility method for quick existence checks

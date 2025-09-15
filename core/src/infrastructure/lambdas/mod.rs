@@ -14,26 +14,64 @@ use crate::business_logic::lambdas::{
 };
 use crate::error_handling::types::{AppError, AppResult};
 
+/// Metrics tracking for lambda executions
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct LambdasMetrics {
+    /// Total number of lambda executions
+    pub total_executions: u64,
+    /// Total execution time in milliseconds
+    pub total_execution_time_ms: u64,
+    /// Number of successful executions
+    pub successful_executions: u64,
+    /// Number of failed executions
+    pub failed_executions: u64,
+    /// Most recently executed lambda name
+    pub last_executed_lambda: Option<String>,
+    /// Timestamp of last execution
+    pub last_execution_time: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+impl Default for LambdasMetrics {
+    fn default() -> Self {
+        Self {
+            total_executions: 0,
+            total_execution_time_ms: 0,
+            successful_executions: 0,
+            failed_executions: 0,
+            last_executed_lambda: None,
+            last_execution_time: None,
+        }
+    }
+}
+
 /// Lambda repository implementation
 #[derive(Debug, Clone)]
 pub struct LambdaStorage {
     /// Base path for lambda storage
     base_path: PathBuf,
+    /// Metrics tracking for lambda executions
+    metrics: LambdasMetrics,
 }
 
 impl LambdaStorage {
     /// Create new lambda storage manager
     pub fn new() -> Self {
-        Self {
+        let mut storage = Self {
             base_path: PathBuf::from("src/infrastructure/lambdas"),
-        }
+            metrics: LambdasMetrics::default(),
+        };
+        storage.metrics = storage.load_metrics();
+        storage
     }
 
     /// Create lambda storage with custom base path
     pub fn with_base_path<P: AsRef<Path>>(path: P) -> Self {
-        Self {
+        let mut storage = Self {
             base_path: path.as_ref().to_path_buf(),
-        }
+            metrics: LambdasMetrics::default(),
+        };
+        storage.metrics = storage.load_metrics();
+        storage
     }
 
     /// Get path to source files directory
@@ -44,6 +82,73 @@ impl LambdaStorage {
     /// Get path to WASM files directory
     fn wasm_dir(&self) -> PathBuf {
         self.base_path.join("wasm")
+    }
+
+    /// Get path to metrics JSON file
+    fn metrics_file(&self) -> PathBuf {
+        self.base_path.join("metrics.json")
+    }
+
+    /// Load metrics from JSON file
+    #[instrument(skip_all, fields(operation = "load_metrics"))]
+    fn load_metrics(&self) -> LambdasMetrics {
+        let metrics_path = self.metrics_file();
+
+        if !metrics_path.exists() {
+            tracing::debug!("Metrics file not found, using default metrics");
+            return LambdasMetrics::default();
+        }
+
+        match fs::read_to_string(&metrics_path) {
+            Ok(content) => match serde_json::from_str::<LambdasMetrics>(&content) {
+                Ok(metrics) => {
+                    tracing::debug!(
+                        total_executions = metrics.total_executions,
+                        "Loaded metrics from file"
+                    );
+                    metrics
+                }
+                Err(e) => {
+                    tracing::warn!(
+                        error = %e,
+                        "Failed to parse metrics file, using default metrics"
+                    );
+                    LambdasMetrics::default()
+                }
+            },
+            Err(e) => {
+                tracing::warn!(
+                    error = %e,
+                    "Failed to read metrics file, using default metrics"
+                );
+                LambdasMetrics::default()
+            }
+        }
+    }
+
+    /// Save metrics to JSON file
+    #[instrument(skip_all, fields(operation = "save_metrics"))]
+    fn save_metrics(&self) -> AppResult<()> {
+        let metrics_path = self.metrics_file();
+
+        let content = serde_json::to_string_pretty(&self.metrics)
+            .map_err(|e| AppError::internal(&format!("Failed to serialize metrics: {}", e)))?;
+
+        fs::write(&metrics_path, content)
+            .map_err(|e| AppError::internal(&format!("Failed to save metrics file: {}", e)))?;
+
+        tracing::debug!(
+            total_executions = self.metrics.total_executions,
+            "Metrics saved to file"
+        );
+
+        Ok(())
+    }
+
+    /// Get current lambda execution metrics
+    #[instrument(skip_all, fields(operation = "get_metrics"))]
+    pub fn get_metrics(&self) -> &LambdasMetrics {
+        &self.metrics
     }
 
     /// Compile Rust source code to WASM
@@ -290,7 +395,8 @@ impl LambdaRepository for LambdaStorage {
     }
 
     /// Execute a lambda function
-    async fn execute(&self, request: ExecuteLambdaRequest) -> AppResult<ExecuteLambdaResponse> {
+    async fn execute(&mut self, request: ExecuteLambdaRequest) -> AppResult<ExecuteLambdaResponse> {
+        let start_time = std::time::Instant::now();
         // Determine which lambda to execute
         let lambda_name = request
             .function_name
@@ -320,14 +426,47 @@ impl LambdaRepository for LambdaStorage {
         };
 
         // Execute WASM using wasmer
-        match self.execute_wasm(&wasm_bytes, &request.input_data).await {
-            Ok(output) => Ok(ExecuteLambdaResponse::Success {
+        let result = match self.execute_wasm(&wasm_bytes, &request.input_data).await {
+            Ok(output) => ExecuteLambdaResponse::Success {
                 output_data: output,
-            }),
-            Err(e) => Ok(ExecuteLambdaResponse::Failed {
+            },
+            Err(e) => ExecuteLambdaResponse::Failed {
                 error_message: format!("WASM execution failed: {}", e),
-            }),
+            },
+        };
+
+        // Update metrics
+        let execution_time_ms = start_time.elapsed().as_millis() as u64;
+        self.metrics.total_executions += 1;
+        self.metrics.total_execution_time_ms += execution_time_ms;
+        self.metrics.last_executed_lambda = Some(lambda_name.clone());
+        self.metrics.last_execution_time = Some(chrono::Utc::now());
+
+        match &result {
+            ExecuteLambdaResponse::Success { .. } => {
+                self.metrics.successful_executions += 1;
+                tracing::info!(
+                    lambda_name = %lambda_name,
+                    execution_time_ms = execution_time_ms,
+                    "Lambda execution successful"
+                );
+            }
+            ExecuteLambdaResponse::Failed { .. } => {
+                self.metrics.failed_executions += 1;
+                tracing::warn!(
+                    lambda_name = %lambda_name,
+                    execution_time_ms = execution_time_ms,
+                    "Lambda execution failed"
+                );
+            }
         }
+
+        // Save metrics to file
+        if let Err(e) = self.save_metrics() {
+            tracing::warn!(error = %e, "Failed to save metrics to file");
+        }
+
+        Ok(result)
     }
 
     /// Create a new lambda function - saves source code and optionally compiles to WASM
@@ -917,6 +1056,11 @@ impl LambdaRepository for LambdaStorage {
         );
 
         Ok(())
+    }
+
+    /// Get lambda execution metrics
+    fn get_metrics(&self) -> &LambdasMetrics {
+        &self.metrics
     }
 }
 

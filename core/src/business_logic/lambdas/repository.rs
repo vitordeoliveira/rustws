@@ -7,6 +7,7 @@ use super::dto::{
     LambdaSummary, UpdateLambdaRequest,
 };
 use crate::error_handling::types::AppResult;
+use crate::infrastructure::lambdas::LambdasMetrics;
 
 /// Lambda repository trait for managing WASM-based serverless functions
 pub trait LambdaRepository: Send + Sync {
@@ -23,7 +24,7 @@ pub trait LambdaRepository: Send + Sync {
     async fn save_compiled_wasm(&self, lambda_name: &str, wasm_bytes: &[u8]) -> AppResult<PathBuf>;
 
     /// Execute a lambda function
-    async fn execute(&self, request: ExecuteLambdaRequest) -> AppResult<ExecuteLambdaResponse>;
+    async fn execute(&mut self, request: ExecuteLambdaRequest) -> AppResult<ExecuteLambdaResponse>;
 
     // /// Get a lambda function by ID
     // async fn get_by_id(&self, id: Uuid) -> AppResult<Option<Lambda>>;
@@ -43,4 +44,7 @@ pub trait LambdaRepository: Send + Sync {
 
     /// Update an existing lambda function
     async fn update(&self, lambda_name: &str, request: UpdateLambdaRequest) -> AppResult<()>;
+
+    /// Get lambda execution metrics
+    fn get_metrics(&self) -> &LambdasMetrics;
 }

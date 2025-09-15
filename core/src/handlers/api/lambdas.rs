@@ -106,7 +106,7 @@ pub async fn compile_lambda_handler(
 pub async fn execute_lambda_handler(
     State(_state): State<AppState>,
     _auth_session: AuthSession<AuthBackend>,
-    lambda_service: LambdasService<LambdaStorage>,
+    mut lambda_service: LambdasService<LambdaStorage>,
     Path(lambda_name): Path<String>,
     Json(input_json): Json<serde_json::Value>,
 ) -> AppResult<Json<ExecuteLambdaResponse>> {
