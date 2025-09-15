@@ -3,8 +3,9 @@ use std::path::{Path, PathBuf};
 use tracing::instrument;
 
 use crate::business_logic::lambdas::{
-    ExecuteLambdaRequest, ExecuteLambdaResponse, LambdaRepository, Resource,
+    ExecuteLambdaRequest, ExecuteLambdaResponse, LambdaRepository,
 };
+use crate::business_logic::resource::Resource;
 use crate::business_logic::workflows::{
     ExecuteWorkflowRequest, ExecuteWorkflowResponse, WorkflowRepository, WorkflowStatus,
     WorkflowSummary,

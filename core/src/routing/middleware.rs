@@ -1,16 +1,13 @@
 //! Request middleware for matrix interface
 
 use axum::{
-    extract::{Request, State},
+    extract::Request,
     http::{HeaderName, HeaderValue, StatusCode},
     middleware::Next,
     response::Response,
 };
-use tower_sessions::{cookie::time::Duration, Expiry, SessionManagerLayer};
-use tower_sessions_sqlx_store::PostgresStore;
 use uuid::Uuid;
 
-use crate::{error_handling::AppResult, state::AppState};
 
 /// Request ID wrapper for use in handlers
 #[derive(Debug, Clone)]

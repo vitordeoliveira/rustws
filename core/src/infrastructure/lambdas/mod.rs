@@ -10,8 +10,9 @@ use uuid::Uuid;
 
 use crate::business_logic::lambdas::{
     CreateLambdaRequest, CreateLambdaResponse, ExecuteLambdaRequest, ExecuteLambdaResponse, Lambda,
-    LambdaRepository, LambdaStatus, LambdaSummary, Resource, UpdateLambdaRequest,
+    LambdaRepository, LambdaStatus, LambdaSummary, UpdateLambdaRequest,
 };
+use crate::business_logic::resource::Resource;
 use crate::error_handling::types::{AppError, AppResult};
 
 /// Metrics tracking for lambda executions
