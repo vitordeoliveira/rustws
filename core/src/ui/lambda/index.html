@@ -33,7 +33,7 @@
 
 <!-- Stats Overview -->
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 mb-8">
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+    <div id="lambda-metrics" class="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
             <div class="flex items-center">
                 <div class="flex-shrink-0">
@@ -385,6 +385,68 @@ function closeExecutionResultModal() {
     document.getElementById('executionResultModal').classList.add('hidden');
 }
 
+async function refreshLambdaMetrics() {
+    try {
+        console.log('Refreshing lambda metrics...');
+        
+        const response = await fetch('/api/lambda/metrics', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            console.error('Failed to fetch metrics:', response.status, response.statusText);
+            return;
+        }
+        
+        const metrics = await response.json();
+        console.log('Received updated metrics:', metrics);
+        
+        // Update the metrics in the UI
+        updateMetricsDisplay(metrics);
+        
+    } catch (error) {
+        console.error('Error refreshing metrics:', error);
+    }
+}
+
+function updateMetricsDisplay(metrics) {
+    // Update Total Functions (should remain the same, but good to be consistent)
+    const totalFunctionsElement = document.querySelector('#lambda-metrics .bg-orange-100').closest('.bg-white').querySelector('.text-2xl');
+    if (totalFunctionsElement) {
+        // Keep the current value since this is about function count, not executions
+        // totalFunctionsElement.textContent = metrics.total_functions || totalFunctionsElement.textContent;
+    }
+    
+    // Update Total Invocations
+    const totalInvocationsElement = document.querySelector('#lambda-metrics .bg-blue-100').closest('.bg-white').querySelector('.text-2xl');
+    if (totalInvocationsElement) {
+        totalInvocationsElement.textContent = metrics.total_executions;
+    }
+    
+    // Update Avg Duration
+    const avgDurationElement = document.querySelector('#lambda-metrics .bg-yellow-100').closest('.bg-white').querySelector('.text-2xl');
+    if (avgDurationElement) {
+        const avgDuration = metrics.total_executions > 0 
+            ? Math.round(metrics.total_execution_time_ms / metrics.total_executions)
+            : 0;
+        avgDurationElement.textContent = `${avgDuration}ms`;
+    }
+    
+    // Update Error Rate
+    const errorRateElement = document.querySelector('#lambda-metrics .bg-red-100').closest('.bg-white').querySelector('.text-2xl');
+    if (errorRateElement) {
+        const errorRate = metrics.total_executions > 0
+            ? Math.round((metrics.failed_executions / metrics.total_executions) * 100)
+            : 0;
+        errorRateElement.textContent = `${errorRate}%`;
+    }
+    
+    console.log('Metrics display updated successfully');
+}
+
 async function compileLambda(lambdaName) {
     const button = event.target.closest('button');
     const originalClasses = button.className;
@@ -489,6 +551,9 @@ async function testLambda(lambdaName) {
                     
                     showToast(`✅ ${lambdaName} executed successfully! Raw output: ${outputData.length} bytes`, true);
                 }
+                
+                // Refresh metrics after successful execution
+                await refreshLambdaMetrics();
             } else if (result.Failed) {
                 const errorJson = JSON.stringify({ error: result.Failed.error_message }, null, 2);
                 showExecutionResultModal(lambdaName, errorJson, null, errorJson.length, 'Failed');

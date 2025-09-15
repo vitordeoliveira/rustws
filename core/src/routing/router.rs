@@ -57,6 +57,10 @@ pub fn create_private_router() -> Router<AppState> {
             put(api::lambdas::update_lambda_handler),
         )
         .route(
+            "/api/lambda/metrics",
+            get(api::lambdas::get_lambda_metrics_handler),
+        )
+        .route(
             "/api/workflow/execute/{workflow_name}",
             post(api::workflows::execute_workflow_handler),
         )

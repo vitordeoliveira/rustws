@@ -15,7 +15,7 @@ use crate::{
         UpdateLambdaResponse,
     },
     error_handling::types::AppResult,
-    infrastructure::lambdas::LambdaStorage,
+    infrastructure::lambdas::{LambdaStorage, LambdasMetrics},
     state::AppState,
 };
 
@@ -339,4 +339,29 @@ pub async fn update_lambda_handler(
             Ok(Json(response))
         }
     }
+}
+
+/// Get current lambda execution metrics
+#[instrument(
+    skip_all,
+    fields(handler = "lambda_metrics", operation = "api_get_metrics")
+)]
+pub async fn get_lambda_metrics_handler(
+    State(_state): State<AppState>,
+    _auth_session: AuthSession<AuthBackend>,
+    lambda_service: LambdasService<LambdaStorage>,
+) -> AppResult<Json<LambdasMetrics>> {
+    info!("Lambda metrics request received");
+
+    // Get current metrics from the service
+    let metrics = lambda_service.get_metrics().clone();
+
+    info!(
+        total_executions = metrics.total_executions,
+        successful_executions = metrics.successful_executions,
+        failed_executions = metrics.failed_executions,
+        "Lambda metrics retrieved successfully"
+    );
+
+    Ok(Json(metrics))
 }
