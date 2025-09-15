@@ -41,7 +41,6 @@ pub enum ServiceStatus {
     Healthy,
     Warning,
     Critical,
-    Unknown,
 }
 
 /// Alert/incident information
@@ -60,7 +59,6 @@ pub struct Alert {
 /// Alert severity levels
 #[derive(Debug, Clone, Serialize)]
 pub enum AlertSeverity {
-    Info,
     Warning,
     Critical,
 }
@@ -90,8 +88,6 @@ pub enum LogLevel {
     Error,
     Warn,
     Info,
-    Debug,
-    Trace,
 }
 
 /// Performance metrics over time
@@ -109,7 +105,6 @@ pub struct PerformanceMetric {
 #[derive(Debug, Clone, Serialize)]
 pub enum MetricTrend {
     Increasing,
-    Decreasing,
     Stable,
 }
 

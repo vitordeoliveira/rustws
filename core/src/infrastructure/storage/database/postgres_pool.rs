@@ -1,22 +1,10 @@
 //! PostgreSQL connection pool setup
 
-use sqlx::{postgres::PgPoolOptions, PgPool};
+use sqlx::{PgPool, postgres::PgPoolOptions};
 use std::time::Duration;
 use tracing::{info, instrument};
 
 use crate::error_handling::types::AppResult;
-
-/// PostgreSQL database wrapper
-#[derive(Clone)]
-pub struct PostgresDatabase {
-    pub pool: PgPool,
-}
-
-impl PostgresDatabase {
-    pub fn new(pool: PgPool) -> Self {
-        Self { pool }
-    }
-}
 
 /// Create a PostgreSQL connection pool with optimized settings
 #[instrument(skip_all, fields(

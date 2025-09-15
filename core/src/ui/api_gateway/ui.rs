@@ -33,30 +33,6 @@ pub enum ApiGatewayStatus {
     Inactive,
     Deploying,
     Warning,
-    Error,
-}
-
-/// Represents an individual API endpoint
-#[derive(Debug, Clone, Serialize)]
-pub struct ApiEndpoint {
-    pub id: String,
-    pub path: String,
-    pub method: String,
-    pub description: String,
-    pub status: EndpointStatus,
-    pub gateway_id: String,
-    pub response_time_ms: Option<u32>,
-    pub error_rate: f32,
-    pub requests_per_minute: u32,
-}
-
-/// Status of an API endpoint
-#[derive(Debug, Clone, Serialize)]
-pub enum EndpointStatus {
-    Healthy,
-    Warning,
-    Error,
-    Maintenance,
 }
 
 /// UI component for the API Gateway dashboard page
