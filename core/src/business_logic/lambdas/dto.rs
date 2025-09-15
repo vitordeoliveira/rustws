@@ -65,65 +65,6 @@ pub enum ExecuteLambdaResponse {
     },
 }
 
-impl ExecuteLambdaResponse {
-    /// Deserialize the output data as JSON into a specific type
-    ///
-    /// Example usage:
-    /// ```rust
-    /// #[derive(Deserialize)]
-    /// struct HelloWorld { text: String, count: isize }
-    ///
-    /// let response = lambda_service.execute(&request).await?;
-    /// let result: HelloWorld = response.deserialize_json()?;
-    /// println!("Result: {} (count: {})", result.text, result.count);
-    /// ```
-    pub fn deserialize_json<T>(&self) -> Result<T, serde_json::Error>
-    where
-        T: serde::de::DeserializeOwned,
-    {
-        match self {
-            ExecuteLambdaResponse::Success { output_data } => serde_json::from_slice(output_data),
-            ExecuteLambdaResponse::Failed { error_message } => {
-                // Create a JSON error by trying to parse invalid JSON that will definitely fail
-                match serde_json::from_str::<T>("invalid json") {
-                    Ok(_) => unreachable!("This should never succeed"),
-                    Err(_) => {
-                        // Create a more descriptive error using IO error
-                        let io_error = std::io::Error::new(
-                            std::io::ErrorKind::Other,
-                            format!("Lambda execution failed: {}", error_message),
-                        );
-                        Err(serde_json::Error::io(io_error))
-                    }
-                }
-            }
-        }
-    }
-
-    /// Get the output data as a UTF-8 string
-    pub fn as_string(&self) -> Result<String, std::string::FromUtf8Error> {
-        match self {
-            ExecuteLambdaResponse::Success { output_data } => {
-                String::from_utf8(output_data.clone())
-            }
-            ExecuteLambdaResponse::Failed { error_message } => Ok(error_message.clone()),
-        }
-    }
-
-    /// Get the raw output bytes (if successful)
-    pub fn as_bytes(&self) -> Option<&[u8]> {
-        match self {
-            ExecuteLambdaResponse::Success { output_data } => Some(output_data),
-            ExecuteLambdaResponse::Failed { .. } => None,
-        }
-    }
-
-    /// Check if the execution was successful
-    pub fn is_success(&self) -> bool {
-        matches!(self, ExecuteLambdaResponse::Success { .. })
-    }
-}
-
 /// Lambda execution status for future use
 /// TODO: Use this enum in ExecuteLambdaResponse for more detailed status tracking
 #[derive(Debug, Serialize)]
