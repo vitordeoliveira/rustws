@@ -61,6 +61,28 @@ pub struct Response {
     pub body: String,
 }
 
+impl Response {
+    /// Deserialize response body as JSON
+    pub fn json<T: for<'de> Deserialize<'de>>(&self) -> Result<T, String> {
+        serde_json::from_str(&self.body).map_err(|e| format!("Failed to deserialize JSON: {}", e))
+    }
+
+    /// Get response body as text
+    pub fn text(&self) -> &str {
+        &self.body
+    }
+
+    /// Check if response was successful (2xx status)
+    pub fn is_success(&self) -> bool {
+        (200..300).contains(&self.status)
+    }
+
+    /// Get status code
+    pub fn status(&self) -> u16 {
+        self.status
+    }
+}
+
 /// Send HTTP request to host
 pub fn http_request(request: &Request) -> Result<Response, String> {
     // Serialize the request to JSON
@@ -159,35 +181,36 @@ fn lambda_fn(input: HelloWorld) -> HelloWorld {
     };
 
     match http_request(&request) {
-        Ok(response) => {
-            if response.status == 200 {
-                // Try to parse the JSONPlaceholder API response
-                match serde_json::from_str::<Post>(&response.body) {
-                    Ok(post) => HelloWorld {
-                        text: format!(
-                            "Processed: {} (original count: {}). Got post '{}' by user {}!",
-                            input.text, input.count, post.title, post.userId
-                        ),
-                        count: input.count + 10,
-                    },
-                    Err(_) => HelloWorld {
-                        text: format!(
-                            "Processed: {} (original count: {}). Got HTTP response but couldn't parse JSON",
-                            input.text, input.count
-                        ),
-                        count: input.count + 10,
-                    },
-                }
-            } else {
-                HelloWorld {
+        Ok(response) if response.is_success() => {
+            // Try to parse the JSONPlaceholder API response using type-safe deserialization
+            match response.json::<Post>() {
+                Ok(post) => HelloWorld {
                     text: format!(
-                        "Processed: {} (original count: {}). HTTP request failed with status: {}",
-                        input.text, input.count, response.status
+                        "Processed: {} (original count: {}). Got post '{}' by user {}!",
+                        input.text, input.count, post.title, post.userId
                     ),
                     count: input.count + 10,
-                }
+                },
+                Err(_) => HelloWorld {
+                    text: format!(
+                        "Processed: {} (original count: {}). Got HTTP response but couldn't parse JSON: {}",
+                        input.text,
+                        input.count,
+                        response.text()
+                    ),
+                    count: input.count + 10,
+                },
             }
         }
+        Ok(response) => HelloWorld {
+            text: format!(
+                "Processed: {} (original count: {}). HTTP request failed with status: {}",
+                input.text,
+                input.count,
+                response.status()
+            ),
+            count: input.count + 10,
+        },
         Err(e) => HelloWorld {
             text: format!(
                 "Processed: {} (original count: {}). HTTP request error: {}",
@@ -205,14 +228,17 @@ fn lambda_fn(input: HelloWorld) -> HelloWorld {
 // - serde_json = "1.0"
 //
 // Usage examples:
-// - Simple GET:
+// - Simple GET with type-safe JSON response:
 //   let request = Request {
 //       method: "GET".to_string(),
-//       url: "https://api.example.com/data".to_string(),
+//       url: "https://api.example.com/posts/1".to_string(),
 //       headers: HashMap::new(),
 //       body: None,
 //   };
 //   let response = http_request(&request)?;
+//   if response.is_success() {
+//       let post: Post = response.json()?;  // Type-safe deserialization!
+//   }
 //
 // - POST with JSON body:
 //   let mut headers = HashMap::new();
@@ -224,3 +250,17 @@ fn lambda_fn(input: HelloWorld) -> HelloWorld {
 //       body: Some(serde_json::to_string(&my_data)?),
 //   };
 //   let response = http_request(&request)?;
+//   let result: CreateResponse = response.json()?;  // Type-safe!
+//
+// - Handle both success and error responses:
+//   match http_request(&request) {
+//       Ok(response) if response.is_success() => {
+//           let data: MyData = response.json()?;
+//           // Use typed data
+//       },
+//       Ok(response) => {
+//           println!("Request failed with status: {}", response.status());
+//           println!("Error message: {}", response.text());
+//       },
+//       Err(e) => println!("Network error: {}", e),
+//   }

@@ -134,17 +134,13 @@ impl LambdaRepository for LambdaStorage {
             },
         };
 
-        // Update metrics
+        // Record execution in metrics ledger
         let execution_time_ms = start_time.elapsed().as_millis() as u64;
-        let metrics = self.get_metrics_mut();
-        metrics.total_executions += 1;
-        metrics.total_execution_time_ms += execution_time_ms;
-        metrics.last_executed_lambda = Some(lambda_name.clone());
-        metrics.last_execution_time = Some(chrono::Utc::now());
+        let ledger = self.get_metrics_ledger_mut();
 
         match &result {
             ExecuteLambdaResponse::Success { .. } => {
-                metrics.successful_executions += 1;
+                ledger.record_success(lambda_name.clone(), execution_time_ms);
                 tracing::info!(
                     lambda_name = %lambda_name,
                     execution_time_ms = execution_time_ms,
@@ -152,7 +148,7 @@ impl LambdaRepository for LambdaStorage {
                 );
             }
             ExecuteLambdaResponse::Failed { .. } => {
-                metrics.failed_executions += 1;
+                ledger.record_failure(lambda_name.clone(), execution_time_ms);
                 tracing::warn!(
                     lambda_name = %lambda_name,
                     execution_time_ms = execution_time_ms,
@@ -725,6 +721,8 @@ impl LambdaRepository for LambdaStorage {
 
     /// Get lambda execution metrics
     fn get_metrics(&self) -> &super::metrics::LambdasMetrics {
-        self.get_metrics()
+        // Note: This method signature requires a reference, but we calculate on-demand
+        // This is a bit of a hack - consider changing the trait to return owned values
+        Box::leak(Box::new(LambdaStorage::get_metrics(self)))
     }
 }

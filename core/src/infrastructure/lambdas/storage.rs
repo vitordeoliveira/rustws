@@ -8,7 +8,7 @@ use std::process::Command;
 use tracing::instrument;
 use uuid::Uuid;
 
-use super::metrics::LambdasMetrics;
+use super::metrics::{LambdaMetricsLedger, LambdasMetrics};
 use crate::error_handling::types::{AppError, AppResult};
 
 /// Lambda repository implementation
@@ -16,8 +16,8 @@ use crate::error_handling::types::{AppError, AppResult};
 pub struct LambdaStorage {
     /// Base path for lambda storage
     base_path: PathBuf,
-    /// Metrics tracking for lambda executions
-    metrics: LambdasMetrics,
+    /// Metrics ledger for lambda executions
+    metrics_ledger: LambdaMetricsLedger,
 }
 
 impl LambdaStorage {
@@ -25,9 +25,9 @@ impl LambdaStorage {
     pub fn new() -> Self {
         let mut storage = Self {
             base_path: PathBuf::from("src/infrastructure/lambdas"),
-            metrics: LambdasMetrics::default(),
+            metrics_ledger: LambdaMetricsLedger::default(),
         };
-        storage.metrics = storage.load_metrics();
+        storage.metrics_ledger = storage.load_metrics_ledger();
         storage
     }
 
@@ -46,67 +46,89 @@ impl LambdaStorage {
         self.base_path.join("metrics.json")
     }
 
-    /// Get lambda execution metrics
-    pub fn get_metrics(&self) -> &LambdasMetrics {
-        &self.metrics
+    /// Get lambda execution metrics (calculated from ledger)
+    pub fn get_metrics(&self) -> LambdasMetrics {
+        self.metrics_ledger.calculate_totals()
     }
 
-    /// Get mutable reference to metrics (for updates)
-    pub(crate) fn get_metrics_mut(&mut self) -> &mut LambdasMetrics {
-        &mut self.metrics
+    /// Get mutable reference to metrics ledger
+    pub(crate) fn get_metrics_ledger_mut(&mut self) -> &mut LambdaMetricsLedger {
+        &mut self.metrics_ledger
     }
 
-    /// Load metrics from JSON file
-    #[instrument(skip_all, fields(operation = "load_metrics"))]
-    fn load_metrics(&self) -> LambdasMetrics {
+    /// Get reference to metrics ledger
+    pub fn get_metrics_ledger(&self) -> &LambdaMetricsLedger {
+        &self.metrics_ledger
+    }
+
+    /// Load metrics ledger from JSON file
+    #[instrument(skip_all, fields(operation = "load_metrics_ledger"))]
+    fn load_metrics_ledger(&self) -> LambdaMetricsLedger {
         let metrics_path = self.metrics_file();
 
         if !metrics_path.exists() {
-            tracing::debug!("Metrics file not found, using default metrics");
-            return LambdasMetrics::default();
+            tracing::debug!("Metrics file not found, using default ledger");
+            return LambdaMetricsLedger::default();
         }
 
         match fs::read_to_string(&metrics_path) {
-            Ok(content) => match serde_json::from_str::<LambdasMetrics>(&content) {
-                Ok(metrics) => {
-                    tracing::debug!(
-                        total_executions = metrics.total_executions,
-                        "Loaded metrics from file"
-                    );
-                    metrics
+            Ok(content) => {
+                // Try to load as new ledger format first
+                match serde_json::from_str::<LambdaMetricsLedger>(&content) {
+                    Ok(ledger) => {
+                        tracing::debug!(
+                            entries_count = ledger.entries.len(),
+                            "Loaded metrics ledger from file"
+                        );
+                        ledger
+                    }
+                    Err(_) => {
+                        // Try to load as old metrics format for backward compatibility
+                        match serde_json::from_str::<LambdasMetrics>(&content) {
+                            Ok(_old_metrics) => {
+                                tracing::warn!(
+                                    "Found old metrics format, starting with empty ledger"
+                                );
+                                LambdaMetricsLedger::default()
+                            }
+                            Err(e) => {
+                                tracing::warn!(
+                                    error = %e,
+                                    "Failed to parse metrics file, using default ledger"
+                                );
+                                LambdaMetricsLedger::default()
+                            }
+                        }
+                    }
                 }
-                Err(e) => {
-                    tracing::warn!(
-                        error = %e,
-                        "Failed to parse metrics file, using default metrics"
-                    );
-                    LambdasMetrics::default()
-                }
-            },
+            }
             Err(e) => {
                 tracing::warn!(
                     error = %e,
-                    "Failed to read metrics file, using default metrics"
+                    "Failed to read metrics file, using default ledger"
                 );
-                LambdasMetrics::default()
+                LambdaMetricsLedger::default()
             }
         }
     }
 
-    /// Save metrics to JSON file
+    /// Save metrics ledger to JSON file
     #[instrument(skip_all, fields(operation = "save_metrics"))]
     pub(crate) fn save_metrics(&self) -> AppResult<()> {
         let metrics_path = self.metrics_file();
 
-        let content = serde_json::to_string_pretty(&self.metrics)
-            .map_err(|e| AppError::internal(&format!("Failed to serialize metrics: {}", e)))?;
+        let content = serde_json::to_string_pretty(&self.metrics_ledger).map_err(|e| {
+            AppError::internal(&format!("Failed to serialize metrics ledger: {}", e))
+        })?;
 
         fs::write(&metrics_path, content)
             .map_err(|e| AppError::internal(&format!("Failed to save metrics file: {}", e)))?;
 
+        let totals = self.metrics_ledger.calculate_totals();
         tracing::debug!(
-            total_executions = self.metrics.total_executions,
-            "Metrics saved to file"
+            entries_count = self.metrics_ledger.entries.len(),
+            total_executions = totals.total_executions,
+            "Metrics ledger saved to file"
         );
 
         Ok(())
