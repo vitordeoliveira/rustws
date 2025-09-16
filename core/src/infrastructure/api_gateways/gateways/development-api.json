@@ -1,0 +1,92 @@
+{
+  "id": "550e8400-e29b-41d4-a716-446655440002",
+  "name": "development-api",
+  "description": "Development API Gateway for testing and staging",
+  "status": "Deploying",
+  "stage": "dev",
+  "base_url": "https://dev-api.rustws.com",
+  "endpoints": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440020",
+      "path": "/health",
+      "method": "GET",
+      "target": {
+        "Static": {
+          "response": {
+            "status": "ok",
+            "environment": "development",
+            "debug": true
+          }
+        }
+      },
+      "auth_required": false,
+      "rate_limit": null,
+      "cors_enabled": true,
+      "description": "Development health check",
+      "request_transformations": {},
+      "response_transformations": {},
+      "created_at": "2025-01-15T09:00:00Z",
+      "updated_at": "2025-01-15T09:30:00Z"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440021",
+      "path": "/test/hello",
+      "method": "GET",
+      "target": {
+        "Lambda": {
+          "function_name": "hello_world"
+        }
+      },
+      "auth_required": false,
+      "rate_limit": null,
+      "cors_enabled": true,
+      "description": "Test hello world lambda",
+      "request_transformations": {},
+      "response_transformations": {},
+      "created_at": "2025-01-15T09:00:00Z",
+      "updated_at": "2025-01-15T09:00:00Z"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440022",
+      "path": "/proxy/external",
+      "method": "GET",
+      "target": {
+        "HttpProxy": {
+          "url": "https://jsonplaceholder.typicode.com/posts"
+        }
+      },
+      "auth_required": false,
+      "rate_limit": {
+        "requests_per_minute": 30,
+        "burst_limit": 3
+      },
+      "cors_enabled": true,
+      "description": "Proxy to external JSON API for testing",
+      "request_transformations": {},
+      "response_transformations": {},
+      "created_at": "2025-01-15T09:00:00Z",
+      "updated_at": "2025-01-15T09:00:00Z"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440023",
+      "path": "/workflows/test",
+      "method": "POST",
+      "target": {
+        "Workflow": {
+          "workflow_name": "hello_world"
+        }
+      },
+      "auth_required": false,
+      "rate_limit": null,
+      "cors_enabled": true,
+      "description": "Test workflow execution",
+      "request_transformations": {},
+      "response_transformations": {},
+      "created_at": "2025-01-15T09:00:00Z",
+      "updated_at": "2025-01-15T09:00:00Z"
+    }
+  ],
+  "last_deployment": "2025-01-15T09:30:00Z",
+  "created_at": "2025-01-15T09:00:00Z",
+  "updated_at": "2025-01-15T09:30:00Z"
+}

@@ -9,13 +9,18 @@ use tracing::instrument;
 
 use crate::{
     auth::dto::AuthBackend,
-    business_logic::{lambdas::LambdasService, workflows::WorkflowsService},
+    business_logic::{
+        api_gateway::ApiGatewayRepository, lambdas::LambdasService, workflows::WorkflowsService,
+    },
     error_handling::types::AppResult,
-    infrastructure::{lambdas::LambdaStorage, step_functions::StepFunctionStorage},
+    infrastructure::{
+        api_gateways::ApiGatewayStorage, lambdas::LambdaStorage,
+        step_functions::StepFunctionStorage,
+    },
     state::AppState,
     ui::{
         Ui,
-        api_gateway::{ApiGatewayPageUi, get_mock_api_gateways},
+        api_gateway::ApiGatewayPageUi,
         home::HomePageUi,
         lambda::{CreateLambdaPageUi, EditLambdaPageUi, LambdaPageUi},
         monitoring::{MonitoringPageUi, get_mock_monitoring_data},
@@ -200,8 +205,9 @@ pub async fn api_gateway_handler(
 ) -> AppResult<Html<String>> {
     let user = auth_session.user.unwrap();
 
-    // Get mock API gateways for UI demonstration
-    let api_gateways = get_mock_api_gateways();
+    // Get real API gateways from storage
+    let api_gateway_storage = ApiGatewayStorage::new();
+    let api_gateways = api_gateway_storage.get_api_gateways().await?;
 
     let api_gateway_page_ui = ApiGatewayPageUi::new(user, api_gateways);
     let html = api_gateway_page_ui.render_html(&state.tera)?;

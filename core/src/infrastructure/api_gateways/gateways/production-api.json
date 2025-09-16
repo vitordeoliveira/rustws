@@ -1,0 +1,101 @@
+{
+  "id": "550e8400-e29b-41d4-a716-446655440001",
+  "name": "production-api",
+  "description": "Production API Gateway for core services",
+  "status": "Active",
+  "stage": "prod",
+  "base_url": "https://api.rustws.com",
+  "endpoints": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440010",
+      "path": "/health",
+      "method": "GET",
+      "target": {
+        "Static": {
+          "response": {
+            "status": "ok",
+            "version": "1.0.0",
+            "timestamp": "2025-01-15T10:00:00Z"
+          }
+        }
+      },
+      "auth_required": false,
+      "rate_limit": {
+        "requests_per_minute": 1000,
+        "burst_limit": 50
+      },
+      "cors_enabled": true,
+      "description": "Health check endpoint",
+      "request_transformations": {},
+      "response_transformations": {},
+      "created_at": "2025-01-15T10:00:00Z",
+      "updated_at": "2025-01-15T10:00:00Z"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440011",
+      "path": "/users",
+      "method": "GET",
+      "target": {
+        "Lambda": {
+          "function_name": "list_users"
+        }
+      },
+      "auth_required": true,
+      "rate_limit": {
+        "requests_per_minute": 100,
+        "burst_limit": 10
+      },
+      "cors_enabled": true,
+      "description": "List all users",
+      "request_transformations": {},
+      "response_transformations": {},
+      "created_at": "2025-01-15T10:00:00Z",
+      "updated_at": "2025-01-15T10:00:00Z"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440012",
+      "path": "/users/{id}",
+      "method": "GET",
+      "target": {
+        "Lambda": {
+          "function_name": "get_user"
+        }
+      },
+      "auth_required": true,
+      "rate_limit": {
+        "requests_per_minute": 200,
+        "burst_limit": 20
+      },
+      "cors_enabled": true,
+      "description": "Get user by ID",
+      "request_transformations": {},
+      "response_transformations": {},
+      "created_at": "2025-01-15T10:00:00Z",
+      "updated_at": "2025-01-15T10:00:00Z"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440013",
+      "path": "/workflows/user-onboarding",
+      "method": "POST",
+      "target": {
+        "Workflow": {
+          "workflow_name": "user_onboarding"
+        }
+      },
+      "auth_required": true,
+      "rate_limit": {
+        "requests_per_minute": 50,
+        "burst_limit": 5
+      },
+      "cors_enabled": true,
+      "description": "Execute user onboarding workflow",
+      "request_transformations": {},
+      "response_transformations": {},
+      "created_at": "2025-01-15T10:00:00Z",
+      "updated_at": "2025-01-15T10:00:00Z"
+    }
+  ],
+  "last_deployment": "2025-01-15T10:00:00Z",
+  "created_at": "2025-01-15T10:00:00Z",
+  "updated_at": "2025-01-15T10:00:00Z"
+}
