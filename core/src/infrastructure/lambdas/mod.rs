@@ -1013,6 +1013,204 @@ impl LambdaRepository for LambdaStorage {
     }
 }
 
+/// Host function for HTTP requests from WASM
+fn host_http_request(
+    mut env: wasmer::FunctionEnvMut<WasmEnv>,
+    req_ptr: u32,
+    req_len: u32,
+    out_ptr_ptr: u32,
+    out_len_ptr: u32,
+) -> i32 {
+    tracing::debug!("HTTP request from WASM lambda");
+
+    // Get memory from the environment
+    let memory = match env.data().memory.clone() {
+        Some(mem) => mem,
+        None => {
+            tracing::error!("Failed to get WASM memory in HTTP host function");
+            return -1;
+        }
+    };
+
+    // Read request from WASM memory
+    let request_bytes = {
+        let view = memory.view(&env);
+        let mut bytes = Vec::with_capacity(req_len as usize);
+        for i in 0..req_len {
+            match view.read_u8((req_ptr + i) as u64) {
+                Ok(byte) => bytes.push(byte),
+                Err(e) => {
+                    tracing::error!("Failed to read request from WASM memory: {}", e);
+                    return -1;
+                }
+            }
+        }
+        bytes
+    };
+
+    // Parse request JSON
+    let request: std::collections::HashMap<String, serde_json::Value> =
+        match serde_json::from_slice(&request_bytes) {
+            Ok(req) => req,
+            Err(e) => {
+                tracing::error!("Failed to parse HTTP request JSON: {}", e);
+                return -1;
+            }
+        };
+
+    // Extract request fields
+    let method = request
+        .get("method")
+        .and_then(|v| v.as_str())
+        .unwrap_or("GET");
+    let url = match request.get("url").and_then(|v| v.as_str()) {
+        Some(url) => url,
+        None => {
+            tracing::error!("Request missing URL field");
+            return -1;
+        }
+    };
+
+    tracing::info!(method = %method, url = %url, "Making real HTTP request from lambda");
+
+    // Clone data for the blocking thread
+    let method = method.to_string();
+    let url = url.to_string();
+    let headers = request.get("headers").and_then(|v| v.as_object()).cloned();
+    let body = request
+        .get("body")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+
+    // Execute HTTP request in a blocking thread to avoid tokio runtime conflicts
+    let http_result = std::thread::spawn(move || {
+        // Create HTTP client in the blocking thread
+        let client = reqwest::blocking::Client::new();
+        let mut req_builder = match method.as_str() {
+            "GET" => client.get(&url),
+            "POST" => client.post(&url),
+            "PUT" => client.put(&url),
+            "DELETE" => client.delete(&url),
+            "PATCH" => client.patch(&url),
+            "HEAD" => client.head(&url),
+            "OPTIONS" => client.request(reqwest::Method::OPTIONS, &url),
+            _ => client.get(&url), // Default to GET
+        };
+
+        // Add headers if present
+        if let Some(headers) = headers {
+            for (key, value) in headers {
+                if let Some(value_str) = value.as_str() {
+                    req_builder = req_builder.header(key, value_str);
+                }
+            }
+        }
+
+        // Add body if present
+        if let Some(body) = body {
+            req_builder = req_builder.body(body);
+        }
+
+        // Execute HTTP request
+        let response = req_builder.send()?;
+        let status = response.status().as_u16();
+        let body = response.text()?;
+
+        Ok::<(u16, String), reqwest::Error>((status, body))
+    });
+
+    let (status, body) = match http_result.join() {
+        Ok(Ok((status, body))) => (status, body),
+        Ok(Err(e)) => {
+            tracing::error!("HTTP request failed: {}", e);
+            return -1;
+        }
+        Err(_) => {
+            tracing::error!("HTTP request thread panicked");
+            return -1;
+        }
+    };
+
+    // Create response JSON
+    let response_json = serde_json::json!({
+        "status": status,
+        "body": body
+    });
+
+    let response_bytes = match serde_json::to_vec(&response_json) {
+        Ok(bytes) => bytes,
+        Err(e) => {
+            tracing::error!("Failed to serialize response: {}", e);
+            return -1;
+        }
+    };
+
+    tracing::info!(status = %status, response_size = response_bytes.len(), "HTTP request completed");
+
+    // Use a simple approach: allocate in existing WASM memory and return pointer
+    let response_len = response_bytes.len();
+
+    // Get current memory size and use it as allocation point
+    let memory_view = memory.view(&env);
+    let current_size = memory_view.data_size() as usize;
+    let alloc_ptr = current_size as u32;
+
+    // Grow memory if needed
+    let needed_pages = ((current_size + response_len + 65535) / 65536) - (current_size / 65536);
+    if needed_pages > 0 {
+        if let Err(e) = memory.grow(&mut env, needed_pages as u32) {
+            tracing::error!("Failed to grow WASM memory: {}", e);
+            return -1;
+        }
+    }
+
+    // Write response data to allocated memory
+    let memory_view = memory.view(&env);
+    for (i, &byte) in response_bytes.iter().enumerate() {
+        if let Err(e) = memory_view.write_u8((alloc_ptr + i as u32) as u64, byte) {
+            tracing::error!("Failed to write response to WASM memory: {}", e);
+            return -1;
+        }
+    }
+
+    // Write response pointer and length back to WASM using byte-by-byte approach
+    let alloc_ptr_bytes = alloc_ptr.to_le_bytes();
+    for (i, &byte) in alloc_ptr_bytes.iter().enumerate() {
+        if let Err(e) = memory_view.write_u8((out_ptr_ptr + i as u32) as u64, byte) {
+            tracing::error!("Failed to write response pointer: {}", e);
+            return -1;
+        }
+    }
+
+    let response_len_bytes = (response_len as u32).to_le_bytes();
+    for (i, &byte) in response_len_bytes.iter().enumerate() {
+        if let Err(e) = memory_view.write_u8((out_len_ptr + i as u32) as u64, byte) {
+            tracing::error!("Failed to write response length: {}", e);
+            return -1;
+        }
+    }
+
+    0 // Success
+}
+
+/// Environment data for WASM functions
+#[derive(Clone)]
+struct WasmEnv {
+    memory: Option<wasmer::Memory>,
+}
+
+impl WasmEnv {
+    fn new() -> Self {
+        Self { memory: None }
+    }
+
+    fn with_memory(memory: wasmer::Memory) -> Self {
+        Self {
+            memory: Some(memory),
+        }
+    }
+}
+
 impl LambdaStorage {
     /// Execute WASM bytecode using wasmer with structured data support
     #[instrument(
@@ -1032,8 +1230,23 @@ impl LambdaStorage {
         let module = Module::new(&store, wasm_bytes)
             .map_err(|e| AppError::validation(&format!("Failed to compile WASM module: {}", e)))?;
 
+        // Create function environment for host functions
+        let env = wasmer::FunctionEnv::new(&mut store, WasmEnv::new());
+
+        // Create instance first to get memory
+        let imports = wasmer::imports! {
+            "env" => {
+                "host_http_request" => wasmer::Function::new_typed_with_env(&mut store, &env, host_http_request),
+                "wasm_free" => wasmer::Function::new_typed(&mut store, |ptr: u32, size: u32| {
+                    // This is called by WASM to free host-allocated memory
+                    // For now, we'll just log it since we're using simple allocation
+                    tracing::debug!(ptr = ptr, size = size, "WASM requested to free host memory");
+                }),
+            }
+        };
+
         // Create instance
-        let instance = Instance::new(&mut store, &module, &wasmer::imports! {})
+        let instance = Instance::new(&mut store, &module, &imports)
             .map_err(|e| AppError::validation(&format!("Failed to create WASM instance: {}", e)))?;
 
         // Get the exported handler function
@@ -1047,6 +1260,9 @@ impl LambdaStorage {
             .exports
             .get_memory("memory")
             .map_err(|_| AppError::validation("WASM memory not found"))?;
+
+        // Update the environment with memory so host functions can access it
+        env.as_mut(&mut store).memory = Some(memory.clone());
 
         // Allocate memory for input data
         let input_len = input_data.len();
