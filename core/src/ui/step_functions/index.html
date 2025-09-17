@@ -190,20 +190,96 @@
     {% endif %}
 </div>
 
-<!-- Definition Modal -->
+<!-- Enhanced Definition Modal -->
 <div id="definitionModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
-        <div class="bg-white rounded-lg shadow-lg max-w-4xl w-full max-h-[90vh] flex flex-col">
+        <div class="bg-white rounded-lg shadow-lg max-w-6xl w-full max-h-[90vh] flex flex-col">
             <div class="flex justify-between items-center p-6 border-b border-gray-200">
-                <h3 class="text-lg font-medium text-gray-900">Workflow Definition</h3>
+                <div>
+                    <h3 class="text-lg font-medium text-gray-900">Workflow Definition</h3>
+                    <p id="workflowModalTitle" class="text-sm text-gray-500 mt-1"></p>
+                </div>
                 <button onclick="closeDefinitionModal()" class="text-gray-400 hover:text-gray-600">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
                 </button>
             </div>
+            
             <div class="p-6 flex-1 overflow-auto">
-                <pre id="definitionContent" class="bg-gray-50 p-4 rounded-md overflow-auto text-sm font-mono"></pre>
+                <!-- Loading State -->
+                <div id="definitionLoading" class="text-center py-8">
+                    <div class="inline-flex items-center px-4 py-2 font-semibold leading-6 text-sm shadow rounded-md text-gray-500 bg-white">
+                        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Loading workflow definition...
+                    </div>
+                </div>
+
+                <!-- Error State -->
+                <div id="definitionError" class="hidden text-center py-8">
+                    <div class="text-red-600 mb-4">
+                        <svg class="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <h4 class="text-lg font-medium text-gray-900 mb-2">Failed to Load Workflow</h4>
+                    <p id="definitionErrorMessage" class="text-gray-600"></p>
+                </div>
+
+                <!-- Content -->
+                <div id="definitionContent" class="hidden space-y-6">
+                    <!-- Workflow Overview -->
+                    <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                        <h4 class="text-lg font-semibold text-blue-900 mb-3">Workflow Overview</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                            <div>
+                                <span class="text-blue-700 font-medium">Entry Point:</span>
+                                <span id="workflowEntryPoint" class="ml-2 font-mono text-blue-900"></span>
+                            </div>
+                            <div>
+                                <span class="text-blue-700 font-medium">Total States:</span>
+                                <span id="workflowStateCount" class="ml-2 font-mono text-blue-900"></span>
+                            </div>
+                            <div>
+                                <span class="text-blue-700 font-medium">Status:</span>
+                                <span id="workflowStatus" class="ml-2 font-mono text-blue-900"></span>
+                            </div>
+                        </div>
+                        <div id="workflowDescriptionContainer" class="mt-3 hidden">
+                            <span class="text-blue-700 font-medium">Description:</span>
+                            <span id="workflowDescription" class="ml-2 text-blue-900"></span>
+                        </div>
+                    </div>
+
+                    <!-- State Flow -->
+                    <div class="bg-green-50 rounded-lg p-4 border border-green-200">
+                        <h4 class="text-lg font-semibold text-green-900 mb-3">State Flow</h4>
+                        <div id="stateFlow" class="space-y-2"></div>
+                    </div>
+
+                    <!-- Resource Summary -->
+                    <div class="bg-amber-50 rounded-lg p-4 border border-amber-200">
+                        <h4 class="text-lg font-semibold text-amber-900 mb-3">Resources Used</h4>
+                        <div id="resourceSummary" class="space-y-1"></div>
+                    </div>
+
+                    <!-- Raw JSON Definition -->
+                    <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="text-lg font-semibold text-gray-900">JSON Definition</h4>
+                            <button id="toggleJsonButton" onclick="toggleJsonDefinition()" 
+                                    class="text-sm text-gray-600 hover:text-gray-800 font-medium">
+                                Show JSON
+                            </button>
+                        </div>
+                        <div id="jsonDefinition" class="hidden">
+                            <pre id="rawJsonContent" class="bg-white p-4 rounded border text-sm font-mono overflow-auto max-h-96"></pre>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -268,10 +344,14 @@
 </div>
 
 <script>
-// Store step function definitions
-const stepFunctionDefinitions = {
+// Store basic step function info
+const stepFunctionBasicInfo = {
     {% for workflow in workflows %}
-    "{{ workflow.name }}": "{{ workflow.state_count }} states",
+    "{{ workflow.name }}": {
+        state_count: {{ workflow.state_count }},
+        status: "{{ workflow.status }}",
+        description: {% if workflow.description %}"{{ workflow.description|safe }}"{% else %}null{% endif %}
+    },
     {% endfor %}
 };
 
@@ -365,17 +445,199 @@ async function executeStepFunction(workflowName) {
     }
 }
 
-// View definition
-function viewDefinition(stepFunctionName) {
-    const definition = stepFunctionDefinitions[stepFunctionName];
-    if (definition) {
-        document.getElementById('definitionContent').textContent = JSON.stringify(definition, null, 2);
-        document.getElementById('definitionModal').classList.remove('hidden');
+// Enhanced view definition
+async function viewDefinition(workflowName) {
+    // Show modal and loading state
+    document.getElementById('definitionModal').classList.remove('hidden');
+    document.getElementById('definitionLoading').classList.remove('hidden');
+    document.getElementById('definitionError').classList.add('hidden');
+    document.getElementById('definitionContent').classList.add('hidden');
+    document.getElementById('workflowModalTitle').textContent = workflowName;
+    
+    try {
+        // Fetch workflow definition from API
+        const response = await fetch(`/api/workflow/definition/${encodeURIComponent(workflowName)}`);
+        
+        if (!response.ok) {
+            throw new Error(`Failed to fetch workflow: ${response.status} ${response.statusText}`);
+        }
+        
+        const workflow = await response.json();
+        
+        // Hide loading, show content
+        document.getElementById('definitionLoading').classList.add('hidden');
+        document.getElementById('definitionContent').classList.remove('hidden');
+        
+        // Populate workflow details
+        populateWorkflowDetails(workflow);
+        
+    } catch (error) {
+        console.error('Error fetching workflow definition:', error);
+        
+        // Show error state
+        document.getElementById('definitionLoading').classList.add('hidden');
+        document.getElementById('definitionError').classList.remove('hidden');
+        document.getElementById('definitionErrorMessage').textContent = error.message;
+        
+        showToast(`❌ Failed to load workflow definition: ${error.message}`, false);
+    }
+}
+
+function populateWorkflowDetails(workflow) {
+    try {
+        // Parse the JSON definition
+        const definition = JSON.parse(workflow.definition);
+        
+        // Populate overview
+        document.getElementById('workflowEntryPoint').textContent = definition.StartAt || 'Not specified';
+        document.getElementById('workflowStateCount').textContent = Object.keys(definition.States || {}).length;
+        document.getElementById('workflowStatus').textContent = workflow.status;
+        
+        // Show description if available
+        if (workflow.description || definition.Comment) {
+            const desc = workflow.description || definition.Comment;
+            document.getElementById('workflowDescription').textContent = desc;
+            document.getElementById('workflowDescriptionContainer').classList.remove('hidden');
+        } else {
+            document.getElementById('workflowDescriptionContainer').classList.add('hidden');
+        }
+        
+        // Populate state flow
+        populateStateFlow(definition.States || {}, definition.StartAt);
+        
+        // Populate resource summary
+        populateResourceSummary(definition.States || {});
+        
+        // Set raw JSON content
+        document.getElementById('rawJsonContent').textContent = JSON.stringify(definition, null, 2);
+        
+    } catch (error) {
+        console.error('Error parsing workflow definition:', error);
+        showToast('❌ Error parsing workflow definition', false);
+    }
+}
+
+function populateStateFlow(states, startAt) {
+    const stateFlowDiv = document.getElementById('stateFlow');
+    stateFlowDiv.innerHTML = '';
+    
+    if (!states || Object.keys(states).length === 0) {
+        stateFlowDiv.innerHTML = '<p class="text-gray-500 text-sm">No states defined</p>';
+        return;
+    }
+    
+    // Build state flow visualization
+    const stateEntries = Object.entries(states);
+    stateEntries.forEach(([stateName, stateConfig], index) => {
+        const stateDiv = document.createElement('div');
+        stateDiv.className = 'flex items-center text-sm py-2';
+        
+        // State type badge
+        const stateType = stateConfig.Type || 'Unknown';
+        const badgeColor = getStateTypeBadgeColor(stateType);
+        
+        // Check if this is the start state
+        const isStart = stateName === startAt;
+        const startIcon = isStart ? '🚀 ' : '';
+        
+        // Get next state info
+        const nextInfo = getNextStateInfo(stateConfig);
+        
+        stateDiv.innerHTML = `
+            <div class="flex-1">
+                <span class="font-mono font-medium">${startIcon}${stateName}</span>
+                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${badgeColor} ml-2">
+                    ${stateType}
+                </span>
+                ${nextInfo ? `<span class="text-gray-600 ml-2">→ ${nextInfo}</span>` : ''}
+            </div>
+        `;
+        
+        stateFlowDiv.appendChild(stateDiv);
+    });
+}
+
+function getStateTypeBadgeColor(stateType) {
+    const colors = {
+        'Task': 'bg-blue-100 text-blue-800',
+        'Choice': 'bg-purple-100 text-purple-800',
+        'Wait': 'bg-yellow-100 text-yellow-800',
+        'Succeed': 'bg-green-100 text-green-800',
+        'Fail': 'bg-red-100 text-red-800',
+        'Parallel': 'bg-indigo-100 text-indigo-800',
+        'Map': 'bg-cyan-100 text-cyan-800'
+    };
+    return colors[stateType] || 'bg-gray-100 text-gray-800';
+}
+
+function getNextStateInfo(stateConfig) {
+    if (stateConfig.Next) {
+        return stateConfig.Next;
+    } else if (stateConfig.End) {
+        return 'END';
+    } else if (stateConfig.Default) {
+        return `Default: ${stateConfig.Default}`;
+    } else if (stateConfig.Choices && stateConfig.Choices.length > 0) {
+        return `${stateConfig.Choices.length} choice(s)`;
+    }
+    return null;
+}
+
+function populateResourceSummary(states) {
+    const resourceSummaryDiv = document.getElementById('resourceSummary');
+    resourceSummaryDiv.innerHTML = '';
+    
+    const resources = new Map();
+    
+    // Extract resources from Task states
+    Object.entries(states).forEach(([stateName, stateConfig]) => {
+        if (stateConfig.Type === 'Task' && stateConfig.Resource) {
+            const resource = stateConfig.Resource;
+            if (!resources.has(resource)) {
+                resources.set(resource, []);
+            }
+            resources.get(resource).push(stateName);
+        }
+    });
+    
+    if (resources.size === 0) {
+        resourceSummaryDiv.innerHTML = '<p class="text-gray-500 text-sm">No resources defined</p>';
+        return;
+    }
+    
+    // Display resources
+    resources.forEach((stateNames, resource) => {
+        const resourceDiv = document.createElement('div');
+        resourceDiv.className = 'text-sm';
+        
+        resourceDiv.innerHTML = `
+            <div class="font-mono text-amber-900 font-medium">${resource}</div>
+            <div class="text-amber-700 ml-4">Used by: ${stateNames.join(', ')}</div>
+        `;
+        
+        resourceSummaryDiv.appendChild(resourceDiv);
+    });
+}
+
+function toggleJsonDefinition() {
+    const jsonDiv = document.getElementById('jsonDefinition');
+    const button = document.getElementById('toggleJsonButton');
+    
+    if (jsonDiv.classList.contains('hidden')) {
+        jsonDiv.classList.remove('hidden');
+        button.textContent = 'Hide JSON';
+    } else {
+        jsonDiv.classList.add('hidden');
+        button.textContent = 'Show JSON';
     }
 }
 
 function closeDefinitionModal() {
     document.getElementById('definitionModal').classList.add('hidden');
+    
+    // Reset JSON toggle state
+    document.getElementById('jsonDefinition').classList.add('hidden');
+    document.getElementById('toggleJsonButton').textContent = 'Show JSON';
 }
 
 // Execution Result Modal Functions

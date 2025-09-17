@@ -10,7 +10,7 @@ use tracing::{error, info, instrument, warn};
 use crate::{
     auth::dto::AuthBackend,
     business_logic::workflows::{
-        ExecuteWorkflowRequest, ExecuteWorkflowResponse, WorkflowsService,
+        ExecuteWorkflowRequest, ExecuteWorkflowResponse, Workflow, WorkflowsService,
     },
     error_handling::types::AppResult,
     infrastructure::step_functions::StepFunctionStorage,
@@ -95,6 +95,68 @@ pub async fn execute_workflow_handler(
                 workflow_name = %workflow_name,
                 error = %e,
                 "Workflow execution service error"
+            );
+            Err(e)
+        }
+    }
+}
+
+/// Get workflow definition details for viewing/inspection
+#[instrument(
+    skip_all,
+    fields(
+        handler = "get_workflow_definition", 
+        operation = "api_get_definition",
+        workflow_name = %workflow_name
+    )
+)]
+pub async fn get_workflow_definition_handler(
+    State(_state): State<AppState>,
+    _auth_session: AuthSession<AuthBackend>,
+    workflows_service: WorkflowsService<StepFunctionStorage>,
+    Path(workflow_name): Path<String>,
+) -> AppResult<Json<Workflow>> {
+    info!(
+        workflow_name = %workflow_name,
+        "Workflow definition request received"
+    );
+
+    // Validate workflow name
+    if workflow_name.trim().is_empty() {
+        warn!(
+            workflow_name = %workflow_name,
+            "Invalid workflow name provided - empty or whitespace"
+        );
+        return Err(crate::error_handling::types::AppError::validation(
+            "Workflow name cannot be empty or contain only whitespace",
+        ));
+    }
+
+    // Get workflow definition from service
+    match workflows_service.get_by_name(&workflow_name).await {
+        Ok(Some(workflow)) => {
+            info!(
+                workflow_name = %workflow_name,
+                definition_size = workflow.definition.len(),
+                "Successfully retrieved workflow definition"
+            );
+            Ok(Json(workflow))
+        }
+        Ok(None) => {
+            warn!(
+                workflow_name = %workflow_name,
+                "Workflow not found"
+            );
+            Err(crate::error_handling::types::AppError::not_found(&format!(
+                "Workflow '{}' not found",
+                workflow_name
+            )))
+        }
+        Err(e) => {
+            error!(
+                workflow_name = %workflow_name,
+                error = %e,
+                "Failed to retrieve workflow definition"
             );
             Err(e)
         }

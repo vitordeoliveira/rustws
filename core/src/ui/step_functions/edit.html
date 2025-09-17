@@ -2,13 +2,13 @@
 
 {% block content %}
 <!-- Header Section -->
-<div class="bg-gradient-to-r from-amber-500 to-orange-600 text-white -mt-0">
+<div class="bg-gradient-to-r from-cyan-500 to-blue-600 text-white -mt-0">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-12">
         <div class="text-center">
             <h1 class="text-3xl md:text-4xl font-bold mb-4">
                 Edit Step Function
             </h1>
-            <p class="text-lg text-amber-100 max-w-2xl mx-auto">
+            <p class="text-lg text-cyan-100 max-w-2xl mx-auto">
                 Modify your serverless workflow configuration and state machine definition
             </p>
         </div>
@@ -19,7 +19,7 @@
 <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <!-- Back Navigation -->
     <div class="mb-6">
-        <a href="/step-functions" class="inline-flex items-center text-amber-600 hover:text-amber-700 font-medium transition-colors duration-200">
+        <a href="/step-functions" class="inline-flex items-center text-cyan-600 hover:text-cyan-700 font-medium transition-colors duration-200">
             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
             </svg>
@@ -62,7 +62,7 @@
                     <select 
                         id="status" 
                         name="status"
-                        class="block w-full rounded-md border-gray-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 focus:ring-1 px-3 py-2"
+                        class="block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 focus:ring-1 px-3 py-2"
                     >
                         <option value="active" {% if workflow.status == "Active" %}selected{% endif %}>Active</option>
                         <option value="inactive" {% if workflow.status == "Inactive" %}selected{% endif %}>Inactive</option>
@@ -81,7 +81,7 @@
                         <button 
                             type="button" 
                             onclick="validateDefinition()" 
-                            class="inline-flex items-center px-3 py-1 border border-amber-300 text-xs font-medium rounded-md text-amber-700 bg-amber-50 hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-colors duration-200"
+                            class="inline-flex items-center px-3 py-1 border border-cyan-300 text-xs font-medium rounded-md text-cyan-700 bg-cyan-50 hover:bg-cyan-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-colors duration-200"
                         >
                             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -91,7 +91,7 @@
                         <button 
                             type="button" 
                             onclick="loadTemplate()" 
-                            class="inline-flex items-center px-3 py-1 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-colors duration-200"
+                            class="inline-flex items-center px-3 py-1 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-colors duration-200"
                         >
                             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
@@ -105,12 +105,12 @@
                     name="workflowDefinition" 
                     rows="15" 
                     required
-                    class="block w-full rounded-md border-gray-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 focus:ring-1 font-mono text-sm"
+                    class="block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 focus:ring-1 font-mono text-sm"
                     placeholder="Enter your AWS Step Functions state machine definition in JSON format..."
                 >{{ definition|safe }}</textarea>
                 <p class="text-xs text-gray-500 mt-2">
                     Define your state machine using AWS Step Functions JSON specification. 
-                    <a href="https://docs.aws.amazon.com/step-functions/latest/dg/amazon-states-language-reference.html" target="_blank" class="text-amber-600 hover:text-amber-700 underline">
+                    <a href="https://docs.aws.amazon.com/step-functions/latest/dg/amazon-states-language-reference.html" target="_blank" class="text-cyan-600 hover:text-cyan-700 underline">
                         View documentation →
                     </a>
                 </p>
@@ -121,14 +121,14 @@
                 <div class="flex space-x-3">
                     <a 
                         href="/step-functions" 
-                        class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-colors duration-200"
+                        class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-colors duration-200"
                     >
                         Cancel
                     </a>
                     <button 
                         type="button" 
                         onclick="resetToOriginal()" 
-                        class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-colors duration-200"
+                        class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-colors duration-200"
                     >
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
@@ -139,7 +139,7 @@
                 <button 
                     type="submit" 
                     id="updateStepFunctionButton"
-                    class="inline-flex items-center px-6 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 shadow-sm transition-colors duration-200"
+                    class="inline-flex items-center px-6 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-cyan-600 hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 shadow-sm transition-colors duration-200"
                 >
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
