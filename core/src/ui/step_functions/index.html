@@ -538,17 +538,22 @@ function populateStateFlow(states, startAt) {
         
         // Check if this is the start state
         const isStart = stateName === startAt;
-        const startIcon = isStart ? '🚀 ' : '';
+        
+        // Get resource info for Task states
+        const resourceInfo = stateConfig.Type === 'Task' && stateConfig.Resource 
+            ? `<span class="text-gray-500 text-xs ml-2">(${stateConfig.Resource})</span>` 
+            : '';
         
         // Get next state info
         const nextInfo = getNextStateInfo(stateConfig);
         
         stateDiv.innerHTML = `
             <div class="flex-1">
-                <span class="font-mono font-medium">${startIcon}${stateName}</span>
+                <span class="font-mono font-medium">${stateName}</span>
                 <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${badgeColor} ml-2">
                     ${stateType}
                 </span>
+                ${resourceInfo}
                 ${nextInfo ? `<span class="text-gray-600 ml-2">→ ${nextInfo}</span>` : ''}
             </div>
         `;
