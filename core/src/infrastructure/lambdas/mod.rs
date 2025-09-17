@@ -5,9 +5,9 @@
 
 // Sub-modules
 mod metrics;
+mod repository;
 mod storage;
 mod wasm_runtime;
-mod repository;
 
 // Re-export public types and implementations
 pub use metrics::LambdasMetrics;

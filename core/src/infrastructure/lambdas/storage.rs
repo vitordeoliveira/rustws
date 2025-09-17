@@ -146,8 +146,9 @@ impl LambdaStorage {
         fs::create_dir_all(&src_dir)
             .map_err(|e| AppError::internal(&format!("Failed to create src dir: {}", e)))?;
 
-        // Create Cargo.toml with serde dependencies
-        let cargo_toml = r#"[package]
+        // Create Cargo.toml with lambda macro and serde dependencies
+        let cargo_toml = format!(
+            r#"[package]
 name = "lambda_function"
 version = "0.1.0"
 edition = "2021"
@@ -156,24 +157,34 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-serde = { version = "1.0.219", features = ["derive"] }
+serde = {{ version = "1.0.219", features = ["derive"] }}
 serde_json = "1.0.145"
-
+lambda-fn-macro = {{ path = "{}" }}
 
 [profile.release]
 opt-level = "s"
 lto = true
 panic = "abort"
 strip = "symbols"
-"#;
+"#,
+            std::env::current_dir()
+                .unwrap()
+                .parent()
+                .unwrap()
+                .join("lambda-fn-macro")
+                .display()
+        );
 
         let cargo_toml_path = temp_dir.join("Cargo.toml");
         fs::write(&cargo_toml_path, cargo_toml)
             .map_err(|e| AppError::internal(&format!("Failed to write Cargo.toml: {}", e)))?;
 
-        // Write source code to lib.rs
+        // Process user source to fix outer doc comments only
+        let processed_source = self.fix_outer_doc_comments(source_code);
+
+        // Write processed source code to lib.rs
         let lib_path = src_dir.join("lib.rs");
-        fs::write(&lib_path, source_code)
+        fs::write(&lib_path, processed_source)
             .map_err(|e| AppError::internal(&format!("Failed to write source: {}", e)))?;
 
         // Compile with cargo to WASM
@@ -271,6 +282,23 @@ strip = "symbols"
                 runtime
             ))),
         }
+    }
+
+    /// Fix outer doc comments that can't appear in the middle of a file
+    fn fix_outer_doc_comments(&self, user_source: &str) -> String {
+        user_source
+            .lines()
+            .map(|line| {
+                let trimmed = line.trim();
+                if trimmed.starts_with("//!") {
+                    // Convert outer doc comments to regular comments
+                    line.replace("//!", "//")
+                } else {
+                    line.to_string()
+                }
+            })
+            .collect::<Vec<String>>()
+            .join("\n")
     }
 
     /// Compile source file to WASM

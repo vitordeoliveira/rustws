@@ -247,78 +247,50 @@ function resetToOriginal() {
 
 // Load default Rust template
 function loadTemplate() {
-    const template = `//! Lambda Function - Rust Example
+    const template = `//! Lambda Function - Using the lambda_fn! macro
 //!
-//! This lambda demonstrates:
-//! - Structured data input/output using JSON serialization
-//! - Simple business logic processing
-//! - WASM-compatible memory management
-//!
-//! Focus on customizing the lambda_fn - the handler is standardized infrastructure.
+//! The lambda_fn! macro eliminates all WASM boilerplate.
+//! Just focus on your business logic - no memory management, 
+//! serialization, or handler code needed!
 
 use serde::{Deserialize, Serialize};
+use lambda_fn_macro::lambda_fn;
 
-/// WASM memory management functions
-#[no_mangle]
-pub extern "C" fn wasm_malloc(size: usize) -> *mut u8 {
-    let mut buf = Vec::with_capacity(size);
-    let ptr = buf.as_mut_ptr();
-    std::mem::forget(buf);
-    ptr
-}
+// ===== DEFINE YOUR DATA STRUCTURES =====
 
-#[no_mangle]
-pub extern "C" fn wasm_free_impl(ptr: *mut u8, size: usize) {
-    unsafe {
-        let _ = Vec::from_raw_parts(ptr, 0, size);
-    }
-}
-
-/// Main data structure for input/output
-/// Customize this structure for your specific use case
+/// Input structure - customize for your needs
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct HelloWorld {
-    pub text: String,
-    pub count: isize,
+pub struct MyInput {
+    pub message: String,
+    pub count: i32,
 }
 
-/// Main handler function - STANDARDIZED, DON'T CHANGE THIS
-/// Handles all WASM interface complexity (pointers, serialization, etc.)
-#[no_mangle]
-pub extern "C" fn handler(
-    ptr_in: *const u8,
-    len_in: usize,
-    ptr_out: *mut u8,
-    max_out_len: usize,
-) -> usize {
-    let input_slice = unsafe { std::slice::from_raw_parts(ptr_in, len_in) };
-    let input: HelloWorld = serde_json::from_slice(input_slice).unwrap();
-
-    let output = lambda_fn(input);
-    let output_bytes = serde_json::to_vec(&output).unwrap();
-
-    let copy_len = std::cmp::min(max_out_len, output_bytes.len());
-    unsafe {
-        std::ptr::copy_nonoverlapping(output_bytes.as_ptr(), ptr_out, copy_len);
-    }
-    copy_len
+/// Output structure - customize for your needs  
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MyOutput {
+    pub result: String,
+    pub new_count: i32,
 }
 
-/// YOUR BUSINESS LOGIC GOES HERE - CUSTOMIZE THIS FUNCTION!
-/// Takes HelloWorld input and returns HelloWorld output
-fn lambda_fn(input: HelloWorld) -> HelloWorld {
-    // Example validation - customize as needed
-    if input.count > 50 {
-        panic!("Count is too high");
-    }
+// ===== DEFINE YOUR LAMBDA =====
 
-    // Example business logic - replace with your own!
-    HelloWorld {
-        text: format!(
-            "Processed: {} (original count: {})",
-            input.text, input.count,
-        ),
-        count: input.count + 1,
+lambda_fn! {
+    input: MyInput,
+    output: MyOutput,
+    handler: |input: MyInput| -> MyOutput {
+        // YOUR BUSINESS LOGIC HERE!
+        // Pure Rust - no WASM concerns needed
+        
+        // Example validation
+        if input.count < 0 {
+            panic!("Count cannot be negative");
+        }
+        
+        // Example business logic
+        MyOutput {
+            result: format!("Processed: {}", input.message),
+            new_count: input.count + 1,
+        }
     }
 }`;
     

@@ -1,15 +1,15 @@
-//! Hello World Lambda Function - Rust Example
+//! Hello World Lambda Function - Using lambda_fn! macro with HTTP
 //!
-//! This is a lambda function that demonstrates:
-//! - Structured data return with serialization
-//! - JSON-based communication
-//! - Memory allocation for complex types in WASM
-//! - HTTP requests from WASM to external APIs
+//! This demonstrates:
+//! - Using the lambda_fn! macro for clean, simple code
+//! - Making HTTP requests from WASM lambdas
+//! - Pure business logic without WASM boilerplate
 
+use lambda_fn_macro::lambda_fn;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-// ===== WASM HOST FUNCTION DECLARATIONS =====
+// ===== HTTP FUNCTIONALITY =====
 
 extern "C" {
     /// Host function for making HTTP requests from WASM
@@ -22,25 +22,6 @@ extern "C" {
 
     /// Host function to free memory allocated by the host
     fn wasm_free(ptr: *mut u8, size: usize);
-}
-
-// ===== WASM MEMORY MANAGEMENT =====
-
-/// Allocate memory in WASM that can be accessed by the host
-#[no_mangle]
-pub extern "C" fn wasm_malloc(size: usize) -> *mut u8 {
-    let mut buf = Vec::with_capacity(size);
-    let ptr = buf.as_mut_ptr();
-    std::mem::forget(buf);
-    ptr
-}
-
-/// Free memory allocated by wasm_malloc
-#[no_mangle]
-pub extern "C" fn wasm_free_impl(ptr: *mut u8, size: usize) {
-    unsafe {
-        let _ = Vec::from_raw_parts(ptr, 0, size);
-    }
 }
 
 // ===== SIMPLE HTTP TYPES =====
@@ -140,84 +121,67 @@ pub struct Post {
     pub userId: u32,
 }
 
-/// Main handler function for the lambda
-/// Uses pointer-based memory management for better performance
-#[no_mangle]
-pub extern "C" fn handler(
-    ptr_in: *const u8,
-    len_in: usize,
-    ptr_out: *mut u8,
-    max_out_len: usize,
-) -> usize {
-    let input_slice = unsafe { std::slice::from_raw_parts(ptr_in, len_in) };
-    let input: HelloWorld = serde_json::from_slice(input_slice).unwrap();
+// ===== LAMBDA IMPLEMENTATION USING MACRO =====
 
-    let output = lambda_fn(input);
-    let output_bytes = serde_json::to_vec(&output).unwrap();
-
-    let copy_len = std::cmp::min(max_out_len, output_bytes.len());
-    unsafe {
-        std::ptr::copy_nonoverlapping(output_bytes.as_ptr(), ptr_out, copy_len);
-    }
-    copy_len
-}
-
-/// Business logic function demonstrating HTTP requests
-/// Takes HelloWorld input and returns HelloWorld output with HTTP data
-fn lambda_fn(input: HelloWorld) -> HelloWorld {
-    if input.count > 50 {
-        panic!("Count is too high");
-    }
-
-    // Simple HTTP request using basic Request struct
-    let mut headers = HashMap::new();
-    headers.insert("User-Agent".to_string(), "rustws-lambda/1.0".to_string());
-
-    let request = Request {
-        method: "GET".to_string(),
-        url: "https://jsonplaceholder.typicode.com/posts/1".to_string(),
-        headers,
-        body: None,
-    };
-
-    match http_request(&request) {
-        Ok(response) if response.is_success() => {
-            // Try to parse the JSONPlaceholder API response using type-safe deserialization
-            match response.json::<Post>() {
-                Ok(post) => HelloWorld {
-                    text: format!(
-                        "Processed: {} (original count: {}). Got post '{}' by user {}!",
-                        input.text, input.count, post.title, post.userId
-                    ),
-                    count: input.count + 10,
-                },
-                Err(_) => HelloWorld {
-                    text: format!(
-                        "Processed: {} (original count: {}). Got HTTP response but couldn't parse JSON: {}",
-                        input.text,
-                        input.count,
-                        response.text()
-                    ),
-                    count: input.count + 10,
-                },
-            }
+lambda_fn! {
+    input: HelloWorld,
+    output: HelloWorld,
+    handler: |input: HelloWorld| -> HelloWorld {
+        // Validation
+        if input.count > 50 {
+            panic!("Count is too high");
         }
-        Ok(response) => HelloWorld {
-            text: format!(
-                "Processed: {} (original count: {}). HTTP request failed with status: {}",
-                input.text,
-                input.count,
-                response.status()
-            ),
-            count: input.count + 10,
-        },
-        Err(e) => HelloWorld {
-            text: format!(
-                "Processed: {} (original count: {}). HTTP request error: {}",
-                input.text, input.count, e
-            ),
-            count: input.count + 10,
-        },
+
+        // Business logic with HTTP request - pure Rust!
+        let mut headers = HashMap::new();
+        headers.insert("User-Agent".to_string(), "rustws-lambda/1.0".to_string());
+
+        let request = Request {
+            method: "GET".to_string(),
+            url: "https://jsonplaceholder.typicode.com/posts/1".to_string(),
+            headers,
+            body: None,
+        };
+
+        match http_request(&request) {
+            Ok(response) if response.is_success() => {
+                // Try to parse the JSONPlaceholder API response using type-safe deserialization
+                match response.json::<Post>() {
+                    Ok(post) => HelloWorld {
+                        text: format!(
+                            "Processed: {} (original count: {}). Got post '{}' by user {}!",
+                            input.text, input.count, post.title, post.userId
+                        ),
+                        count: input.count + 10,
+                    },
+                    Err(_) => HelloWorld {
+                        text: format!(
+                            "Processed: {} (original count: {}). Got HTTP response but couldn't parse JSON: {}",
+                            input.text,
+                            input.count,
+                            response.text()
+                        ),
+                        count: input.count + 10,
+                    },
+                }
+            }
+            Ok(response) => HelloWorld {
+                text: format!(
+                    "Processed: {} (original count: {}). HTTP request failed with status: {}",
+                    input.text,
+                    input.count,
+                    response.status()
+                ),
+                count: input.count + 10,
+            },
+            Err(e) => HelloWorld {
+                text: format!(
+                    "Processed: {} (original count: {}). HTTP request error: {}",
+                    input.text, input.count, e
+                ),
+                count: input.count + 10,
+            },
+        }
     }
 }
 
