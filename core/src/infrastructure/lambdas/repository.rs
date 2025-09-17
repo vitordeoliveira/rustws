@@ -6,13 +6,13 @@ use std::fs;
 use tracing::instrument;
 use uuid::Uuid;
 
+use super::storage::LambdaStorage;
+use super::wasm_runtime;
 use crate::business_logic::lambdas::{
     CreateLambdaRequest, CreateLambdaResponse, ExecuteLambdaRequest, ExecuteLambdaResponse, Lambda,
     LambdaRepository, LambdaStatus, LambdaSummary, UpdateLambdaRequest,
 };
 use crate::error_handling::types::{AppError, AppResult};
-use super::storage::LambdaStorage;
-use super::wasm_runtime;
 
 /// Implementation of LambdaRepository trait for LambdaStorage
 impl LambdaRepository for LambdaStorage {
@@ -89,7 +89,11 @@ impl LambdaRepository for LambdaStorage {
     }
 
     /// Save compiled WASM bytes
-    async fn save_compiled_wasm(&self, lambda_name: &str, wasm_bytes: &[u8]) -> AppResult<std::path::PathBuf> {
+    async fn save_compiled_wasm(
+        &self,
+        lambda_name: &str,
+        wasm_bytes: &[u8],
+    ) -> AppResult<std::path::PathBuf> {
         self.save_compiled_wasm(lambda_name, wasm_bytes).await
     }
 
@@ -106,11 +110,15 @@ impl LambdaRepository for LambdaStorage {
         let wasm_path = wasm_dir.join(format!("{}.wasm", lambda_name));
 
         if !wasm_path.exists() {
+            let execution_time_ms = start_time.elapsed().as_millis() as u64;
+            let execution_timestamp = chrono::Utc::now();
             return Ok(ExecuteLambdaResponse::Failed {
                 error_message: format!(
                     "WASM file not found for lambda '{}'. Compile the lambda first.",
                     lambda_name
                 ),
+                execution_time_ms,
+                execution_timestamp,
             });
         }
 
@@ -118,20 +126,35 @@ impl LambdaRepository for LambdaStorage {
         let wasm_bytes = match fs::read(&wasm_path) {
             Ok(bytes) => bytes,
             Err(e) => {
+                let execution_time_ms = start_time.elapsed().as_millis() as u64;
+                let execution_timestamp = chrono::Utc::now();
                 return Ok(ExecuteLambdaResponse::Failed {
                     error_message: format!("Failed to read WASM file: {}", e),
+                    execution_time_ms,
+                    execution_timestamp,
                 });
             }
         };
 
         // Execute WASM using wasmer
+        let execution_timestamp = chrono::Utc::now();
         let result = match wasm_runtime::execute_wasm(&wasm_bytes, &request.input_data).await {
-            Ok(output) => ExecuteLambdaResponse::Success {
-                output_data: output,
-            },
-            Err(e) => ExecuteLambdaResponse::Failed {
-                error_message: format!("WASM execution failed: {}", e),
-            },
+            Ok(output) => {
+                let execution_time_ms = start_time.elapsed().as_millis() as u64;
+                ExecuteLambdaResponse::Success {
+                    output_data: output,
+                    execution_time_ms,
+                    execution_timestamp,
+                }
+            }
+            Err(e) => {
+                let execution_time_ms = start_time.elapsed().as_millis() as u64;
+                ExecuteLambdaResponse::Failed {
+                    error_message: format!("WASM execution failed: {}", e),
+                    execution_time_ms,
+                    execution_timestamp,
+                }
+            }
         };
 
         // Record execution in metrics ledger

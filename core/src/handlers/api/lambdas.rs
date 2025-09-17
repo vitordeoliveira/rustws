@@ -156,14 +156,14 @@ pub async fn execute_lambda_handler(
     match lambda_service.execute(request).await {
         Ok(response) => {
             match &response {
-                ExecuteLambdaResponse::Success { output_data } => {
+                ExecuteLambdaResponse::Success { output_data, .. } => {
                     info!(
                         lambda_name = %lambda_name,
                         output_size_bytes = output_data.len(),
                         "Lambda execution completed successfully"
                     );
                 }
-                ExecuteLambdaResponse::Failed { error_message } => {
+                ExecuteLambdaResponse::Failed { error_message, .. } => {
                     warn!(
                         lambda_name = %lambda_name,
                         error_message = %error_message,

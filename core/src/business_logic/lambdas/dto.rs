@@ -46,15 +46,13 @@ pub struct ExecuteLambdaRequest {
 pub enum ExecuteLambdaResponse {
     Success {
         output_data: Vec<u8>,
-        // TODO: Add in the future
-        // memory_used_mb: u32,
-        // execution_time_ms: u64,
+        execution_time_ms: u64,
+        execution_timestamp: chrono::DateTime<chrono::Utc>,
     },
     Failed {
         error_message: String,
-        // TODO: Add in the future
-        // memory_used_mb: u32,
-        // execution_time_ms: u64,
+        execution_time_ms: u64,
+        execution_timestamp: chrono::DateTime<chrono::Utc>,
     },
 }
 

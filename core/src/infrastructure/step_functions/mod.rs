@@ -445,7 +445,7 @@ impl StepFunctionStorage {
 
         // Process the response
         match response {
-            ExecuteLambdaResponse::Success { output_data } => {
+            ExecuteLambdaResponse::Success { output_data, .. } => {
                 // Parse the output bytes back to JSON
                 let output_json: serde_json::Value =
                     serde_json::from_slice(&output_data).map_err(|e| {
@@ -463,7 +463,7 @@ impl StepFunctionStorage {
 
                 Ok(output_json)
             }
-            ExecuteLambdaResponse::Failed { error_message } => Err(AppError::validation(&format!(
+            ExecuteLambdaResponse::Failed { error_message, .. } => Err(AppError::validation(&format!(
                 "Lambda '{}' execution failed: {}",
                 lambda_name, error_message
             ))),

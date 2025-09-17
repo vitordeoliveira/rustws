@@ -294,6 +294,19 @@
                         </div>
                     </div>
                 </div>
+                <div class="mt-4 pt-4 border-t border-gray-200">
+                    <h4 class="text-sm font-semibold text-gray-700 mb-2">Execution Metrics:</h4>
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <span class="text-gray-500">Execution Time:</span>
+                            <span id="executionTime" class="ml-2 font-mono text-blue-600"></span>
+                        </div>
+                        <div>
+                            <span class="text-gray-500">Timestamp:</span>
+                            <span id="executionTimestamp" class="ml-2 font-mono text-gray-700"></span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -353,7 +366,7 @@ function hideToast() {
 }
 
 // Execution Result Modal Functions
-function showExecutionResultModal(lambdaName, jsonString, parsedJson, outputSize, status) {
+function showExecutionResultModal(lambdaName, jsonString, parsedJson, outputSize, status, executionTimeMs, executionTimestamp) {
     // Set modal content
     document.getElementById('executedLambdaName').textContent = lambdaName;
     
@@ -368,6 +381,22 @@ function showExecutionResultModal(lambdaName, jsonString, parsedJson, outputSize
     document.getElementById('executionJsonContent').textContent = formattedJson;
     document.getElementById('executionStatus').textContent = status;
     document.getElementById('executionSize').textContent = `${outputSize} bytes`;
+    
+    // Set execution metrics
+    if (executionTimeMs !== undefined) {
+        document.getElementById('executionTime').textContent = `${executionTimeMs}ms`;
+    } else {
+        document.getElementById('executionTime').textContent = 'N/A';
+    }
+    
+    if (executionTimestamp) {
+        // Format timestamp to be more readable
+        const date = new Date(executionTimestamp);
+        const formattedTimestamp = date.toLocaleString();
+        document.getElementById('executionTimestamp').textContent = formattedTimestamp;
+    } else {
+        document.getElementById('executionTimestamp').textContent = 'N/A';
+    }
     
     // Set status color
     const statusElement = document.getElementById('executionStatus');
@@ -532,32 +561,38 @@ async function testLambda(lambdaName) {
         if (response.ok) {
             if (result.Success) {
                 const outputData = result.Success.output_data;
+                const executionTimeMs = result.Success.execution_time_ms;
+                const executionTimestamp = result.Success.execution_timestamp;
+                
                 // Parse JSON output and display in modal
                 try {
                     const jsonString = new TextDecoder().decode(new Uint8Array(outputData));
                     const parsedJson = JSON.parse(jsonString);
                     
                     // Show formatted JSON in modal
-                    showExecutionResultModal(lambdaName, jsonString, parsedJson, outputData.length, 'Success');
+                    showExecutionResultModal(lambdaName, jsonString, parsedJson, outputData.length, 'Success', executionTimeMs, executionTimestamp);
                     
                     // Also show success toast
-                    showToast(`✅ ${lambdaName} executed successfully! Click to view JSON output.`, true);
+                    showToast(`✅ ${lambdaName} executed successfully in ${executionTimeMs}ms! Click to view JSON output.`, true);
                 } catch (parseError) {
                     console.error('Failed to parse JSON output:', parseError);
                     
                     // Show raw output in modal if JSON parsing fails
                     const rawString = new TextDecoder().decode(new Uint8Array(outputData));
-                    showExecutionResultModal(lambdaName, rawString, null, outputData.length, 'Success (Raw)');
+                    showExecutionResultModal(lambdaName, rawString, null, outputData.length, 'Success (Raw)', executionTimeMs, executionTimestamp);
                     
-                    showToast(`✅ ${lambdaName} executed successfully! Raw output: ${outputData.length} bytes`, true);
+                    showToast(`✅ ${lambdaName} executed successfully in ${executionTimeMs}ms! Raw output: ${outputData.length} bytes`, true);
                 }
                 
                 // Refresh metrics after successful execution
                 await refreshLambdaMetrics();
             } else if (result.Failed) {
                 const errorJson = JSON.stringify({ error: result.Failed.error_message }, null, 2);
-                showExecutionResultModal(lambdaName, errorJson, null, errorJson.length, 'Failed');
-                showToast(`❌ Execution failed: ${result.Failed.error_message}`, false);
+                const executionTimeMs = result.Failed.execution_time_ms;
+                const executionTimestamp = result.Failed.execution_timestamp;
+                
+                showExecutionResultModal(lambdaName, errorJson, null, errorJson.length, 'Failed', executionTimeMs, executionTimestamp);
+                showToast(`❌ Execution failed after ${executionTimeMs}ms: ${result.Failed.error_message}`, false);
             }
         } else {
             showToast(`❌ Error executing ${lambdaName}`, false);

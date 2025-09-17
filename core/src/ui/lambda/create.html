@@ -233,24 +233,37 @@ function hideToast() {
         function loadTemplate() {
             const template = `//! Lambda Function - Rust Example
 //!
-//! This lambda demonstrates structured data input/output using JSON serialization.
+//! This lambda demonstrates:
+//! - Structured data input/output using JSON serialization
+//! - Simple business logic processing
+//! - WASM-compatible memory management
+//!
 //! Focus on customizing the lambda_fn - the handler is standardized infrastructure.
 
 use serde::{Deserialize, Serialize};
 
-/// Input structure - define what data your lambda expects
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct LambdaInput {
-    pub message: String,
-    pub count: i32,
+/// WASM memory management functions
+#[no_mangle]
+pub extern "C" fn wasm_malloc(size: usize) -> *mut u8 {
+    let mut buf = Vec::with_capacity(size);
+    let ptr = buf.as_mut_ptr();
+    std::mem::forget(buf);
+    ptr
 }
 
-/// Output structure - define what data your lambda returns
+#[no_mangle]
+pub extern "C" fn wasm_free_impl(ptr: *mut u8, size: usize) {
+    unsafe {
+        let _ = Vec::from_raw_parts(ptr, 0, size);
+    }
+}
+
+/// Main data structure for input/output
+/// Customize this structure for your specific use case
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LambdaOutput {
-    pub result: String,
-    pub processed_count: i32,
-    pub timestamp: String,
+pub struct HelloWorld {
+    pub text: String,
+    pub count: isize,
 }
 
 /// Main handler function - STANDARDIZED, DON'T CHANGE THIS
@@ -263,7 +276,7 @@ pub extern "C" fn handler(
     max_out_len: usize,
 ) -> usize {
     let input_slice = unsafe { std::slice::from_raw_parts(ptr_in, len_in) };
-    let input: LambdaInput = serde_json::from_slice(input_slice).unwrap();
+    let input: HelloWorld = serde_json::from_slice(input_slice).unwrap();
 
     let output = lambda_fn(input);
     let output_bytes = serde_json::to_vec(&output).unwrap();
@@ -276,15 +289,20 @@ pub extern "C" fn handler(
 }
 
 /// YOUR BUSINESS LOGIC GOES HERE - CUSTOMIZE THIS FUNCTION!
-/// Takes your input type and returns your output type
-fn lambda_fn(input: LambdaInput) -> LambdaOutput {
+/// Takes HelloWorld input and returns HelloWorld output
+fn lambda_fn(input: HelloWorld) -> HelloWorld {
+    // Example validation - customize as needed
+    if input.count > 50 {
+        panic!("Count is too high");
+    }
+
     // Example business logic - replace with your own!
-    let processed_result = input.count * 2 + input.message.len() as i32;
-    
-    LambdaOutput {
-        result: format!("Processed: {}. Calculated: {}", input.message, processed_result),
-        processed_count: processed_result,
-        timestamp: "2024-01-01T00:00:00Z".to_string(), // Static timestamp for demo
+    HelloWorld {
+        text: format!(
+            "Processed: {} (original count: {})",
+            input.text, input.count,
+        ),
+        count: input.count + 1,
     }
 }`;
     
