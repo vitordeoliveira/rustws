@@ -9,7 +9,12 @@
     },
     "SecondHelloWorld": {
       "Type": "Task", 
-      "Resource": "rustws:lambda:hello_world",
+      "Resource": "rustws:lambda:hello_without_http_request",
+      "Next": "ThirdHelloWorld"
+    },
+    "ThirdHelloWorld": {
+      "Type": "Task", 
+      "Resource": "rustws:lambda:hello_without_http_request",
       "End": true
     }
   }

@@ -328,9 +328,25 @@ document.getElementById('editStepFunctionForm').addEventListener('submit', async
         
         showToast(`Updating step function '${workflowName}'...`, true);
         
-        // TODO: Replace with actual API call to update step function
-        // For now, simulate success after 2 seconds
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // Create update request
+        const updateRequest = {
+            status: null, // Status is derived from validation for now
+            definition: workflowDefinition
+        };
+        
+        // Call update API
+        const response = await fetch(`/api/workflow/update/${encodeURIComponent(workflowName)}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(updateRequest)
+        });
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Server error: ${response.status} ${response.statusText}${errorText ? ` - ${errorText}` : ''}`);
+        }
         
         showToast(`✅ Step function '${workflowName}' updated successfully!`, true);
         

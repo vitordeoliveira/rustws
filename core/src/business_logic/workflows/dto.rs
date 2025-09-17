@@ -30,6 +30,13 @@ pub struct ExecuteWorkflowRequest {
     pub input_data: serde_json::Value,
 }
 
+/// Request to update an existing workflow
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateWorkflowRequest {
+    pub status: Option<WorkflowStatus>,
+    pub definition: Option<String>, // JSON string of the updated workflow definition
+}
+
 /// Complete workflow definition with metadata
 /// Used for editing and detailed workflow management
 #[derive(Debug, Clone, Serialize, Deserialize)]

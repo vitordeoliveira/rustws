@@ -4,7 +4,10 @@ use axum::extract::FromRequestParts;
 use axum::http::request::Parts;
 use tracing::instrument;
 
-use super::dto::{ExecuteWorkflowRequest, ExecuteWorkflowResponse, Workflow, WorkflowSummary};
+use super::dto::{
+    ExecuteWorkflowRequest, ExecuteWorkflowResponse, UpdateWorkflowRequest, Workflow,
+    WorkflowSummary,
+};
 use super::repository::WorkflowRepository;
 use crate::error_handling::types::{AppError, AppResult};
 use crate::infrastructure::step_functions::StepFunctionStorage;
@@ -53,11 +56,16 @@ where
     //     self.repository.create(request).await
     // }
     //
-    // /// Update an existing workflow
-    // #[instrument(skip_all, fields(service = "workflows", operation = "update", workflow_name = %workflow_name))]
-    // pub async fn update(&self, workflow_name: &str, request: UpdateWorkflowRequest) -> AppResult<()> {
-    //     self.repository.update(workflow_name, request).await
-    // }
+    /// Update an existing workflow
+    #[instrument(skip_all, fields(service = "workflows", operation = "update", workflow_name = %workflow_name))]
+    pub async fn update(
+        &self,
+        workflow_name: &str,
+        request: UpdateWorkflowRequest,
+    ) -> AppResult<()> {
+        tracing::info!(workflow_name = %workflow_name, "Updating workflow through service");
+        self.repository.update(workflow_name, request).await
+    }
     //
     // /// Delete a workflow by name
     // #[instrument(skip_all, fields(service = "workflows", operation = "delete", workflow_name = %workflow_name))]

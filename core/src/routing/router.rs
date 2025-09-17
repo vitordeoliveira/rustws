@@ -72,6 +72,10 @@ pub fn create_private_router() -> Router<AppState> {
             "/api/workflow/definition/{workflow_name}",
             get(api::workflows::get_workflow_definition_handler),
         )
+        .route(
+            "/api/workflow/update/{workflow_name}",
+            put(api::workflows::update_workflow_handler),
+        )
         .route_layer(login_required!(AuthBackend, login_url = "/login"))
 }
 

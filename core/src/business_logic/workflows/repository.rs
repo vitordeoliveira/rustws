@@ -4,7 +4,8 @@ use super::dto::{
     // CreateWorkflowRequest, CreateWorkflowResponse,
     ExecuteWorkflowRequest,
     ExecuteWorkflowResponse,
-    // UpdateWorkflowRequest, WorkflowValidationResult,
+    UpdateWorkflowRequest,
+    // WorkflowValidationResult,
     Workflow,
     WorkflowSummary,
 };
@@ -30,9 +31,9 @@ pub trait WorkflowRepository: Send + Sync {
     // /// Saves workflow JSON to filesystem and validates structure
     // async fn create(&self, request: CreateWorkflowRequest) -> AppResult<CreateWorkflowResponse>;
 
-    // /// Update an existing workflow
-    // /// Updates workflow JSON and re-validates structure
-    // async fn update(&self, workflow_name: &str, request: UpdateWorkflowRequest) -> AppResult<()>;
+    /// Update an existing workflow
+    /// Updates workflow JSON and re-validates structure
+    async fn update(&self, workflow_name: &str, request: UpdateWorkflowRequest) -> AppResult<()>;
 
     // /// Delete a workflow by name
     // /// Removes workflow JSON file and any associated metadata

@@ -10,7 +10,8 @@ use tracing::{error, info, instrument, warn};
 use crate::{
     auth::dto::AuthBackend,
     business_logic::workflows::{
-        ExecuteWorkflowRequest, ExecuteWorkflowResponse, Workflow, WorkflowsService,
+        ExecuteWorkflowRequest, ExecuteWorkflowResponse, UpdateWorkflowRequest, Workflow,
+        WorkflowsService,
     },
     error_handling::types::AppResult,
     infrastructure::step_functions::StepFunctionStorage,
@@ -157,6 +158,58 @@ pub async fn get_workflow_definition_handler(
                 workflow_name = %workflow_name,
                 error = %e,
                 "Failed to retrieve workflow definition"
+            );
+            Err(e)
+        }
+    }
+}
+
+/// Update a workflow definition
+#[instrument(
+    skip_all,
+    fields(
+        handler = "update_workflow", 
+        operation = "api_update",
+        workflow_name = %workflow_name
+    )
+)]
+pub async fn update_workflow_handler(
+    State(_state): State<AppState>,
+    _auth_session: AuthSession<AuthBackend>,
+    workflows_service: WorkflowsService<StepFunctionStorage>,
+    Path(workflow_name): Path<String>,
+    Json(request): Json<UpdateWorkflowRequest>,
+) -> AppResult<Json<()>> {
+    info!(
+        workflow_name = %workflow_name,
+        "Workflow update request received"
+    );
+
+    // Validate workflow name
+    if workflow_name.trim().is_empty() {
+        warn!(
+            workflow_name = %workflow_name,
+            "Invalid workflow name provided - empty or whitespace"
+        );
+        return Err(crate::error_handling::types::AppError::validation(
+            "Workflow name cannot be empty or contain only whitespace",
+        ));
+    }
+
+    // Update workflow through service
+    match workflows_service.update(&workflow_name, request).await {
+        Ok(()) => {
+            info!(
+                workflow_name = %workflow_name,
+                "Successfully updated workflow"
+            );
+            Ok(Json(()))
+        }
+        Err(e) => {
+            error!(
+                workflow_name = %workflow_name,
+                error = %e,
+                "Failed to update workflow"
             );
             Err(e)
         }

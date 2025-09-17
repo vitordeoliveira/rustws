@@ -7,8 +7,8 @@ use crate::business_logic::lambdas::{
 };
 use crate::business_logic::resource::Resource;
 use crate::business_logic::workflows::{
-    ExecuteWorkflowRequest, ExecuteWorkflowResponse, Workflow as BusinessWorkflow,
-    WorkflowRepository, WorkflowStatus, WorkflowSummary,
+    ExecuteWorkflowRequest, ExecuteWorkflowResponse, UpdateWorkflowRequest,
+    Workflow as BusinessWorkflow, WorkflowRepository, WorkflowStatus, WorkflowSummary,
 };
 use crate::error_handling::types::{AppError, AppResult};
 use crate::infrastructure::lambdas::LambdaStorage;
@@ -173,6 +173,70 @@ impl WorkflowRepository for StepFunctionStorage {
         );
 
         Ok(Some(business_workflow))
+    }
+
+    #[instrument(
+        skip_all,
+        fields(repository = "step_functions", operation = "update_workflow", workflow_name = %workflow_name)
+    )]
+    async fn update(&self, workflow_name: &str, request: UpdateWorkflowRequest) -> AppResult<()> {
+        tracing::info!(
+            workflow_name = %workflow_name,
+            "Workflow update request received"
+        );
+
+        let workflows_dir = self.workflows_dir();
+        let workflow_path = workflows_dir.join(format!("{}.json", workflow_name));
+
+        // Check if workflow exists
+        if !workflow_path.exists() {
+            tracing::warn!(
+                workflow_name = %workflow_name,
+                workflow_path = %workflow_path.display(),
+                "Workflow file not found for update"
+            );
+            return Err(AppError::not_found(&format!(
+                "Workflow '{}' not found",
+                workflow_name
+            )));
+        }
+
+        // If definition is provided, validate and update it
+        if let Some(definition) = &request.definition {
+            // Validate JSON syntax
+            let workflow: Workflow = serde_json::from_str(definition).map_err(|e| {
+                AppError::validation(&format!("Invalid workflow JSON syntax: {}", e))
+            })?;
+
+            // Validate workflow structure
+            workflow
+                .validate()
+                .map_err(|e| AppError::validation(&format!("Invalid workflow structure: {}", e)))?;
+
+            // Write the updated definition to file
+            std::fs::write(&workflow_path, definition).map_err(|e| {
+                AppError::internal(&format!(
+                    "Failed to write updated workflow '{}': {}",
+                    workflow_name, e
+                ))
+            })?;
+
+            tracing::info!(
+                workflow_name = %workflow_name,
+                definition_size = definition.len(),
+                "Workflow definition updated successfully"
+            );
+        }
+
+        // Note: Status updates could be implemented here if needed
+        // For now, status is derived from workflow validation
+
+        tracing::info!(
+            workflow_name = %workflow_name,
+            "Workflow update completed successfully"
+        );
+
+        Ok(())
     }
 
     #[instrument(
