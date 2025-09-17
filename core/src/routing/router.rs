@@ -31,6 +31,10 @@ pub fn create_private_router() -> Router<AppState> {
             "/step-functions/create",
             get(pages::create_step_function_handler),
         )
+        .route(
+            "/step-functions/edit/{workflow_name}",
+            get(pages::edit_step_function_handler),
+        )
         .route("/lambda/create", get(pages::create_lambda_handler))
         .route(
             "/lambda/edit/{lambda_name}",

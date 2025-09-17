@@ -7,8 +7,8 @@ use crate::business_logic::lambdas::{
 };
 use crate::business_logic::resource::Resource;
 use crate::business_logic::workflows::{
-    ExecuteWorkflowRequest, ExecuteWorkflowResponse, WorkflowRepository, WorkflowStatus,
-    WorkflowSummary,
+    ExecuteWorkflowRequest, ExecuteWorkflowResponse, Workflow as BusinessWorkflow,
+    WorkflowRepository, WorkflowStatus, WorkflowSummary,
 };
 use crate::error_handling::types::{AppError, AppResult};
 use crate::infrastructure::lambdas::LambdaStorage;
@@ -36,7 +36,6 @@ impl StepFunctionStorage {
             lambda_storage: LambdaStorage::new(),
         }
     }
-
 
     /// Get the workflows directory path
     pub fn workflows_dir(&self) -> PathBuf {
@@ -95,6 +94,85 @@ impl WorkflowRepository for StepFunctionStorage {
 
         tracing::info!(count = summaries.len(), "Found workflows");
         Ok(summaries)
+    }
+
+    #[instrument(
+        skip_all,
+        fields(repository = "step_functions", operation = "get_workflow_by_name", workflow_name = %name)
+    )]
+    async fn get_by_name(&self, name: &str) -> AppResult<Option<BusinessWorkflow>> {
+        let workflows_dir = self.workflows_dir();
+        let workflow_path = workflows_dir.join(format!("{}.json", name));
+
+        if !workflow_path.exists() {
+            tracing::warn!(
+                workflow_name = %name,
+                workflow_path = %workflow_path.display(),
+                "Workflow file not found"
+            );
+            return Ok(None);
+        }
+
+        // Read and parse the workflow JSON file
+        let content = std::fs::read_to_string(&workflow_path).map_err(|e| {
+            AppError::internal(&format!("Failed to read workflow file '{}': {}", name, e))
+        })?;
+
+        // Parse JSON to validate structure
+        let workflow: Workflow = serde_json::from_str(&content).map_err(|e| {
+            AppError::internal(&format!(
+                "Failed to parse workflow '{}' as JSON: {}",
+                name, e
+            ))
+        })?;
+
+        // Get file metadata for timestamps
+        let metadata = std::fs::metadata(&workflow_path).map_err(|e| {
+            AppError::internal(&format!(
+                "Failed to read file metadata for '{}': {}",
+                name, e
+            ))
+        })?;
+
+        // Convert file times to chrono DateTime
+        let created_at = metadata
+            .created()
+            .or_else(|_| metadata.modified())
+            .map(|time| chrono::DateTime::<chrono::Utc>::from(time))
+            .unwrap_or_else(|_| chrono::Utc::now());
+
+        let updated_at = metadata
+            .modified()
+            .map(|time| chrono::DateTime::<chrono::Utc>::from(time))
+            .unwrap_or_else(|_| chrono::Utc::now());
+
+        // Validate workflow structure to determine status
+        let status = match workflow.validate() {
+            Ok(_) => WorkflowStatus::Active,
+            Err(_) => WorkflowStatus::Error,
+        };
+
+        let business_workflow = BusinessWorkflow {
+            name: name.to_string(),
+            description: workflow.comment.clone(),
+            status,
+            definition: if content.trim().is_empty() {
+                "{}".to_string()
+            } else {
+                content
+            }, // Ensure valid JSON
+            created_at,
+            updated_at,
+        };
+
+        tracing::debug!(
+            workflow_name = %name,
+            start_at = %workflow.start_at,
+            states_count = workflow.states.len(),
+            "Workflow loaded successfully for editing"
+        );
+
+        Ok(Some(business_workflow))
     }
 
     #[instrument(
@@ -463,10 +541,12 @@ impl StepFunctionStorage {
 
                 Ok(output_json)
             }
-            ExecuteLambdaResponse::Failed { error_message, .. } => Err(AppError::validation(&format!(
-                "Lambda '{}' execution failed: {}",
-                lambda_name, error_message
-            ))),
+            ExecuteLambdaResponse::Failed { error_message, .. } => {
+                Err(AppError::validation(&format!(
+                    "Lambda '{}' execution failed: {}",
+                    lambda_name, error_message
+                )))
+            }
         }
     }
 }

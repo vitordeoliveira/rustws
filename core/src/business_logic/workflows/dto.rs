@@ -30,6 +30,18 @@ pub struct ExecuteWorkflowRequest {
     pub input_data: serde_json::Value,
 }
 
+/// Complete workflow definition with metadata
+/// Used for editing and detailed workflow management
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Workflow {
+    pub name: String,
+    pub description: Option<String>,
+    pub status: WorkflowStatus,
+    pub definition: String, // JSON string of the workflow definition
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+}
+
 /// Response from workflow execution
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ExecuteWorkflowResponse {

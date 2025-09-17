@@ -73,3 +73,33 @@ impl Ui for CreateStepFunctionPageUi {
     }
 }
 
+/// Edit step function page UI
+#[derive(Debug, Serialize)]
+pub struct EditStepFunctionPageUi {
+    layout: BaseLayoutProps,
+    workflow: WorkflowSummary,
+    definition: String,
+}
+
+impl EditStepFunctionPageUi {
+    pub fn new(user: User, workflow: WorkflowSummary, definition: String) -> Self {
+        Self {
+            layout: BaseLayoutProps::new()
+                .title(&format!("Edit {} - RUSTWS Core", workflow.name))
+                .description("Edit serverless workflow configuration and state machine definition")
+                .keywords("step functions, edit, workflows, state machines, serverless, rustws")
+                .user(Some(user)),
+            workflow,
+            definition,
+        }
+    }
+}
+
+impl Ui for EditStepFunctionPageUi {
+    fn render_html(self, tera: &TeraEngine) -> AppResult<Html<String>> {
+        let mut context = self.layout.to_context()?;
+        context.insert("workflow", &self.workflow);
+        context.insert("definition", &self.definition);
+        tera.render_template("step_functions/edit.html", &context)
+    }
+}

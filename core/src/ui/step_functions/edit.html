@@ -1,0 +1,352 @@
+{% extends "shared/base.html" %}
+
+{% block content %}
+<!-- Header Section -->
+<div class="bg-gradient-to-r from-amber-500 to-orange-600 text-white -mt-0">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-12">
+        <div class="text-center">
+            <h1 class="text-3xl md:text-4xl font-bold mb-4">
+                Edit Step Function
+            </h1>
+            <p class="text-lg text-amber-100 max-w-2xl mx-auto">
+                Modify your serverless workflow configuration and state machine definition
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Step Function Form -->
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Back Navigation -->
+    <div class="mb-6">
+        <a href="/step-functions" class="inline-flex items-center text-amber-600 hover:text-amber-700 font-medium transition-colors duration-200">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+            </svg>
+            Back to Step Functions
+        </a>
+    </div>
+
+    <!-- Form Card -->
+    <div class="bg-white rounded-lg border border-gray-200 shadow-sm">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-xl font-semibold text-gray-900">Edit Workflow: {{ workflow.name }}</h2>
+            <p class="text-sm text-gray-600 mt-1">Modify your serverless step function configuration and orchestration logic</p>
+        </div>
+
+        <form id="editStepFunctionForm" class="p-6 space-y-6">
+            <!-- Basic Information -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Function Name (Read-only for editing) -->
+                <div>
+                    <label for="functionName" class="block text-sm font-medium text-gray-700 mb-2">
+                        Workflow Name
+                    </label>
+                    <input 
+                        type="text" 
+                        id="functionName" 
+                        name="functionName" 
+                        value="{{ workflow.name }}"
+                        readonly
+                        class="block w-full rounded-md border-gray-300 bg-gray-50 px-3 py-2 text-gray-500 cursor-not-allowed focus:outline-none"
+                        placeholder="e.g., user-onboarding, order-processing"
+                    >
+                    <p class="text-xs text-gray-500 mt-1">Workflow name cannot be changed</p>
+                </div>
+
+                <!-- Status -->
+                <div>
+                    <label for="status" class="block text-sm font-medium text-gray-700 mb-2">
+                        Status
+                    </label>
+                    <select 
+                        id="status" 
+                        name="status"
+                        class="block w-full rounded-md border-gray-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 focus:ring-1 px-3 py-2"
+                    >
+                        <option value="active" {% if workflow.status == "Active" %}selected{% endif %}>Active</option>
+                        <option value="inactive" {% if workflow.status == "Inactive" %}selected{% endif %}>Inactive</option>
+                        <option value="deprecated" {% if workflow.status == "Error" %}selected{% endif %}>Error</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Workflow Definition -->
+            <div>
+                <div class="flex items-center justify-between mb-3">
+                    <label for="workflowDefinition" class="block text-sm font-medium text-gray-700">
+                        Workflow Definition (JSON) *
+                    </label>
+                    <div class="flex space-x-2">
+                        <button 
+                            type="button" 
+                            onclick="validateDefinition()" 
+                            class="inline-flex items-center px-3 py-1 border border-amber-300 text-xs font-medium rounded-md text-amber-700 bg-amber-50 hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-colors duration-200"
+                        >
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            Validate JSON
+                        </button>
+                        <button 
+                            type="button" 
+                            onclick="loadTemplate()" 
+                            class="inline-flex items-center px-3 py-1 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-colors duration-200"
+                        >
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                            </svg>
+                            Reset to Template
+                        </button>
+                    </div>
+                </div>
+                <textarea 
+                    id="workflowDefinition" 
+                    name="workflowDefinition" 
+                    rows="15" 
+                    required
+                    class="block w-full rounded-md border-gray-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 focus:ring-1 font-mono text-sm"
+                    placeholder="Enter your AWS Step Functions state machine definition in JSON format..."
+                >{{ definition|safe }}</textarea>
+                <p class="text-xs text-gray-500 mt-2">
+                    Define your state machine using AWS Step Functions JSON specification. 
+                    <a href="https://docs.aws.amazon.com/step-functions/latest/dg/amazon-states-language-reference.html" target="_blank" class="text-amber-600 hover:text-amber-700 underline">
+                        View documentation →
+                    </a>
+                </p>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="flex items-center justify-between pt-6 border-t border-gray-200">
+                <div class="flex space-x-3">
+                    <a 
+                        href="/step-functions" 
+                        class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-colors duration-200"
+                    >
+                        Cancel
+                    </a>
+                    <button 
+                        type="button" 
+                        onclick="resetToOriginal()" 
+                        class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-colors duration-200"
+                    >
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                        Reset
+                    </button>
+                </div>
+                <button 
+                    type="submit" 
+                    id="updateStepFunctionButton"
+                    class="inline-flex items-center px-6 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 shadow-sm transition-colors duration-200"
+                >
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Update Step Function
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Toast Notification -->
+<div id="toast" class="fixed top-4 right-4 z-50 hidden">
+    <div class="bg-white border-l-4 border-green-500 rounded-lg shadow-lg p-4 max-w-sm">
+        <div class="flex items-center">
+            <div class="flex-shrink-0">
+                <svg id="toast-icon" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                </svg>
+            </div>
+            <div class="ml-3">
+                <p id="toast-message" class="text-sm font-medium text-gray-900"></p>
+            </div>
+            <div class="ml-auto pl-3">
+                <button onclick="hideToast()" class="text-gray-400 hover:text-gray-500 p-1 rounded cursor-pointer transition-all duration-200 hover:bg-gray-100">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Store original workflow definition for reset functionality
+const originalWorkflowDefinition = `{{ definition|safe }}`;
+const workflowName = "{{ workflow.name }}";
+
+// Toast notification functions
+function showToast(message, isSuccess = true) {
+    const toast = document.getElementById('toast');
+    const icon = document.getElementById('toast-icon');
+    const messageEl = document.getElementById('toast-message');
+    
+    messageEl.textContent = message;
+    
+    const toastDiv = toast.querySelector('div');
+    if (isSuccess) {
+        toastDiv.className = 'bg-white border-l-4 border-green-500 rounded-lg shadow-lg p-4 max-w-sm';
+        icon.className = 'w-5 h-5 text-green-500';
+        icon.innerHTML = '<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>';
+    } else {
+        toastDiv.className = 'bg-white border-l-4 border-red-500 rounded-lg shadow-lg p-4 max-w-sm';
+        icon.className = 'w-5 h-5 text-red-500';
+        icon.innerHTML = '<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>';
+    }
+    
+    toast.classList.remove('hidden');
+    setTimeout(hideToast, 5000);
+}
+
+function hideToast() {
+    document.getElementById('toast').classList.add('hidden');
+}
+
+// Reset to original workflow definition
+function resetToOriginal() {
+    document.getElementById('workflowDefinition').value = originalWorkflowDefinition;
+    showToast('✅ Definition reset to original!', true);
+}
+
+// Load sample workflow template
+function loadTemplate() {
+    const template = `{
+  "Comment": "Simple workflow template",
+  "StartAt": "FirstState",
+  "States": {
+    "FirstState": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:us-east-1:123456789012:function:HelloWorld",
+      "Next": "SecondState"
+    },
+    "SecondState": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:us-east-1:123456789012:function:ProcessData",
+      "Next": "ChoiceState"
+    },
+    "ChoiceState": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.status",
+          "StringEquals": "success",
+          "Next": "SuccessState"
+        }
+      ],
+      "Default": "FailState"
+    },
+    "SuccessState": {
+      "Type": "Succeed"
+    },
+    "FailState": {
+      "Type": "Fail",
+      "Cause": "Workflow failed"
+    }
+  }
+}`;
+    
+    document.getElementById('workflowDefinition').value = template;
+    showToast('✅ Template loaded successfully!', true);
+}
+
+// Validate JSON definition
+function validateDefinition() {
+    const definition = document.getElementById('workflowDefinition').value;
+    
+    if (!definition.trim()) {
+        showToast('❌ Please provide a workflow definition', false);
+        return false;
+    }
+    
+    try {
+        const parsed = JSON.parse(definition);
+        
+        // Basic AWS Step Functions validation
+        if (!parsed.StartAt || !parsed.States) {
+            showToast('❌ Definition must include "StartAt" and "States"', false);
+            return false;
+        }
+        
+        showToast('✅ Valid JSON definition!', true);
+        return true;
+    } catch (error) {
+        showToast(`❌ Invalid JSON: ${error.message}`, false);
+        return false;
+    }
+}
+
+// Handle tab key in textarea for proper indentation
+document.getElementById('workflowDefinition').addEventListener('keydown', function(e) {
+    if (e.key === 'Tab') {
+        e.preventDefault();
+        const start = this.selectionStart;
+        const end = this.selectionEnd;
+        
+        // Insert 2 spaces at cursor position
+        this.value = this.value.substring(0, start) + '  ' + this.value.substring(end);
+        
+        // Move cursor to after the inserted spaces
+        this.selectionStart = this.selectionEnd = start + 2;
+    }
+});
+
+// Form submission
+document.getElementById('editStepFunctionForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const form = e.target;
+    const formData = new FormData(form);
+    const status = formData.get('status');
+    const workflowDefinition = formData.get('workflowDefinition');
+    const updateButton = document.getElementById('updateStepFunctionButton');
+    const originalButtonHtml = updateButton.innerHTML;
+    
+    // Basic validation
+    if (!workflowDefinition || !workflowDefinition.trim()) {
+        showToast('❌ Please provide a workflow definition', false);
+        return;
+    }
+    
+    // Validate JSON
+    if (!validateDefinition()) {
+        return;
+    }
+    
+    try {
+        updateButton.disabled = true;
+        updateButton.innerHTML = `
+            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Updating...
+        `;
+        
+        showToast(`Updating step function '${workflowName}'...`, true);
+        
+        // TODO: Replace with actual API call to update step function
+        // For now, simulate success after 2 seconds
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        showToast(`✅ Step function '${workflowName}' updated successfully!`, true);
+        
+        // Redirect to step functions list after short delay
+        setTimeout(() => {
+            window.location.href = '/step-functions';
+        }, 1500);
+        
+    } catch (error) {
+        console.error('Error updating step function:', error);
+        showToast(`❌ Failed to update step function: ${error.message}`, false);
+    } finally {
+        updateButton.disabled = false;
+        updateButton.innerHTML = originalButtonHtml;
+    }
+});
+</script>
+
+{% endblock %}

@@ -4,7 +4,8 @@ use super::dto::{
     // CreateWorkflowRequest, CreateWorkflowResponse,
     ExecuteWorkflowRequest,
     ExecuteWorkflowResponse,
-    // UpdateWorkflowRequest, Workflow, WorkflowValidationResult,
+    // UpdateWorkflowRequest, WorkflowValidationResult,
+    Workflow,
     WorkflowSummary,
 };
 use crate::error_handling::types::AppResult;
@@ -21,9 +22,9 @@ pub trait WorkflowRepository: Send + Sync {
     /// Returns lightweight workflow information for listing/dashboard views
     async fn get_all(&self) -> AppResult<Vec<WorkflowSummary>>;
 
-    // /// Get full workflow definition by name
-    // /// Returns complete workflow JSON and metadata for editing/execution
-    // async fn get_by_name(&self, name: &str) -> AppResult<Option<Workflow>>;
+    /// Get full workflow definition by name
+    /// Returns complete workflow JSON and metadata for editing/execution
+    async fn get_by_name(&self, name: &str) -> AppResult<Option<Workflow>>;
 
     // /// Create a new workflow
     // /// Saves workflow JSON to filesystem and validates structure
@@ -47,7 +48,10 @@ pub trait WorkflowRepository: Send + Sync {
 
     /// Execute a workflow with input data
     /// Runs the step function workflow and returns execution results
-    async fn execute(&mut self, request: ExecuteWorkflowRequest) -> AppResult<ExecuteWorkflowResponse>;
+    async fn execute(
+        &mut self,
+        request: ExecuteWorkflowRequest,
+    ) -> AppResult<ExecuteWorkflowResponse>;
 
     // /// Check if a workflow exists by name
     // /// Utility method for quick existence checks

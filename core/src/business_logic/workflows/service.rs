@@ -4,7 +4,7 @@ use axum::extract::FromRequestParts;
 use axum::http::request::Parts;
 use tracing::instrument;
 
-use super::dto::{ExecuteWorkflowRequest, ExecuteWorkflowResponse, WorkflowSummary};
+use super::dto::{ExecuteWorkflowRequest, ExecuteWorkflowResponse, Workflow, WorkflowSummary};
 use super::repository::WorkflowRepository;
 use crate::error_handling::types::{AppError, AppResult};
 use crate::infrastructure::step_functions::StepFunctionStorage;
@@ -33,13 +33,19 @@ where
         Ok(summaries)
     }
 
+    /// Get full workflow definition by name
+    #[instrument(skip_all, fields(service = "workflows", operation = "get_by_name", workflow_name = %name))]
+    pub async fn get_by_name(&self, name: &str) -> AppResult<Option<Workflow>> {
+        tracing::info!(workflow_name = %name, "Fetching workflow by name");
+        let workflow = self.repository.get_by_name(name).await?;
+        match &workflow {
+            Some(w) => tracing::info!(workflow_name = %w.name, "Retrieved workflow"),
+            None => tracing::warn!(workflow_name = %name, "Workflow not found"),
+        }
+        Ok(workflow)
+    }
+
     // Future methods will be added here as repository methods are uncommented
-    //
-    // /// Get full workflow definition by name
-    // #[instrument(skip_all, fields(service = "workflows", operation = "get_by_name", workflow_name = %name))]
-    // pub async fn get_by_name(&self, name: &str) -> AppResult<Option<Workflow>> {
-    //     self.repository.get_by_name(name).await
-    // }
     //
     // /// Create a new workflow
     // #[instrument(skip_all, fields(service = "workflows", operation = "create"))]

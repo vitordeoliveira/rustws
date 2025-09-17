@@ -10,7 +10,9 @@ use tracing::instrument;
 use crate::{
     auth::dto::AuthBackend,
     business_logic::{
-        api_gateway::ApiGatewayRepository, lambdas::LambdasService, workflows::WorkflowsService,
+        api_gateway::ApiGatewayRepository,
+        lambdas::LambdasService,
+        workflows::{WorkflowSummary, WorkflowsService},
     },
     error_handling::types::AppResult,
     infrastructure::{
@@ -24,7 +26,7 @@ use crate::{
         home::HomePageUi,
         lambda::{CreateLambdaPageUi, EditLambdaPageUi, LambdaPageUi},
         monitoring::{MonitoringPageUi, get_mock_monitoring_data},
-        step_functions::{CreateStepFunctionPageUi, StepFunctionsPageUi},
+        step_functions::{CreateStepFunctionPageUi, EditStepFunctionPageUi, StepFunctionsPageUi},
     },
 };
 
@@ -195,6 +197,49 @@ pub async fn create_step_function_handler(
     let html = create_step_function_page_ui.render_html(&state.tera)?;
 
     Ok(html)
+}
+
+/// Edit step function page handler - renders step function editing form  
+#[instrument(
+    skip_all,
+    fields(handler = "edit_step_function", operation = "page_render", workflow_name = %workflow_name)
+)]
+pub async fn edit_step_function_handler(
+    Path(workflow_name): Path<String>,
+    State(state): State<AppState>,
+    auth_session: AuthSession<AuthBackend>,
+    workflows_service: WorkflowsService<StepFunctionStorage>,
+) -> AppResult<Html<String>> {
+    let user = auth_session.user.unwrap();
+
+    // Get workflow data from service
+    let workflow = workflows_service.get_by_name(&workflow_name).await?;
+
+    match workflow {
+        Some(workflow) => {
+            // Convert business logic Workflow to WorkflowSummary for UI compatibility
+            let workflow_summary = WorkflowSummary {
+                name: workflow.name.clone(),
+                description: workflow.description.clone(),
+                status: workflow.status.clone(),
+                state_count: workflow.definition.matches("\"Type\"").count() as u32, // Quick state count
+                created_at: workflow.created_at,
+                updated_at: workflow.updated_at,
+            };
+
+            let edit_step_function_page_ui =
+                EditStepFunctionPageUi::new(user, workflow_summary, workflow.definition);
+            let html = edit_step_function_page_ui.render_html(&state.tera)?;
+            Ok(html)
+        }
+        None => {
+            // Workflow not found, redirect to step functions list
+            Err(crate::error_handling::types::AppError::not_found(&format!(
+                "Workflow '{}' not found",
+                workflow_name
+            )))
+        }
+    }
 }
 
 /// API Gateway page handler - delegates all UI concerns to UI layer
