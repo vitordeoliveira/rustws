@@ -18,6 +18,7 @@ use std::collections::HashMap;
 pub struct HelloWorld {
     pub text: String,
     pub count: isize,
+    pub post: Option<Post>,
 }
 
 /// Example JSONPlaceholder post structure for HTTP demo
@@ -62,6 +63,7 @@ lambda_fn! {
                             input.text, input.count, post.title, post.userId
                         ),
                         count: input.count + 10,
+                        post: None
                     },
                     Err(_) => HelloWorld {
                         text: format!(
@@ -71,6 +73,7 @@ lambda_fn! {
                             response.text()
                         ),
                         count: input.count + 10,
+                        post: None
                     },
                 }
             }
@@ -82,6 +85,7 @@ lambda_fn! {
                     response.status()
                 ),
                 count: input.count + 10,
+                post: None
             },
             Err(e) => HelloWorld {
                 text: format!(
@@ -89,6 +93,7 @@ lambda_fn! {
                     input.text, input.count, e
                 ),
                 count: input.count + 10,
+                post: None
             },
         }
     }

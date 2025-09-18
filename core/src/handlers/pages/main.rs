@@ -180,7 +180,7 @@ pub async fn edit_lambda_handler(
 pub async fn lambda_metrics_handler(
     State(state): State<AppState>,
     auth_session: AuthSession<AuthBackend>,
-    _lambda_service: LambdasService<LambdaStorage>,
+    lambda_service: LambdasService<LambdaStorage>,
     Path(lambda_name): Path<String>,
 ) -> AppResult<Html<String>> {
     let user = auth_session.user.unwrap();
@@ -208,8 +208,22 @@ pub async fn lambda_metrics_handler(
         "Filtered lambda execution entries"
     );
 
-    let lambda_metrics_page_ui =
-        LambdaMetricsPageUi::new(user, lambda_name.clone(), lambda_executions);
+    // Get lambda metadata for schema information
+    let lambda_data = lambda_service.get_by_name(&lambda_name).await?;
+    let lambda_metadata = lambda_data.and_then(|lambda| lambda.metadata);
+
+    tracing::debug!(
+        lambda_name = %lambda_name,
+        has_metadata = lambda_metadata.is_some(),
+        "Retrieved lambda metadata for schema display"
+    );
+
+    let lambda_metrics_page_ui = LambdaMetricsPageUi::new(
+        user,
+        lambda_name.clone(),
+        lambda_executions,
+        lambda_metadata,
+    );
     let html = lambda_metrics_page_ui.render_html(&state.tera)?;
 
     Ok(html)
