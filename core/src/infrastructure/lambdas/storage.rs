@@ -134,8 +134,14 @@ impl LambdaStorage {
         Ok(())
     }
 
-    /// Compile Rust source code to WASM
-    pub(crate) async fn compile_rust(&self, source_code: &str) -> AppResult<Vec<u8>> {
+    /// Compile Rust source code to WASM with metadata
+    pub(crate) async fn compile_rust(
+        &self,
+        source_code: &str,
+    ) -> AppResult<(
+        Vec<u8>,
+        Option<crate::business_logic::lambdas::dto::LambdaMetadata>,
+    )> {
         // Create temporary directory for compilation
         let temp_dir = std::env::temp_dir().join(format!("lambda_compile_{}", Uuid::new_v4()));
         fs::create_dir_all(&temp_dir)
@@ -159,6 +165,8 @@ crate-type = ["cdylib"]
 [dependencies]
 serde = {{ version = "1.0.219", features = ["derive"] }}
 serde_json = "1.0.145"
+schemars = {{ version = "0.8", features = ["derive"] }}
+chrono = {{ version = "0.4", features = ["serde"] }}
 lambda-fn-macro = {{ path = "{}" }}
 
 [profile.release]
@@ -213,10 +221,19 @@ strip = "symbols"
         let wasm_bytes = fs::read(&wasm_path)
             .map_err(|e| AppError::internal(&format!("Failed to read WASM output: {}", e)))?;
 
+        // Extract metadata from compiled WASM before cleanup
+        let metadata = self
+            .extract_lambda_metadata_impl(&wasm_bytes)
+            .await
+            .unwrap_or_else(|e| {
+                tracing::warn!(error = %e, "Failed to extract lambda metadata during compilation");
+                None
+            });
+
         // Cleanup temporary directory
         let _ = fs::remove_dir_all(&temp_dir);
 
-        Ok(wasm_bytes)
+        Ok((wasm_bytes, metadata))
     }
 
     /// Check if cargo with WASM target is available
@@ -247,11 +264,12 @@ strip = "symbols"
         Ok(())
     }
 
-    /// Save compiled WASM bytes
+    /// Save compiled WASM bytes and metadata
     pub(crate) async fn save_compiled_wasm(
         &self,
         lambda_name: &str,
         wasm_bytes: &[u8],
+        metadata: Option<crate::business_logic::lambdas::dto::LambdaMetadata>,
     ) -> AppResult<PathBuf> {
         let wasm_dir = self.wasm_dir();
 
@@ -264,11 +282,63 @@ strip = "symbols"
         fs::write(&wasm_path, wasm_bytes)
             .map_err(|e| AppError::internal(&format!("Failed to save WASM file: {}", e)))?;
 
+        // Save metadata file alongside WASM
+        if let Some(metadata) = metadata {
+            let metadata_path = wasm_dir.join(format!("{}.json", lambda_name));
+            let metadata_json = serde_json::to_string_pretty(&metadata)
+                .map_err(|e| AppError::internal(&format!("Failed to serialize metadata: {}", e)))?;
+
+            fs::write(&metadata_path, metadata_json)
+                .map_err(|e| AppError::internal(&format!("Failed to save metadata file: {}", e)))?;
+
+            tracing::info!(
+                lambda_name = %lambda_name,
+                metadata_path = %metadata_path.display(),
+                "Saved lambda metadata to file"
+            );
+        }
+
         Ok(wasm_path)
     }
 
-    /// Compile source code to WASM
-    pub(crate) async fn compile(&self, source_code: &str, runtime: &str) -> AppResult<Vec<u8>> {
+    /// Load metadata for a lambda if it exists
+    pub(crate) async fn load_lambda_metadata(
+        &self,
+        lambda_name: &str,
+    ) -> AppResult<Option<crate::business_logic::lambdas::dto::LambdaMetadata>> {
+        let wasm_dir = self.wasm_dir();
+        let metadata_path = wasm_dir.join(format!("{}.json", lambda_name));
+
+        if !metadata_path.exists() {
+            return Ok(None);
+        }
+
+        let metadata_content = fs::read_to_string(&metadata_path)
+            .map_err(|e| AppError::internal(&format!("Failed to read metadata file: {}", e)))?;
+
+        let metadata: crate::business_logic::lambdas::dto::LambdaMetadata =
+            serde_json::from_str(&metadata_content).map_err(|e| {
+                AppError::internal(&format!("Failed to parse metadata JSON: {}", e))
+            })?;
+
+        tracing::debug!(
+            lambda_name = %lambda_name,
+            metadata_path = %metadata_path.display(),
+            "Loaded lambda metadata from file"
+        );
+
+        Ok(Some(metadata))
+    }
+
+    /// Compile source code to WASM with metadata
+    pub(crate) async fn compile(
+        &self,
+        source_code: &str,
+        runtime: &str,
+    ) -> AppResult<(
+        Vec<u8>,
+        Option<crate::business_logic::lambdas::dto::LambdaMetadata>,
+    )> {
         match runtime {
             "rs" | "rust" => {
                 // Check if Rust WASM toolchain is available
@@ -335,7 +405,237 @@ strip = "symbols"
             .unwrap_or("rs");
 
         // Compile to WASM
-        self.compile(&source_code, runtime).await
+        let (wasm_bytes, _metadata) = self.compile(&source_code, runtime).await?;
+        Ok(wasm_bytes)
+    }
+
+    /// Extract essential metadata from compiled WASM lambda (internal implementation)
+    #[instrument(skip_all, fields(wasm_size = wasm_bytes.len()))]
+    pub(crate) async fn extract_lambda_metadata_impl(
+        &self,
+        wasm_bytes: &[u8],
+    ) -> AppResult<Option<crate::business_logic::lambdas::dto::LambdaMetadata>> {
+        use crate::business_logic::lambdas::dto::{LambdaFeatures, LambdaMetadata};
+        use wasmer::{Instance, Module, Store, imports};
+
+        tracing::info!("Extracting metadata from compiled lambda WASM");
+
+        // Create WASM runtime environment
+        let mut store = Store::default();
+        let module = Module::new(&store, wasm_bytes).map_err(|e| {
+            AppError::internal(&format!(
+                "Failed to load WASM module for metadata extraction: {}",
+                e
+            ))
+        })?;
+
+        // Create stub host functions for HTTP-enabled lambdas
+        // These are dummy implementations - they won't be called during metadata extraction
+        let host_http_request =
+            wasmer::Function::new_typed(&mut store, |_: i32, _: i32, _: i32, _: i32| -> i32 {
+                // Stub implementation - not called during metadata extraction
+                -1
+            });
+
+        let wasm_free = wasmer::Function::new_typed(&mut store, |_: i32, _: i32| {
+            // Stub implementation - not called during metadata extraction
+        });
+
+        // Create instance with the required host functions
+        let instance = Instance::new(
+            &mut store,
+            &module,
+            &imports! {
+                "env" => {
+                    "host_http_request" => host_http_request,
+                    "wasm_free" => wasm_free,
+                }
+            },
+        )
+        .map_err(|e| {
+            AppError::internal(&format!(
+                "Failed to create WASM instance for metadata extraction: {}",
+                e
+            ))
+        })?;
+
+        // Extract metadata by calling the lambda's metadata functions
+        let raw_metadata = match self
+            .call_wasm_function(&mut store, &instance, "get_lambda_metadata")
+            .await
+        {
+            Ok(data) => data,
+            Err(e) => {
+                tracing::warn!(error = %e, "Failed to extract lambda metadata - lambda may not support metadata");
+                return Ok(None);
+            }
+        };
+
+        // Extract input schema
+        let raw_input_schema = match self
+            .call_wasm_function(&mut store, &instance, "get_input_schema")
+            .await
+        {
+            Ok(data) => data,
+            Err(e) => {
+                tracing::warn!(error = %e, "Failed to extract input schema");
+                return Ok(None);
+            }
+        };
+
+        // Extract output schema
+        let raw_output_schema = match self
+            .call_wasm_function(&mut store, &instance, "get_output_schema")
+            .await
+        {
+            Ok(data) => data,
+            Err(e) => {
+                tracing::warn!(error = %e, "Failed to extract output schema");
+                return Ok(None);
+            }
+        };
+
+        // Parse the metadata JSON
+        let metadata_json: serde_json::Value =
+            serde_json::from_str(&raw_metadata).map_err(|e| {
+                AppError::internal(&format!("Failed to parse lambda metadata JSON: {}", e))
+            })?;
+
+        // Parse the input schema JSON
+        let input_schema: serde_json::Value =
+            serde_json::from_str(&raw_input_schema).map_err(|e| {
+                AppError::internal(&format!("Failed to parse input schema JSON: {}", e))
+            })?;
+
+        // Parse the output schema JSON
+        let output_schema: serde_json::Value =
+            serde_json::from_str(&raw_output_schema).map_err(|e| {
+                AppError::internal(&format!("Failed to parse output schema JSON: {}", e))
+            })?;
+
+        // Build complete metadata structure with schemas
+        let lambda_metadata = LambdaMetadata {
+            features: LambdaFeatures {
+                http_enabled: metadata_json["features"]["http_enabled"]
+                    .as_bool()
+                    .unwrap_or(false),
+                experimental_features: vec![], // Future extensibility
+            },
+            input_type: metadata_json["input_type"]
+                .as_str()
+                .unwrap_or("unknown")
+                .to_string(),
+            output_type: metadata_json["output_type"]
+                .as_str()
+                .unwrap_or("unknown")
+                .to_string(),
+            input_schema,
+            output_schema,
+            macro_version: metadata_json["macro_version"]
+                .as_str()
+                .unwrap_or("unknown")
+                .to_string(),
+        };
+
+        tracing::info!(
+            input_type = %lambda_metadata.input_type,
+            output_type = %lambda_metadata.output_type,
+            http_enabled = lambda_metadata.features.http_enabled,
+            macro_version = %lambda_metadata.macro_version,
+            input_schema_size = lambda_metadata.input_schema.to_string().len(),
+            output_schema_size = lambda_metadata.output_schema.to_string().len(),
+            "Successfully extracted lambda metadata with full schemas"
+        );
+
+        Ok(Some(lambda_metadata))
+    }
+
+    /// Call a WASM function and return the result as a string
+    #[instrument(skip_all, fields(function_name = %function_name))]
+    async fn call_wasm_function(
+        &self,
+        store: &mut wasmer::Store,
+        instance: &wasmer::Instance,
+        function_name: &str,
+    ) -> AppResult<String> {
+        use wasmer::{Function, Value};
+
+        // Get the function from exports
+        let func = instance
+            .exports
+            .get::<Function>(function_name)
+            .map_err(|e| {
+                AppError::internal(&format!(
+                    "Function '{}' not found in WASM exports: {}",
+                    function_name, e
+                ))
+            })?;
+
+        // Allocate buffer for the result
+        let buffer_size = 8192; // 8KB should be enough for metadata
+        let malloc_fn = instance
+            .exports
+            .get::<Function>("wasm_malloc")
+            .map_err(|e| AppError::internal(&format!("wasm_malloc function not found: {}", e)))?;
+
+        let buffer_ptr = malloc_fn
+            .call(store, &[Value::I32(buffer_size as i32)])
+            .map_err(|e| AppError::internal(&format!("Failed to allocate WASM memory: {}", e)))?[0]
+            .i32()
+            .ok_or_else(|| AppError::internal("wasm_malloc returned invalid pointer"))?;
+
+        // Call the function
+        let actual_size = func
+            .call(
+                store,
+                &[Value::I32(buffer_ptr), Value::I32(buffer_size as i32)],
+            )
+            .map_err(|e| {
+                AppError::internal(&format!(
+                    "Failed to call WASM function '{}': {}",
+                    function_name, e
+                ))
+            })?[0]
+            .i32()
+            .ok_or_else(|| {
+                AppError::internal(&format!(
+                    "Function '{}' returned invalid size",
+                    function_name
+                ))
+            })?;
+
+        if actual_size == 0 {
+            return Err(AppError::internal(&format!(
+                "Function '{}' returned empty result",
+                function_name
+            )));
+        }
+
+        // Read the result from WASM memory
+        let memory = instance
+            .exports
+            .get_memory("memory")
+            .map_err(|e| AppError::internal(&format!("WASM memory not found: {}", e)))?;
+
+        let result_bytes = memory
+            .view(store)
+            .copy_range_to_vec(
+                buffer_ptr as u64..(buffer_ptr + actual_size.min(buffer_size as i32)) as u64,
+            )
+            .map_err(|e| AppError::internal(&format!("Failed to read WASM memory: {}", e)))?;
+
+        // Free the allocated memory
+        if let Ok(free_fn) = instance.exports.get::<Function>("wasm_free_impl") {
+            let _ = free_fn.call(
+                store,
+                &[Value::I32(buffer_ptr), Value::I32(buffer_size as i32)],
+            );
+        }
+
+        // Convert to string
+        String::from_utf8(result_bytes).map_err(|e| {
+            AppError::internal(&format!("Invalid UTF-8 in WASM function result: {}", e))
+        })
     }
 }
 

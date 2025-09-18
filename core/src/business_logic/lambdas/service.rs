@@ -47,10 +47,24 @@ where
             .await
         {
             Ok(wasm_bytes) => {
-                // Save the compiled WASM
+                // Extract metadata from compiled WASM
+                let metadata = self
+                    .repository
+                    .extract_lambda_metadata(&wasm_bytes)
+                    .await
+                    .unwrap_or_else(|e| {
+                        tracing::warn!(
+                            lambda_name = %request.lambda_name,
+                            error = %e,
+                            "Failed to extract metadata during service layer compilation"
+                        );
+                        None
+                    });
+
+                // Save the compiled WASM with metadata
                 let wasm_path = self
                     .repository
-                    .save_compiled_wasm(&request.lambda_name, &wasm_bytes)
+                    .save_compiled_wasm(&request.lambda_name, &wasm_bytes, metadata)
                     .await?;
 
                 let compilation_time = start_time.elapsed().as_millis() as u64;

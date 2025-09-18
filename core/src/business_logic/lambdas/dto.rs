@@ -18,6 +18,9 @@ pub struct Lambda {
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
     pub status: LambdaStatus,
+
+    /// Lambda metadata with input/output schemas and capabilities
+    pub metadata: Option<LambdaMetadata>,
 }
 
 /// Lambda function status
@@ -121,6 +124,9 @@ pub struct LambdaSummary {
     pub status: LambdaStatus,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
+
+    /// Lambda metadata with input/output schemas and capabilities
+    pub metadata: Option<LambdaMetadata>,
 }
 
 impl From<Lambda> for LambdaSummary {
@@ -135,6 +141,7 @@ impl From<Lambda> for LambdaSummary {
             status: lambda.status,
             created_at: lambda.created_at,
             updated_at: lambda.updated_at,
+            metadata: lambda.metadata,
         }
     }
 }
@@ -154,4 +161,36 @@ pub struct CompileLambdaResponse {
     pub wasm_path: Option<String>,
     pub compilation_time_ms: u64,
     pub message: String,
+}
+
+/// Essential lambda metadata extracted during compilation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LambdaMetadata {
+    /// Feature flags and capabilities
+    pub features: LambdaFeatures,
+
+    /// Input type name (e.g., "MyInputStruct")
+    pub input_type: String,
+
+    /// Output type name (e.g., "MyOutputStruct")
+    pub output_type: String,
+
+    /// Full JSON schema for input type (for workflow validation)
+    pub input_schema: serde_json::Value,
+
+    /// Full JSON schema for output type (for workflow validation)
+    pub output_schema: serde_json::Value,
+
+    /// Macro version used to generate the lambda
+    pub macro_version: String,
+}
+
+/// Lambda feature flags and capabilities
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LambdaFeatures {
+    /// Whether HTTP functionality is enabled
+    pub http_enabled: bool,
+
+    /// Additional capabilities that may be added in the future
+    pub experimental_features: Vec<String>,
 }

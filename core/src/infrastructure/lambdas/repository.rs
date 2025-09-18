@@ -58,6 +58,16 @@ impl LambdaRepository for LambdaStorage {
                     LambdaStatus::Inactive
                 };
 
+                // Load metadata if available
+                let metadata = self.load_lambda_metadata(&name).await.unwrap_or_else(|e| {
+                    tracing::debug!(
+                        lambda_name = %name,
+                        error = %e,
+                        "Failed to load lambda metadata for summary - using None"
+                    );
+                    None
+                });
+
                 // Create a LambdaSummary for the source file
                 let summary = LambdaSummary {
                     id: Uuid::new_v4(),
@@ -69,6 +79,7 @@ impl LambdaRepository for LambdaStorage {
                     status,              // Active if WASM exists, Inactive otherwise
                     created_at: chrono::Utc::now(),
                     updated_at: chrono::Utc::now(),
+                    metadata, // Load metadata from file if available
                 };
 
                 summaries.push(summary);
@@ -80,7 +91,8 @@ impl LambdaRepository for LambdaStorage {
 
     /// Compile source code to WASM
     async fn compile(&self, source_code: &str, runtime: &str) -> AppResult<Vec<u8>> {
-        self.compile(source_code, runtime).await
+        let (wasm_bytes, _metadata) = self.compile(source_code, runtime).await?;
+        Ok(wasm_bytes)
     }
 
     /// Compile source file to WASM
@@ -88,13 +100,23 @@ impl LambdaRepository for LambdaStorage {
         self.compile_source_file(lambda_name).await
     }
 
-    /// Save compiled WASM bytes
+    /// Save compiled WASM bytes and metadata
     async fn save_compiled_wasm(
         &self,
         lambda_name: &str,
         wasm_bytes: &[u8],
+        metadata: Option<crate::business_logic::lambdas::dto::LambdaMetadata>,
     ) -> AppResult<std::path::PathBuf> {
-        self.save_compiled_wasm(lambda_name, wasm_bytes).await
+        self.save_compiled_wasm(lambda_name, wasm_bytes, metadata)
+            .await
+    }
+
+    /// Extract metadata from compiled WASM bytes
+    async fn extract_lambda_metadata(
+        &self,
+        wasm_bytes: &[u8],
+    ) -> AppResult<Option<crate::business_logic::lambdas::dto::LambdaMetadata>> {
+        self.extract_lambda_metadata_impl(wasm_bytes).await
     }
 
     /// Execute a lambda function
@@ -314,10 +336,10 @@ impl LambdaRepository for LambdaStorage {
         // Attempt to compile to WASM
         let (wasm_path, wasm_size_bytes, compilation_success) =
             match self.compile(&request.source_code, &request.runtime).await {
-                Ok(wasm_bytes) => {
-                    // Save compiled WASM
+                Ok((wasm_bytes, metadata)) => {
+                    // Save compiled WASM and metadata
                     match self
-                        .save_compiled_wasm(&request.function_name, &wasm_bytes)
+                        .save_compiled_wasm(&request.function_name, &wasm_bytes, metadata)
                         .await
                     {
                         Ok(wasm_file_path) => {
@@ -531,6 +553,16 @@ impl LambdaRepository for LambdaStorage {
             (now, now)
         };
 
+        // Load metadata if available
+        let metadata = self.load_lambda_metadata(name).await.unwrap_or_else(|e| {
+            tracing::warn!(
+                lambda_name = %name,
+                error = %e,
+                "Failed to load lambda metadata - using None"
+            );
+            None
+        });
+
         // Create Lambda object
         let lambda = Lambda {
             id: Uuid::new_v4(), // Generate a new UUID for this instance
@@ -545,6 +577,7 @@ impl LambdaRepository for LambdaStorage {
             created_at,
             updated_at,
             status: status.clone(),
+            metadata, // Load metadata from file if available
         };
 
         tracing::info!(
