@@ -1,7 +1,7 @@
 //! WASM runtime and execution engine
 //!
 //! This module provides WASM execution capabilities using wasmer, including
-//! host function support for HTTP requests.
+//! host function support for HTTP requests and environment variable access.
 
 use crate::error_handling::types::{AppError, AppResult};
 use tracing::instrument;
@@ -206,6 +206,116 @@ fn host_http_request(
     0 // Success
 }
 
+/// Host function for getting environment variables from WASM
+#[instrument(skip_all, fields(operation = "host_get_env"))]
+fn host_get_env(
+    mut env: wasmer::FunctionEnvMut<WasmEnv>,
+    key_ptr: u32,
+    key_len: u32,
+    out_ptr_ptr: u32,
+    out_len_ptr: u32,
+) -> i32 {
+    tracing::debug!("Environment variable request from WASM lambda");
+
+    // Get memory from the environment
+    let memory = match env.data().memory.clone() {
+        Some(mem) => mem,
+        None => {
+            tracing::error!("Failed to get WASM memory in environment host function");
+            return -1;
+        }
+    };
+
+    // Read environment variable key from WASM memory
+    let key_bytes = {
+        let view = memory.view(&env);
+        let mut bytes = Vec::with_capacity(key_len as usize);
+        for i in 0..key_len {
+            match view.read_u8((key_ptr + i) as u64) {
+                Ok(byte) => bytes.push(byte),
+                Err(e) => {
+                    tracing::error!("Failed to read key from WASM memory: {}", e);
+                    return -1;
+                }
+            }
+        }
+        bytes
+    };
+
+    // Convert bytes to string
+    let key = match String::from_utf8(key_bytes) {
+        Ok(key) => key,
+        Err(e) => {
+            tracing::error!("Failed to convert key to UTF-8 string: {}", e);
+            return -1;
+        }
+    };
+
+    tracing::debug!(key = %key, "Retrieving environment variable");
+
+    // Get environment variable
+    let env_value = std::env::var(&key);
+
+    // Create response JSON
+    let response_json = match env_value {
+        Ok(value) => serde_json::json!(Some(value)),
+        Err(_) => serde_json::json!(None::<String>),
+    };
+
+    let response_bytes = match serde_json::to_vec(&response_json) {
+        Ok(bytes) => bytes,
+        Err(e) => {
+            tracing::error!("Failed to serialize environment variable response: {}", e);
+            return -1;
+        }
+    };
+
+    // Use a simple approach: allocate in existing WASM memory and return pointer
+    let response_len = response_bytes.len();
+
+    // Get current memory size and use it as allocation point
+    let memory_view = memory.view(&env);
+    let current_size = memory_view.data_size() as usize;
+    let alloc_ptr = current_size as u32;
+
+    // Grow memory if needed
+    let needed_pages = ((current_size + response_len + 65535) / 65536) - (current_size / 65536);
+    if needed_pages > 0 {
+        if let Err(e) = memory.grow(&mut env, needed_pages as u32) {
+            tracing::error!("Failed to grow WASM memory: {}", e);
+            return -1;
+        }
+    }
+
+    // Write response data to allocated memory
+    let memory_view = memory.view(&env);
+    for (i, &byte) in response_bytes.iter().enumerate() {
+        if let Err(e) = memory_view.write_u8((alloc_ptr + i as u32) as u64, byte) {
+            tracing::error!("Failed to write response to WASM memory: {}", e);
+            return -1;
+        }
+    }
+
+    // Write response pointer and length back to WASM using byte-by-byte approach
+    let alloc_ptr_bytes = alloc_ptr.to_le_bytes();
+    for (i, &byte) in alloc_ptr_bytes.iter().enumerate() {
+        if let Err(e) = memory_view.write_u8((out_ptr_ptr + i as u32) as u64, byte) {
+            tracing::error!("Failed to write response pointer: {}", e);
+            return -1;
+        }
+    }
+
+    let response_len_bytes = (response_len as u32).to_le_bytes();
+    for (i, &byte) in response_len_bytes.iter().enumerate() {
+        if let Err(e) = memory_view.write_u8((out_len_ptr + i as u32) as u64, byte) {
+            tracing::error!("Failed to write response length: {}", e);
+            return -1;
+        }
+    }
+
+    0 // Success
+}
+
 /// Execute WASM bytecode using wasmer with structured data support
 #[instrument(
     skip_all,
@@ -231,6 +341,7 @@ pub(crate) async fn execute_wasm(wasm_bytes: &[u8], input_data: &[u8]) -> AppRes
     let imports = wasmer::imports! {
         "env" => {
             "host_http_request" => wasmer::Function::new_typed_with_env(&mut store, &env, host_http_request),
+            "host_get_env" => wasmer::Function::new_typed_with_env(&mut store, &env, host_get_env),
             "wasm_free" => wasmer::Function::new_typed(&mut store, |ptr: u32, size: u32| {
                 // This is called by WASM to free host-allocated memory
                 // For now, we'll just log it since we're using simple allocation

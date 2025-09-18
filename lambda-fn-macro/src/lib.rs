@@ -79,6 +79,45 @@
 //!     }
 //! }
 //! ```
+//!
+//! ## Lambda with Environment Variables
+//! ```rust
+//! use serde::{Deserialize, Serialize};
+//! use schemars::JsonSchema;
+//! use lambda_fn_macro::lambda_fn;
+//!
+//! #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+//! pub struct ConfigInput {
+//!     pub config_key: String,
+//! }
+//!
+//! #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+//! pub struct ConfigOutput {
+//!     pub value: Option<String>,
+//!     pub found: bool,
+//! }
+//!
+//! lambda_fn! {
+//!     input: ConfigInput,
+//!     output: ConfigOutput,
+//!     handler: |input: ConfigInput| -> ConfigOutput {
+//!         match get_env(&input.config_key) {
+//!             Ok(Some(value)) => ConfigOutput {
+//!                 value: Some(value),
+//!                 found: true,
+//!             },
+//!             Ok(None) => ConfigOutput {
+//!                 value: None,
+//!                 found: false,
+//!             },
+//!             Err(e) => ConfigOutput {
+//!                 value: Some(format!("Error: {}", e)),
+//!                 found: false,
+//!             },
+//!         }
+//!     }
+//! }
+//! ```
 
 /// Macro to create a complete lambda function with WASM infrastructure, schema generation, and optional HTTP support
 ///
@@ -89,10 +128,12 @@
 /// - Error handling
 /// - JSON Schema export functions (`get_input_schema`, `get_output_schema`)
 /// - Lambda metadata export function (`get_lambda_metadata`)
+/// - Environment variable access (`get_env`) for retrieving host environment variables
 /// - Optional HTTP functionality (`Request`, `Response`, `http_request`) when `enable_http: true`
 ///
 /// Users only need to define their input/output types (with JsonSchema derive) and business logic.
 /// The generated schema functions enable workflow validation and type checking.
+/// Environment variable access allows lambdas to read configuration from the host environment.
 /// HTTP functionality provides seamless access to external APIs from within lambda functions.
 #[macro_export]
 macro_rules! lambda_fn {
@@ -110,6 +151,14 @@ macro_rules! lambda_fn {
             fn host_http_request(
                 req_ptr: *const u8,
                 req_len: usize,
+                out_ptr: *mut *mut u8,
+                out_len: *mut usize,
+            ) -> i32;
+
+            /// Host function to get environment variable from WASM
+            fn host_get_env(
+                key_ptr: *const u8,
+                key_len: usize,
                 out_ptr: *mut *mut u8,
                 out_len: *mut usize,
             ) -> i32;
@@ -193,6 +242,45 @@ macro_rules! lambda_fn {
                 .map_err(|e| format!("Failed to deserialize response: {}", e))?;
 
             Ok(response)
+        }
+
+        /// Get environment variable from host (auto-generated)
+        pub fn get_env(key: &str) -> Result<Option<String>, String> {
+            // Convert key to bytes
+            let key_bytes = key.as_bytes();
+
+            // Prepare variables to receive response pointer and length
+            let mut out_ptr: u32 = 0;
+            let mut out_len: u32 = 0;
+
+            // Call the host function with pointers to our variables
+            let result = unsafe {
+                host_get_env(
+                    key_bytes.as_ptr(),
+                    key_bytes.len(),
+                    &mut out_ptr as *mut u32 as *mut *mut u8,
+                    &mut out_len as *mut u32 as *mut usize,
+                )
+            };
+
+            if result != 0 {
+                return Err(format!("Failed to get environment variable '{}': {}", key, result));
+            }
+
+            if out_ptr == 0 || out_len == 0 {
+                // Environment variable not found
+                return Ok(None);
+            }
+
+            // Read the response from the host-allocated memory
+            let response_bytes =
+                unsafe { std::slice::from_raw_parts(out_ptr as *const u8, out_len as usize) };
+
+            // Deserialize the response
+            let value: Option<String> = serde_json::from_slice(response_bytes)
+                .map_err(|e| format!("Failed to deserialize environment variable '{}': {}", key, e))?;
+
+            Ok(value)
         }
 
         // ===== WASM MEMORY MANAGEMENT =====
@@ -352,6 +440,60 @@ macro_rules! lambda_fn {
         output: $output_type:ty,
         handler: |$input_param:ident: $input_param_type:ty| -> $output_param_type:ty $handler_body:block
     ) => {
+        // ===== HOST FUNCTIONALITY (AUTO-GENERATED) =====
+
+        extern "C" {
+            /// Host function to get environment variable from WASM
+            fn host_get_env(
+                key_ptr: *const u8,
+                key_len: usize,
+                out_ptr: *mut *mut u8,
+                out_len: *mut usize,
+            ) -> i32;
+
+            /// Host function to free memory allocated by the host
+            fn wasm_free(ptr: *mut u8, size: usize);
+        }
+
+        /// Get environment variable from host (auto-generated)
+        pub fn get_env(key: &str) -> Result<Option<String>, String> {
+            // Convert key to bytes
+            let key_bytes = key.as_bytes();
+
+            // Prepare variables to receive response pointer and length
+            let mut out_ptr: u32 = 0;
+            let mut out_len: u32 = 0;
+
+            // Call the host function with pointers to our variables
+            let result = unsafe {
+                host_get_env(
+                    key_bytes.as_ptr(),
+                    key_bytes.len(),
+                    &mut out_ptr as *mut u32 as *mut *mut u8,
+                    &mut out_len as *mut u32 as *mut usize,
+                )
+            };
+
+            if result != 0 {
+                return Err(format!("Failed to get environment variable '{}': {}", key, result));
+            }
+
+            if out_ptr == 0 || out_len == 0 {
+                // Environment variable not found
+                return Ok(None);
+            }
+
+            // Read the response from the host-allocated memory
+            let response_bytes =
+                unsafe { std::slice::from_raw_parts(out_ptr as *const u8, out_len as usize) };
+
+            // Deserialize the response
+            let value: Option<String> = serde_json::from_slice(response_bytes)
+                .map_err(|e| format!("Failed to deserialize environment variable '{}': {}", key, e))?;
+
+            Ok(value)
+        }
+
         // ===== WASM MEMORY MANAGEMENT =====
 
         /// Allocate memory in WASM that can be accessed by the host
