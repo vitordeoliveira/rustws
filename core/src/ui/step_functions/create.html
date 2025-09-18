@@ -34,7 +34,7 @@
             <p class="text-sm text-gray-600 mt-1">Create a serverless step function to orchestrate complex business processes</p>
         </div>
 
-        <form id="createStepFunctionForm" class="p-6 space-y-6">
+        <form id="createStepFunctionForm" class="p-6 space-y-6" method="post" action="/step-functions/create">
             <!-- Basic Information -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <!-- Function Name -->
@@ -274,22 +274,22 @@ document.getElementById('workflowDefinition').addEventListener('keydown', functi
 });
 
 // Form submission
-async function createStepFunction(event) {
-    event.preventDefault();
+function createStepFunction(event) {
     const form = event.target;
     const formData = new FormData(form);
     const functionName = formData.get('functionName');
     const workflowDefinition = formData.get('workflowDefinition');
     const createButton = document.getElementById('createStepFunctionButton');
-    const originalButtonHtml = createButton.innerHTML;
     
     // Basic validation
     if (!functionName || !functionName.trim()) {
+        event.preventDefault();
         showToast('❌ Please provide a workflow name', false);
         return;
     }
     
     if (!workflowDefinition || !workflowDefinition.trim()) {
+        event.preventDefault();
         showToast('❌ Please provide a workflow definition', false);
         return;
     }
@@ -298,41 +298,22 @@ async function createStepFunction(event) {
     try {
         JSON.parse(workflowDefinition);
     } catch (error) {
+        event.preventDefault();
         showToast(`❌ Invalid JSON definition: ${error.message}`, false);
         return;
     }
     
-    try {
-        createButton.disabled = true;
-        createButton.innerHTML = `
-            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            Creating...
-        `;
-        
-        showToast(`Creating step function '${functionName}'...`, true);
-        
-        // TODO: Replace with actual API call to create step function
-        // For now, simulate success after 2 seconds
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        showToast(`✅ Step function '${functionName}' created successfully!`, true);
-        
-        // Redirect to step functions list after short delay
-        setTimeout(() => {
-            window.location.href = '/step-functions';
-        }, 1500);
-        
-    } catch (error) {
-        console.error('Error creating step function:', error);
-        showToast(`❌ Failed to create step function: ${error.message}`, false);
-        
-    } finally {
-        createButton.disabled = false;
-        createButton.innerHTML = originalButtonHtml;
-    }
+    // If validation passes, show loading state and let form submit
+    createButton.disabled = true;
+    createButton.innerHTML = `
+        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        Creating...
+    `;
+    
+    showToast(`Creating step function '${functionName}'...`, true);
 }
 
 // Attach form submission handler

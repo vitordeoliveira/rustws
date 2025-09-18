@@ -5,8 +5,8 @@ use axum::http::request::Parts;
 use tracing::instrument;
 
 use super::dto::{
-    ExecuteWorkflowRequest, ExecuteWorkflowResponse, UpdateWorkflowRequest, Workflow,
-    WorkflowSummary,
+    CreateWorkflowRequest, CreateWorkflowResponse, ExecuteWorkflowRequest, ExecuteWorkflowResponse,
+    UpdateWorkflowRequest, Workflow, WorkflowSummary,
 };
 use super::repository::WorkflowRepository;
 use crate::error_handling::types::{AppError, AppResult};
@@ -48,14 +48,15 @@ where
         Ok(workflow)
     }
 
-    // Future methods will be added here as repository methods are uncommented
-    //
-    // /// Create a new workflow
-    // #[instrument(skip_all, fields(service = "workflows", operation = "create"))]
-    // pub async fn create(&self, request: CreateWorkflowRequest) -> AppResult<CreateWorkflowResponse> {
-    //     self.repository.create(request).await
-    // }
-    //
+    /// Create a new workflow
+    #[instrument(skip_all, fields(service = "workflows", operation = "create"))]
+    pub async fn create(
+        &self,
+        request: CreateWorkflowRequest,
+    ) -> AppResult<CreateWorkflowResponse> {
+        tracing::info!(workflow_name = %request.name, "Creating workflow through service");
+        self.repository.create(request).await
+    }
     /// Update an existing workflow
     #[instrument(skip_all, fields(service = "workflows", operation = "update", workflow_name = %workflow_name))]
     pub async fn update(

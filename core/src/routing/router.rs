@@ -29,7 +29,7 @@ pub fn create_private_router() -> Router<AppState> {
         .route("/step-functions", get(pages::step_functions_handler))
         .route(
             "/step-functions/create",
-            get(pages::create_step_function_handler),
+            get(pages::create_step_function_handler).post(pages::create_workflow_form_handler),
         )
         .route(
             "/step-functions/edit/{workflow_name}",

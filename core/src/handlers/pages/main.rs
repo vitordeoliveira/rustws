@@ -1,10 +1,12 @@
 //! Main page handlers
 
 use axum::{
+    Form,
     extract::{Path, State},
     response::Html,
 };
 use axum_login::AuthSession;
+use serde::Deserialize;
 use tracing::instrument;
 
 use crate::{
@@ -12,7 +14,7 @@ use crate::{
     business_logic::{
         api_gateway::ApiGatewayRepository,
         lambdas::LambdasService,
-        workflows::{WorkflowSummary, WorkflowsService},
+        workflows::{CreateWorkflowRequest, WorkflowSummary, WorkflowsService},
     },
     error_handling::types::AppResult,
     infrastructure::{
@@ -29,6 +31,15 @@ use crate::{
         step_functions::{CreateStepFunctionPageUi, EditStepFunctionPageUi, StepFunctionsPageUi},
     },
 };
+
+#[derive(Deserialize)]
+pub struct CreateWorkflowFormData {
+    #[serde(rename = "functionName")]
+    pub function_name: String,
+    pub description: Option<String>,
+    #[serde(rename = "workflowDefinition")]
+    pub workflow_definition: String,
+}
 
 /// Home page handler - delegates all UI concerns to UI layer
 #[instrument(skip_all, fields(handler = "home", operation = "page_render"))]
@@ -275,6 +286,89 @@ pub async fn delete_step_function_handler(
     let workflows = workflows_service.get_all().await?;
 
     // Render step functions index page with updated list
+    let step_functions_page_ui = StepFunctionsPageUi::new(user, workflows);
+    let html = step_functions_page_ui.render_html(&state.tera)?;
+
+    Ok(html)
+}
+
+/// Create workflow form handler - processes form data and creates workflow
+#[instrument(
+    skip_all,
+    fields(handler = "create_workflow_form", operation = "form_submission")
+)]
+pub async fn create_workflow_form_handler(
+    State(state): State<AppState>,
+    auth_session: AuthSession<AuthBackend>,
+    workflows_service: WorkflowsService<StepFunctionStorage>,
+    Form(form_data): Form<CreateWorkflowFormData>,
+) -> AppResult<Html<String>> {
+    let user = auth_session.user.unwrap();
+
+    tracing::info!(
+        workflow_name = %form_data.function_name,
+        "Processing workflow creation form submission"
+    );
+
+    // Validate workflow name
+    if form_data.function_name.trim().is_empty() {
+        tracing::warn!(
+            workflow_name = %form_data.function_name,
+            "Invalid workflow name - empty or whitespace"
+        );
+        // Return to create page with error - for now just return to list
+        let workflows = workflows_service.get_all().await?;
+        let step_functions_page_ui = StepFunctionsPageUi::new(user, workflows);
+        return step_functions_page_ui.render_html(&state.tera);
+    }
+
+    // Validate JSON syntax
+    if let Err(e) = serde_json::from_str::<serde_json::Value>(&form_data.workflow_definition) {
+        tracing::warn!(
+            workflow_name = %form_data.function_name,
+            error = %e,
+            "Invalid workflow JSON definition"
+        );
+        // Return to create page with error - for now just return to list
+        let workflows = workflows_service.get_all().await?;
+        let step_functions_page_ui = StepFunctionsPageUi::new(user, workflows);
+        return step_functions_page_ui.render_html(&state.tera);
+    }
+
+    // Create workflow request
+    let create_request = CreateWorkflowRequest {
+        name: form_data.function_name.clone(),
+        description: form_data.description.clone(),
+        definition: form_data.workflow_definition,
+    };
+
+    // Create the workflow
+    match workflows_service.create(create_request).await {
+        Ok(response) => {
+            if response.success {
+                tracing::info!(
+                    workflow_name = %form_data.function_name,
+                    "Workflow created successfully"
+                );
+            } else {
+                tracing::warn!(
+                    workflow_name = %form_data.function_name,
+                    message = %response.message,
+                    "Workflow creation failed"
+                );
+            }
+        }
+        Err(e) => {
+            tracing::error!(
+                workflow_name = %form_data.function_name,
+                error = %e,
+                "Failed to create workflow"
+            );
+        }
+    }
+
+    // Get updated workflow list and return to step functions page
+    let workflows = workflows_service.get_all().await?;
     let step_functions_page_ui = StepFunctionsPageUi::new(user, workflows);
     let html = step_functions_page_ui.render_html(&state.tera)?;
 

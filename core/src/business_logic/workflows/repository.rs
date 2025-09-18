@@ -1,7 +1,8 @@
 //! Workflow repository trait for step function management and execution
 
 use super::dto::{
-    // CreateWorkflowRequest, CreateWorkflowResponse,
+    CreateWorkflowRequest,
+    CreateWorkflowResponse,
     ExecuteWorkflowRequest,
     ExecuteWorkflowResponse,
     UpdateWorkflowRequest,
@@ -27,9 +28,9 @@ pub trait WorkflowRepository: Send + Sync {
     /// Returns complete workflow JSON and metadata for editing/execution
     async fn get_by_name(&self, name: &str) -> AppResult<Option<Workflow>>;
 
-    // /// Create a new workflow
-    // /// Saves workflow JSON to filesystem and validates structure
-    // async fn create(&self, request: CreateWorkflowRequest) -> AppResult<CreateWorkflowResponse>;
+    /// Create a new workflow
+    /// Saves workflow JSON to filesystem and validates structure
+    async fn create(&self, request: CreateWorkflowRequest) -> AppResult<CreateWorkflowResponse>;
 
     /// Update an existing workflow
     /// Updates workflow JSON and re-validates structure

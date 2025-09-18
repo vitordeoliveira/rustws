@@ -7,8 +7,9 @@ use crate::business_logic::lambdas::{
 };
 use crate::business_logic::resource::Resource;
 use crate::business_logic::workflows::{
-    ExecuteWorkflowRequest, ExecuteWorkflowResponse, UpdateWorkflowRequest,
-    Workflow as BusinessWorkflow, WorkflowRepository, WorkflowStatus, WorkflowSummary,
+    CreateWorkflowRequest, CreateWorkflowResponse, ExecuteWorkflowRequest, ExecuteWorkflowResponse,
+    UpdateWorkflowRequest, Workflow as BusinessWorkflow, WorkflowRepository, WorkflowStatus,
+    WorkflowSummary,
 };
 use crate::error_handling::types::{AppError, AppResult};
 use crate::infrastructure::lambdas::LambdaStorage;
@@ -173,6 +174,65 @@ impl WorkflowRepository for StepFunctionStorage {
         );
 
         Ok(Some(business_workflow))
+    }
+
+    #[instrument(
+        skip_all,
+        fields(repository = "step_functions", operation = "create_workflow", workflow_name = %request.name)
+    )]
+    async fn create(&self, request: CreateWorkflowRequest) -> AppResult<CreateWorkflowResponse> {
+        tracing::info!(
+            workflow_name = %request.name,
+            "Workflow creation request received"
+        );
+
+        let workflows_dir = self.workflows_dir();
+
+        // Ensure workflows directory exists
+        fs::create_dir_all(&workflows_dir).map_err(|e| {
+            AppError::internal(&format!("Failed to create workflows directory: {}", e))
+        })?;
+
+        let workflow_path = workflows_dir.join(format!("{}.json", request.name));
+
+        // Check if workflow already exists
+        if workflow_path.exists() {
+            tracing::warn!(
+                workflow_name = %request.name,
+                workflow_path = %workflow_path.display(),
+                "Workflow already exists"
+            );
+            return Ok(CreateWorkflowResponse {
+                success: false,
+                message: format!("Workflow '{}' already exists", request.name),
+                workflow_name: request.name,
+            });
+        }
+
+        // Validate JSON syntax by parsing it
+        let _workflow: Workflow = serde_json::from_str(&request.definition)
+            .map_err(|e| AppError::validation(&format!("Invalid workflow JSON syntax: {}", e)))?;
+
+        // Write the workflow definition to file
+        fs::write(&workflow_path, &request.definition).map_err(|e| {
+            AppError::internal(&format!(
+                "Failed to write workflow file '{}': {}",
+                request.name, e
+            ))
+        })?;
+
+        tracing::info!(
+            workflow_name = %request.name,
+            workflow_path = %workflow_path.display(),
+            definition_size = request.definition.len(),
+            "Workflow created successfully"
+        );
+
+        Ok(CreateWorkflowResponse {
+            success: true,
+            message: format!("Workflow '{}' created successfully", request.name),
+            workflow_name: request.name,
+        })
     }
 
     #[instrument(

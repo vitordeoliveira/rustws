@@ -30,6 +30,22 @@ pub struct ExecuteWorkflowRequest {
     pub input_data: serde_json::Value,
 }
 
+/// Request to create a new workflow
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateWorkflowRequest {
+    pub name: String,
+    pub description: Option<String>,
+    pub definition: String, // JSON string of the workflow definition
+}
+
+/// Response from creating a workflow
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateWorkflowResponse {
+    pub success: bool,
+    pub message: String,
+    pub workflow_name: String,
+}
+
 /// Request to update an existing workflow
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateWorkflowRequest {
