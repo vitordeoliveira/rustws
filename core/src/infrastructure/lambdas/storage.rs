@@ -371,8 +371,14 @@ strip = "symbols"
             .join("\n")
     }
 
-    /// Compile source file to WASM
-    pub(crate) async fn compile_source_file(&self, lambda_name: &str) -> AppResult<Vec<u8>> {
+    /// Compile source file to WASM with metadata
+    pub(crate) async fn compile_source_file(
+        &self,
+        lambda_name: &str,
+    ) -> AppResult<(
+        Vec<u8>,
+        Option<crate::business_logic::lambdas::dto::LambdaMetadata>,
+    )> {
         let source_dir = self.source_dir();
 
         // Try different Rust file extensions
@@ -404,9 +410,8 @@ strip = "symbols"
             .and_then(|s| s.to_str())
             .unwrap_or("rs");
 
-        // Compile to WASM
-        let (wasm_bytes, _metadata) = self.compile(&source_code, runtime).await?;
-        Ok(wasm_bytes)
+        // Compile to WASM and return both WASM bytes and metadata
+        self.compile(&source_code, runtime).await
     }
 
     /// Extract essential metadata from compiled WASM lambda (internal implementation)

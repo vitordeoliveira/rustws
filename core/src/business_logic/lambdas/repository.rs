@@ -17,8 +17,14 @@ pub trait LambdaRepository: Send + Sync {
     /// Compile source code to WASM
     async fn compile(&self, source_code: &str, runtime: &str) -> AppResult<Vec<u8>>;
 
-    /// Compile source file to WASM
-    async fn compile_source_file(&self, lambda_name: &str) -> AppResult<Vec<u8>>;
+    /// Compile source file to WASM with metadata
+    async fn compile_source_file(
+        &self,
+        lambda_name: &str,
+    ) -> AppResult<(
+        Vec<u8>,
+        Option<crate::business_logic::lambdas::dto::LambdaMetadata>,
+    )>;
 
     /// Save compiled WASM bytes and metadata
     async fn save_compiled_wasm(
