@@ -6,3 +6,6 @@ source/
 
 # Lambda execution metrics (runtime data)
 **/metrics.json
+
+core/.env
+rustws-web/.env
