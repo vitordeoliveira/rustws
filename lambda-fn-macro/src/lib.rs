@@ -353,7 +353,8 @@ macro_rules! lambda_fn {
         pub extern "C" fn get_lambda_metadata(ptr_out: *mut u8, max_out_len: usize) -> usize {
             let metadata = serde_json::json!({
                 "features": {
-                    "http_enabled": true
+                    "http_enabled": true,
+                    "env_enabled": true
                 },
                 "input_type": stringify!($input_type),
                 "output_type": stringify!($output_type),
@@ -564,7 +565,8 @@ macro_rules! lambda_fn {
         pub extern "C" fn get_lambda_metadata(ptr_out: *mut u8, max_out_len: usize) -> usize {
             let metadata = serde_json::json!({
                 "features": {
-                    "http_enabled": false
+                    "http_enabled": false,
+                    "env_enabled": true
                 },
                 "input_type": stringify!($input_type),
                 "output_type": stringify!($output_type),

@@ -191,6 +191,9 @@ pub struct LambdaFeatures {
     /// Whether HTTP functionality is enabled
     pub http_enabled: bool,
 
+    /// Whether environment variable access is enabled
+    pub env_enabled: bool,
+
     /// Additional capabilities that may be added in the future
     pub experimental_features: Vec<String>,
 }

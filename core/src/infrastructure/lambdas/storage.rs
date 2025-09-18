@@ -524,6 +524,9 @@ strip = "symbols"
                 http_enabled: metadata_json["features"]["http_enabled"]
                     .as_bool()
                     .unwrap_or(false),
+                env_enabled: metadata_json["features"]["env_enabled"]
+                    .as_bool()
+                    .unwrap_or(false),
                 experimental_features: vec![], // Future extensibility
             },
             input_type: metadata_json["input_type"]

@@ -148,10 +148,7 @@
                 <thead class="bg-gray-50">
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Function Name</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Runtime</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Features</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Memory</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timeout</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Modified</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                         <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -177,21 +174,17 @@
                                 </div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
-                                    {% if lambda.runtime == 'rs' %}bg-rust-100 text-rust-800
-                                    {% elif lambda.runtime == 'js' %}bg-yellow-100 text-yellow-800
-                                    {% elif lambda.runtime == 'py' %}bg-blue-100 text-blue-800
-                                    {% else %}bg-gray-100 text-gray-800{% endif %}">
-                                    {% if lambda.runtime == 'rs' %}Rust
-                                    {% elif lambda.runtime == 'js' %}Node.js
-                                    {% elif lambda.runtime == 'py' %}Python
-                                    {% elif lambda.runtime == 'go' %}Go
-                                    {% else %}{{ lambda.runtime }}{% endif %}
-                                </span>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="flex flex-wrap gap-1">
                                     {% if lambda.metadata %}
+                                        <!-- Always show Basic tag -->
+                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600" title="Basic lambda function">
+                                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                                            </svg>
+                                            Basic
+                                        </span>
+                                        
+                                        <!-- HTTP feature -->
                                         {% if lambda.metadata.features.http_enabled %}
                                             <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800" title="HTTP requests enabled">
                                                 <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -200,18 +193,30 @@
                                                 HTTP
                                             </span>
                                         {% endif %}
+                                        
+                                        <!-- Environment variables feature -->
+                                        {% if lambda.metadata.features.env_enabled %}
+                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800" title="Environment variables access enabled">
+                                                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4"></path>
+                                                </svg>
+                                                ENV
+                                            </span>
+                                        {% endif %}
+                                        
+                                        <!-- Experimental features -->
                                         {% if lambda.metadata.features.experimental_features %}
                                             {% for feature in lambda.metadata.features.experimental_features %}
                                                 <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800" title="Experimental feature: {{ feature }}">
                                                     <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                                                     </svg>
-                                                    {{ feature }}
+                                                    {{ feature | upper }}
                                                 </span>
                                             {% endfor %}
                                         {% endif %}
-                                    {% endif %}
-                                    {% if not lambda.metadata or (not lambda.metadata.features.http_enabled and not lambda.metadata.features.experimental_features) %}
+                                    {% else %}
+                                        <!-- No metadata - show basic only -->
                                         <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600" title="Basic lambda function">
                                             <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
@@ -221,8 +226,6 @@
                                     {% endif %}
                                 </div>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ lambda.memory_mb }} MB</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ lambda.timeout_seconds }}s</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ lambda.updated_at | date(format="%Y-%m-%d %H:%M") }}</td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 {% if lambda.status == 'Active' %}
@@ -244,6 +247,11 @@
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                 <div class="flex items-center justify-end space-x-2">
+                                    <button class="text-gray-600 hover:text-gray-700 hover:bg-gray-50 p-2 rounded-md cursor-pointer transition-all duration-200 transform hover:scale-105" title="Info" onclick="showLambdaInfo('{{ lambda.name }}', '{{ lambda.runtime }}', '{{ lambda.memory_mb }}', '{{ lambda.timeout_seconds }}', '{{ lambda.created_at | date(format="%Y-%m-%d %H:%M") }}', '{{ lambda.updated_at | date(format="%Y-%m-%d %H:%M") }}', '{{ lambda.description | default(value="") }}')">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                    </button>
                                     <button class="text-green-600 hover:text-green-700 hover:bg-green-50 p-2 rounded-md cursor-pointer transition-all duration-200 transform hover:scale-105" title="Compile" onclick="compileLambda('{{ lambda.name }}')">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
@@ -277,7 +285,7 @@
                     {% else %}
                         <!-- Empty State -->
                         <tr>
-                            <td colspan="8" class="px-6 py-12 text-center">
+                            <td colspan="5" class="px-6 py-12 text-center">
                                 <div class="flex flex-col items-center">
                                     <svg class="w-12 h-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
@@ -301,6 +309,60 @@
 .bg-rust-100 { background-color: #fef2f2; }
 .text-rust-800 { color: #991b1b; }
 </style>
+
+<!-- Lambda Info Modal -->
+<div id="lambdaInfoModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-lg shadow-lg max-w-2xl w-full max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-center p-6 border-b border-gray-200">
+                <h3 class="text-lg font-medium text-gray-900">Lambda Function Details: <span id="infoLambdaName" class="text-orange-600"></span></h3>
+                <button onclick="closeLambdaInfoModal()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="p-6 flex-1 overflow-auto">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <h4 class="text-sm font-semibold text-gray-700 mb-3">Configuration</h4>
+                        <div class="space-y-3">
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Runtime:</span>
+                                <span id="infoRuntime" class="font-medium"></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Memory:</span>
+                                <span id="infoMemory" class="font-medium"></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Timeout:</span>
+                                <span id="infoTimeout" class="font-medium"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-semibold text-gray-700 mb-3">Timestamps</h4>
+                        <div class="space-y-3">
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Created:</span>
+                                <span id="infoCreated" class="font-medium"></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Last Modified:</span>
+                                <span id="infoUpdated" class="font-medium"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-6 pt-6 border-t border-gray-200">
+                    <h4 class="text-sm font-semibold text-gray-700 mb-3">Description</h4>
+                    <p id="infoDescription" class="text-gray-600 text-sm"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- Execution Result Modal -->
 <div id="executionResultModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
@@ -450,6 +512,36 @@ function showExecutionResultModal(lambdaName, jsonString, parsedJson, outputSize
 
 function closeExecutionResultModal() {
     document.getElementById('executionResultModal').classList.add('hidden');
+}
+
+// Lambda Info Modal Functions
+function showLambdaInfo(name, runtime, memory, timeout, created, updated, description) {
+    // Set modal content
+    document.getElementById('infoLambdaName').textContent = name;
+    
+    // Format runtime display
+    let runtimeDisplay;
+    switch(runtime) {
+        case 'rs': runtimeDisplay = 'Rust'; break;
+        case 'js': runtimeDisplay = 'Node.js'; break;
+        case 'py': runtimeDisplay = 'Python'; break;
+        case 'go': runtimeDisplay = 'Go'; break;
+        default: runtimeDisplay = runtime;
+    }
+    
+    document.getElementById('infoRuntime').textContent = runtimeDisplay;
+    document.getElementById('infoMemory').textContent = `${memory} MB`;
+    document.getElementById('infoTimeout').textContent = `${timeout}s`;
+    document.getElementById('infoCreated').textContent = created;
+    document.getElementById('infoUpdated').textContent = updated;
+    document.getElementById('infoDescription').textContent = description || 'No description provided';
+    
+    // Show modal
+    document.getElementById('lambdaInfoModal').classList.remove('hidden');
+}
+
+function closeLambdaInfoModal() {
+    document.getElementById('lambdaInfoModal').classList.add('hidden');
 }
 
 async function refreshLambdaMetrics() {
