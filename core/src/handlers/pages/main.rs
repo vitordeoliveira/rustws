@@ -26,7 +26,7 @@ use crate::{
         Ui,
         api_gateway::ApiGatewayPageUi,
         home::HomePageUi,
-        lambda::{CreateLambdaPageUi, EditLambdaPageUi, LambdaPageUi},
+        lambda::{CreateLambdaPageUi, EditLambdaPageUi, LambdaMetricsPageUi, LambdaPageUi},
         monitoring::{MonitoringPageUi, get_mock_monitoring_data},
         step_functions::{CreateStepFunctionPageUi, EditStepFunctionPageUi, StepFunctionsPageUi},
     },
@@ -170,6 +170,49 @@ pub async fn edit_lambda_handler(
             )))
         }
     }
+}
+
+/// Lambda metrics page handler - shows execution metrics for a specific lambda
+#[instrument(
+    skip_all,
+    fields(handler = "lambda_metrics", operation = "page_render")
+)]
+pub async fn lambda_metrics_handler(
+    State(state): State<AppState>,
+    auth_session: AuthSession<AuthBackend>,
+    _lambda_service: LambdasService<LambdaStorage>,
+    Path(lambda_name): Path<String>,
+) -> AppResult<Html<String>> {
+    let user = auth_session.user.unwrap();
+
+    tracing::info!(
+        lambda_name = %lambda_name,
+        "Loading metrics for lambda"
+    );
+
+    // We need to access the ledger entries, but the current service only gives us aggregated metrics
+    // Let's access the storage directly to get the ledger
+    let lambda_storage = LambdaStorage::new();
+    let ledger = lambda_storage.get_metrics_ledger();
+
+    let lambda_executions: Vec<_> = ledger
+        .entries
+        .iter()
+        .filter(|entry| entry.lambda_name == lambda_name)
+        .cloned()
+        .collect();
+
+    tracing::debug!(
+        lambda_name = %lambda_name,
+        execution_count = lambda_executions.len(),
+        "Filtered lambda execution entries"
+    );
+
+    let lambda_metrics_page_ui =
+        LambdaMetricsPageUi::new(user, lambda_name.clone(), lambda_executions);
+    let html = lambda_metrics_page_ui.render_html(&state.tera)?;
+
+    Ok(html)
 }
 
 /// Step Functions page handler - delegates all UI concerns to UI layer

@@ -1,0 +1,236 @@
+{% extends "shared/base.html" %}
+
+{% block content %}
+<!-- Header Section -->
+<div class="bg-gradient-to-r from-purple-500 to-indigo-600 text-white -mt-0">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-12">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+            <div class="text-center lg:text-left">
+                <div class="flex items-center mb-4">
+                    <a href="/lambda" class="text-purple-200 hover:text-white hover:bg-purple-400 hover:bg-opacity-20 p-3 rounded-full cursor-pointer transition-all duration-300 ease-in-out hover:shadow-lg mr-3 group">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                        </svg>
+                    </a>
+                    <h1 class="text-3xl md:text-4xl font-bold">
+                        {{ lambda_name }} Metrics
+                    </h1>
+                </div>
+                <p class="text-lg text-purple-100 max-w-2xl">
+                    Performance metrics and execution history for lambda function
+                </p>
+            </div>
+            <div class="mt-8 lg:mt-0 flex flex-col sm:flex-row gap-4">
+                <a href="/lambda/edit/{{ lambda_name }}" class="px-6 py-3 bg-white text-purple-600 rounded-lg font-semibold hover:bg-purple-50 transition-colors duration-200 flex items-center justify-center">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                    </svg>
+                    Edit Function
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Metrics Overview -->
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 mb-8">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <!-- Total Executions -->
+        <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                    </div>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">Total Executions</p>
+                    <p class="text-2xl font-semibold text-gray-900">{{ total_executions }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Success Rate -->
+        <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                        <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">Success Rate</p>
+                    <p class="text-2xl font-semibold text-gray-900">{{ success_rate | round }}%</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Average Duration -->
+        <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
+                        <svg class="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">Avg Duration</p>
+                    <p class="text-2xl font-semibold text-gray-900">{{ avg_execution_time_ms | round }}ms</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Failed Executions -->
+        <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                        <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                        </svg>
+                    </div>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">Failed</p>
+                    <p class="text-2xl font-semibold text-gray-900">{{ failed_executions }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Execution History -->
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+    <div class="bg-white rounded-lg border border-gray-200 shadow-sm">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h2 class="text-xl font-semibold text-gray-900">Execution History</h2>
+                    <p class="text-sm text-gray-600 mt-1">Recent executions for {{ lambda_name }}</p>
+                </div>
+            </div>
+        </div>
+
+        {% if executions %}
+            <!-- Executions Table -->
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timestamp</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Performance</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for execution in executions | sort(attribute="timestamp", reverse=true) %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {{ execution.timestamp | date(format="%Y-%m-%d %H:%M:%S") }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if execution.status == "Success" %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    <span class="w-2 h-2 bg-green-400 rounded-full mr-1"></span>
+                                    Success
+                                </span>
+                                {% else %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                    <span class="w-2 h-2 bg-red-400 rounded-full mr-1"></span>
+                                    Failed
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
+                                {{ execution.execution_time_ms }}ms
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if execution.execution_time_ms < 100 %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    Fast
+                                </span>
+                                {% elif execution.execution_time_ms < 500 %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                    Normal
+                                </span>
+                                {% else %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                    Slow
+                                </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <!-- Empty State -->
+            <div class="px-6 py-12 text-center">
+                <div class="flex flex-col items-center">
+                    <svg class="w-12 h-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">No execution history</h3>
+                    <p class="text-gray-500 mb-4">This lambda hasn't been executed yet. Try running a test to see metrics.</p>
+                    <a href="/lambda" class="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-md transition-all duration-200 cursor-pointer transform hover:scale-105 hover:shadow-md">
+                        Back to Lambda List
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if executions %}
+<!-- Simple Performance Chart -->
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+    <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Performance Trends</h3>
+        <div class="space-y-4">
+            <!-- Success Rate Bar -->
+            <div>
+                <div class="flex justify-between text-sm text-gray-600 mb-1">
+                    <span>Success Rate</span>
+                    <span>{{ success_rate | round }}%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                    <div class="bg-green-500 h-2 rounded-full" style="width: {{ success_rate }}%"></div>
+                </div>
+            </div>
+            
+            <!-- Recent Executions Timeline -->
+            {% if executions | length > 1 %}
+            <div>
+                <div class="flex justify-between text-sm text-gray-600 mb-2">
+                    <span>Recent Executions</span>
+                    <span>Last {{ executions | length }} runs</span>
+                </div>
+                <div class="flex space-x-1">
+                    {% for execution in executions | sort(attribute="timestamp") %}
+                        {% if execution.status == "Success" %}
+                            <div class="w-2 h-8 bg-green-400 rounded-sm" title="Success - {{ execution.execution_time_ms }}ms"></div>
+                        {% else %}
+                            <div class="w-2 h-8 bg-red-400 rounded-sm" title="Failed - {{ execution.execution_time_ms }}ms"></div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                <div class="flex justify-between text-xs text-gray-500 mt-1">
+                    <span>Oldest</span>
+                    <span>Latest</span>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

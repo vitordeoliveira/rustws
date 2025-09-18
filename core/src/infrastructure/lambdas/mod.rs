@@ -10,5 +10,5 @@ mod storage;
 mod wasm_runtime;
 
 // Re-export public types and implementations
-pub use metrics::LambdasMetrics;
+pub use metrics::{LambdasMetrics, LambdaExecutionEntry};
 pub use storage::LambdaStorage;
