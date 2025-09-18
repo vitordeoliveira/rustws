@@ -319,6 +319,44 @@ impl WorkflowRepository for StepFunctionStorage {
             }
         }
     }
+
+    #[instrument(
+        skip_all,
+        fields(repository = "step_functions", operation = "delete_workflow", workflow_name = %workflow_name)
+    )]
+    async fn delete(&self, workflow_name: &str) -> AppResult<()> {
+        let workflows_dir = self.workflows_dir();
+        let workflow_path = workflows_dir.join(format!("{}.json", workflow_name));
+
+        // Check if workflow exists
+        if !workflow_path.exists() {
+            tracing::warn!(
+                workflow_name = %workflow_name,
+                workflow_path = %workflow_path.display(),
+                "Workflow file not found for deletion"
+            );
+            return Err(AppError::not_found(&format!(
+                "Workflow '{}' not found",
+                workflow_name
+            )));
+        }
+
+        // Delete the workflow file
+        fs::remove_file(&workflow_path).map_err(|e| {
+            AppError::internal(&format!(
+                "Failed to delete workflow file '{}': {}",
+                workflow_name, e
+            ))
+        })?;
+
+        tracing::info!(
+            workflow_name = %workflow_name,
+            workflow_path = %workflow_path.display(),
+            "Workflow deleted successfully"
+        );
+
+        Ok(())
+    }
 }
 
 impl StepFunctionStorage {

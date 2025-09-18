@@ -35,9 +35,9 @@ pub trait WorkflowRepository: Send + Sync {
     /// Updates workflow JSON and re-validates structure
     async fn update(&self, workflow_name: &str, request: UpdateWorkflowRequest) -> AppResult<()>;
 
-    // /// Delete a workflow by name
-    // /// Removes workflow JSON file and any associated metadata
-    // async fn delete(&self, workflow_name: &str) -> AppResult<()>;
+    /// Delete a workflow by name
+    /// Removes workflow JSON file and any associated metadata
+    async fn delete(&self, workflow_name: &str) -> AppResult<()>;
 
     // /// Validate workflow structure and dependencies
     // /// Checks JSON syntax, state references, and lambda availability

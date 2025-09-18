@@ -693,11 +693,22 @@ async function deleteStepFunction(stepFunctionName) {
         
         showToast(`Deleting ${stepFunctionName}...`, true);
         
-        // TODO: Replace with actual API call
-        setTimeout(() => {
+        // Call the delete API endpoint
+        const response = await fetch(`/step-functions/delete/${encodeURIComponent(stepFunctionName)}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+        
+        if (response.ok) {
+            // Replace the current page content with the updated page
+            const html = await response.text();
+            document.documentElement.innerHTML = html;
             showToast(`✅ Step function '${stepFunctionName}' deleted successfully!`, true);
-            // TODO: Refresh the page or remove the element from DOM
-        }, 2000);
+        } else {
+            throw new Error(`Failed to delete step function: ${response.status} ${response.statusText}`);
+        }
         
     } catch (error) {
         console.error('Delete error:', error);

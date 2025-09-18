@@ -242,6 +242,45 @@ pub async fn edit_step_function_handler(
     }
 }
 
+/// Delete step function handler - deletes workflow and returns step functions index page
+#[instrument(
+    skip_all,
+    fields(handler = "delete_step_function", operation = "page_delete")
+)]
+pub async fn delete_step_function_handler(
+    State(state): State<AppState>,
+    auth_session: AuthSession<AuthBackend>,
+    workflows_service: WorkflowsService<StepFunctionStorage>,
+    Path(workflow_name): Path<String>,
+) -> AppResult<Html<String>> {
+    let user = auth_session.user.unwrap();
+
+    // Delete the workflow
+    if let Err(e) = workflows_service.delete(&workflow_name).await {
+        tracing::error!(
+            workflow_name = %workflow_name,
+            error = %e,
+            "Failed to delete workflow"
+        );
+        // Continue to render the page even if deletion failed
+        // The user will see the workflow still exists in the list
+    } else {
+        tracing::info!(
+            workflow_name = %workflow_name,
+            "Workflow deleted successfully"
+        );
+    }
+
+    // Get updated workflow list (after potential deletion)
+    let workflows = workflows_service.get_all().await?;
+
+    // Render step functions index page with updated list
+    let step_functions_page_ui = StepFunctionsPageUi::new(user, workflows);
+    let html = step_functions_page_ui.render_html(&state.tera)?;
+
+    Ok(html)
+}
+
 /// API Gateway page handler - delegates all UI concerns to UI layer
 #[instrument(skip_all, fields(handler = "api_gateway", operation = "page_render"))]
 pub async fn api_gateway_handler(

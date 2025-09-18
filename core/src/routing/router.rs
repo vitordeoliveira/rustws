@@ -45,6 +45,10 @@ pub fn create_private_router() -> Router<AppState> {
             post(pages::delete_lambda_handler),
         )
         .route(
+            "/step-functions/delete/{workflow_name}",
+            post(pages::delete_step_function_handler),
+        )
+        .route(
             "/api/lambda/compile/{lambda_name}",
             post(api::lambdas::compile_lambda_handler),
         )

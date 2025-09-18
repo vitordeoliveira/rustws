@@ -66,13 +66,13 @@ where
         tracing::info!(workflow_name = %workflow_name, "Updating workflow through service");
         self.repository.update(workflow_name, request).await
     }
-    //
-    // /// Delete a workflow by name
-    // #[instrument(skip_all, fields(service = "workflows", operation = "delete", workflow_name = %workflow_name))]
-    // pub async fn delete(&self, workflow_name: &str) -> AppResult<()> {
-    //     self.repository.delete(workflow_name).await
-    // }
-    //
+
+    /// Delete a workflow by name
+    #[instrument(skip_all, fields(service = "workflows", operation = "delete", workflow_name = %workflow_name))]
+    pub async fn delete(&self, workflow_name: &str) -> AppResult<()> {
+        tracing::info!(workflow_name = %workflow_name, "Deleting workflow through service");
+        self.repository.delete(workflow_name).await
+    }
     // /// Validate workflow structure and dependencies
     // #[instrument(skip_all, fields(service = "workflows", operation = "validate", workflow_name = %workflow_name))]
     // pub async fn validate(&self, workflow_name: &str) -> AppResult<WorkflowValidationResult> {
