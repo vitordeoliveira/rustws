@@ -54,3 +54,6 @@ axum-login = "0.18.0"
 wasmer = { version = "6.0.1", default-features = false, features = [
   "cranelift",
 ] }
+
+# Lambda macro
+lambda-fn-macro = { path = "../lambda-fn-macro" }

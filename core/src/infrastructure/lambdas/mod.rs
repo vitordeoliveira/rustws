@@ -6,6 +6,7 @@
 // Sub-modules
 mod metrics;
 mod repository;
+mod source;  // Lambda source files with auto-discovery
 mod storage;
 mod wasm_runtime;
 

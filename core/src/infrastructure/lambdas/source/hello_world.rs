@@ -33,14 +33,13 @@ pub struct Post {
 // ===== LAMBDA IMPLEMENTATION USING MACRO =====
 
 lambda_fn! {
-    input: HelloWorld,
-    output: HelloWorld,
-    enable_http: true,
+    features: [http],
     handler: |input: HelloWorld| -> HelloWorld {
         // Validation
         if input.count > 50 {
             panic!("Count is too high");
         }
+
 
         // Business logic with HTTP request - pure Rust!
         let mut headers = HashMap::new();

@@ -1759,6 +1759,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "lambda-fn-macro"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "proc-macro2",
+ "quote",
+ "schemars",
+ "serde",
+ "serde_json",
+ "syn 2.0.106",
+]
+
+[[package]]
 name = "lazy_static"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2859,6 +2872,7 @@ dependencies = [
  "base64",
  "chrono",
  "dotenv",
+ "lambda-fn-macro",
  "notify",
  "rand 0.9.2",
  "reqwest",
