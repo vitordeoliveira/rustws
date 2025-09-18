@@ -223,7 +223,7 @@ strip = "symbols"
 
         // Extract metadata from compiled WASM before cleanup
         let metadata = self
-            .extract_lambda_metadata_impl(&wasm_bytes)
+            .extract_lambda_metadata(&wasm_bytes)
             .await
             .unwrap_or_else(|e| {
                 tracing::warn!(error = %e, "Failed to extract lambda metadata during compilation");
@@ -372,7 +372,7 @@ strip = "symbols"
     }
 
     /// Compile source file to WASM with metadata
-    pub(crate) async fn compile_source_file(
+    pub(crate) async fn compile_source_file_impl(
         &self,
         lambda_name: &str,
     ) -> AppResult<(
@@ -414,9 +414,9 @@ strip = "symbols"
         self.compile(&source_code, runtime).await
     }
 
-    /// Extract essential metadata from compiled WASM lambda (internal implementation)
+    /// Extract essential metadata from compiled WASM lambda
     #[instrument(skip_all, fields(wasm_size = wasm_bytes.len()))]
-    pub(crate) async fn extract_lambda_metadata_impl(
+    pub(crate) async fn extract_lambda_metadata(
         &self,
         wasm_bytes: &[u8],
     ) -> AppResult<Option<crate::business_logic::lambdas::dto::LambdaMetadata>> {

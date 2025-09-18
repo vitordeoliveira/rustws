@@ -14,11 +14,8 @@ pub trait LambdaRepository: Send + Sync {
     /// Get all lambda functions
     async fn get_all(&self) -> AppResult<Vec<LambdaSummary>>;
 
-    /// Compile source code to WASM
-    async fn compile(&self, source_code: &str, runtime: &str) -> AppResult<Vec<u8>>;
-
     /// Compile source file to WASM with metadata
-    async fn compile_source_file(
+    async fn compile(
         &self,
         lambda_name: &str,
     ) -> AppResult<(
@@ -33,12 +30,6 @@ pub trait LambdaRepository: Send + Sync {
         wasm_bytes: &[u8],
         metadata: Option<crate::business_logic::lambdas::dto::LambdaMetadata>,
     ) -> AppResult<PathBuf>;
-
-    /// Extract metadata from compiled WASM bytes
-    async fn extract_lambda_metadata(
-        &self,
-        wasm_bytes: &[u8],
-    ) -> AppResult<Option<crate::business_logic::lambdas::dto::LambdaMetadata>>;
 
     /// Execute a lambda function
     async fn execute(&mut self, request: ExecuteLambdaRequest) -> AppResult<ExecuteLambdaResponse>;

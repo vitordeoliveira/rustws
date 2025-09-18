@@ -89,21 +89,15 @@ impl LambdaRepository for LambdaStorage {
         Ok(summaries)
     }
 
-    /// Compile source code to WASM
-    async fn compile(&self, source_code: &str, runtime: &str) -> AppResult<Vec<u8>> {
-        let (wasm_bytes, _metadata) = self.compile(source_code, runtime).await?;
-        Ok(wasm_bytes)
-    }
-
     /// Compile source file to WASM with metadata
-    async fn compile_source_file(
+    async fn compile(
         &self,
         lambda_name: &str,
     ) -> AppResult<(
         Vec<u8>,
         Option<crate::business_logic::lambdas::dto::LambdaMetadata>,
     )> {
-        self.compile_source_file(lambda_name).await
+        self.compile_source_file_impl(lambda_name).await
     }
 
     /// Save compiled WASM bytes and metadata
@@ -115,14 +109,6 @@ impl LambdaRepository for LambdaStorage {
     ) -> AppResult<std::path::PathBuf> {
         self.save_compiled_wasm(lambda_name, wasm_bytes, metadata)
             .await
-    }
-
-    /// Extract metadata from compiled WASM bytes
-    async fn extract_lambda_metadata(
-        &self,
-        wasm_bytes: &[u8],
-    ) -> AppResult<Option<crate::business_logic::lambdas::dto::LambdaMetadata>> {
-        self.extract_lambda_metadata_impl(wasm_bytes).await
     }
 
     /// Execute a lambda function

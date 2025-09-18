@@ -41,11 +41,7 @@ where
     pub async fn compile(&self, request: CompileLambdaRequest) -> AppResult<CompileLambdaResponse> {
         let start_time = Instant::now();
 
-        match self
-            .repository
-            .compile_source_file(&request.lambda_name)
-            .await
-        {
+        match self.repository.compile(&request.lambda_name).await {
             Ok((wasm_bytes, metadata)) => {
                 // Save the compiled WASM with metadata (already extracted during compilation)
                 let wasm_path = self
