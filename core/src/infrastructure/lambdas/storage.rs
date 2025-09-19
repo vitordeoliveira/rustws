@@ -434,9 +434,15 @@ strip = "symbols"
             ))
         })?;
 
-        // Create stub host functions for HTTP-enabled lambdas
+        // Create stub host functions for HTTP and environment-enabled lambdas
         // These are dummy implementations - they won't be called during metadata extraction
         let host_http_request =
+            wasmer::Function::new_typed(&mut store, |_: i32, _: i32, _: i32, _: i32| -> i32 {
+                // Stub implementation - not called during metadata extraction
+                -1
+            });
+
+        let host_get_env =
             wasmer::Function::new_typed(&mut store, |_: i32, _: i32, _: i32, _: i32| -> i32 {
                 // Stub implementation - not called during metadata extraction
                 -1
@@ -453,6 +459,7 @@ strip = "symbols"
             &imports! {
                 "env" => {
                     "host_http_request" => host_http_request,
+                    "host_get_env" => host_get_env,
                     "wasm_free" => wasm_free,
                 }
             },

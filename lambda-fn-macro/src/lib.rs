@@ -1,7 +1,7 @@
 //! Lambda Function Macro Crate
 //!
-//! This crate provides the `lambda_fn!` macro that eliminates all WASM infrastructure
-//! code, allowing developers to focus purely on business logic.
+//! This crate provides the `#[lambda_fn]` attribute macro that eliminates all WASM infrastructure
+//! code, allowing developers to focus purely on business logic with full IDE support.
 //!
 //! # Examples
 //!
@@ -23,12 +23,12 @@
 //!     pub new_count: i32,
 //! }
 //!
-//! lambda_fn! {
-//!     handler: |input: MyInput| -> MyOutput {
-//!         MyOutput {
-//!             result: format!("Processed: {}", input.message),
-//!             new_count: input.count + 1,
-//!         }
+//! #[lambda_fn]
+//! fn my_lambda(input: MyInput) -> MyOutput {
+//!     // Full IDE autocomplete works here!
+//!     MyOutput {
+//!         result: format!("Processed: {}", input.message),
+//!         new_count: input.count + 1,
 //!     }
 //! }
 //! ```
@@ -52,26 +52,25 @@
 //!     pub status: u16,
 //! }
 //!
-//! lambda_fn! {
-//!     features: [http],
-//!     handler: |input: ApiInput| -> ApiOutput {
-//!         let request = Request {
-//!             method: "GET".to_string(),
-//!             url: input.endpoint,
-//!             headers: HashMap::new(),
-//!             body: None,
-//!         };
-//!         
-//!         match http_request(&request) {
-//!             Ok(response) => ApiOutput {
-//!                 response: response.text().to_string(),
-//!                 status: response.status(),
-//!             },
-//!             Err(e) => ApiOutput {
-//!                 response: format!("Error: {}", e),
-//!                 status: 500,
-//!             },
-//!         }
+//! #[lambda_fn(features = [http])]
+//! fn api_lambda(input: ApiInput) -> ApiOutput {
+//!     // Full IDE autocomplete + HTTP functions available!
+//!     let request = Request {
+//!         method: "GET".to_string(),
+//!         url: input.endpoint,
+//!         headers: HashMap::new(),
+//!         body: None,
+//!     };
+//!     
+//!     match http_request(&request) {
+//!         Ok(response) => ApiOutput {
+//!             response: response.text().to_string(),
+//!             status: response.status(),
+//!         },
+//!         Err(e) => ApiOutput {
+//!             response: format!("Error: {}", e),
+//!             status: 500,
+//!         },
 //!     }
 //! }
 //! ```
@@ -93,23 +92,22 @@
 //!     pub found: bool,
 //! }
 //!
-//! lambda_fn! {
-//!     features: [env],
-//!     handler: |input: ConfigInput| -> ConfigOutput {
-//!         match get_env(&input.config_key) {
-//!             Ok(Some(value)) => ConfigOutput {
-//!                 value: Some(value),
-//!                 found: true,
-//!             },
-//!             Ok(None) => ConfigOutput {
-//!                 value: None,
-//!                 found: false,
-//!             },
-//!             Err(e) => ConfigOutput {
-//!                 value: Some(format!("Error: {}", e)),
-//!                 found: false,
-//!             },
-//!         }
+//! #[lambda_fn(features = [env])]
+//! fn config_lambda(input: ConfigInput) -> ConfigOutput {
+//!     // Full IDE autocomplete + environment functions available!
+//!     match get_env(&input.config_key) {
+//!         Ok(Some(value)) => ConfigOutput {
+//!             value: Some(value),
+//!             found: true,
+//!         },
+//!         Ok(None) => ConfigOutput {
+//!             value: None,
+//!             found: false,
+//!         },
+//!         Err(e) => ConfigOutput {
+//!             value: Some(format!("Error: {}", e)),
+//!             found: false,
+//!         },
 //!     }
 //! }
 //! ```
@@ -133,52 +131,51 @@
 //!     pub status: u16,
 //! }
 //!
-//! lambda_fn! {
-//!     features: [env, http],
-//!     handler: |input: ApiConfigInput| -> ApiConfigOutput {
-//!         // Get API key from environment
-//!         let api_key = match get_env(&input.api_key_env) {
-//!             Ok(Some(key)) => key,
-//!             Ok(None) => return ApiConfigOutput {
-//!                 response: "API key not found".to_string(),
-//!                 status: 401,
-//!             },
-//!             Err(e) => return ApiConfigOutput {
-//!                 response: format!("Error getting API key: {}", e),
-//!                 status: 500,
-//!             },
-//!         };
-//!         
-//!         // Make HTTP request with API key
-//!         let mut headers = HashMap::new();
-//!         headers.insert("Authorization".to_string(), format!("Bearer {}", api_key));
-//!         
-//!         let request = Request {
-//!             method: "GET".to_string(),
-//!             url: input.endpoint,
-//!             headers,
-//!             body: None,
-//!         };
-//!         
-//!         match http_request(&request) {
-//!             Ok(response) => ApiConfigOutput {
-//!                 response: response.text().to_string(),
-//!                 status: response.status(),
-//!             },
-//!             Err(e) => ApiConfigOutput {
-//!                 response: format!("HTTP error: {}", e),
-//!                 status: 500,
-//!             },
-//!         }
+//! #[lambda_fn(features = [env, http])]
+//! fn full_lambda(input: ApiConfigInput) -> ApiConfigOutput {
+//!     // Full IDE autocomplete + env + HTTP functions available!
+//!     // Get API key from environment
+//!     let api_key = match get_env(&input.api_key_env) {
+//!         Ok(Some(key)) => key,
+//!         Ok(None) => return ApiConfigOutput {
+//!             response: "API key not found".to_string(),
+//!             status: 401,
+//!         },
+//!         Err(e) => return ApiConfigOutput {
+//!             response: format!("Error getting API key: {}", e),
+//!             status: 500,
+//!         },
+//!     };
+//!     
+//!     // Make HTTP request with API key
+//!     let mut headers = HashMap::new();
+//!     headers.insert("Authorization".to_string(), format!("Bearer {}", api_key));
+//!     
+//!     let request = Request {
+//!         method: "GET".to_string(),
+//!         url: input.endpoint,
+//!         headers,
+//!         body: None,
+//!     };
+//!     
+//!     match http_request(&request) {
+//!         Ok(response) => ApiConfigOutput {
+//!             response: response.text().to_string(),
+//!             status: response.status(),
+//!         },
+//!         Err(e) => ApiConfigOutput {
+//!             response: format!("HTTP error: {}", e),
+//!             status: 500,
+//!         },
 //!     }
 //! }
 //! ```
 
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, ExprClosure, Ident, Token};
+use syn::{parse_macro_input, FnArg, ItemFn, Pat, ReturnType, Type};
 
-/// Macro to create a complete lambda function with WASM infrastructure, schema generation, and optional features
+/// Attribute macro to create a complete lambda function with WASM infrastructure, schema generation, and optional features
 ///
 /// This macro generates all the necessary WASM boilerplate including:
 /// - Memory management functions (`wasm_malloc`, `wasm_free_impl`)
@@ -191,22 +188,55 @@ use syn::{parse_macro_input, ExprClosure, Ident, Token};
 ///   - `env`: Environment variable access (`get_env`) for retrieving host environment variables
 ///   - `http`: HTTP functionality (`Request`, `Response`, `http_request`) for external API calls
 ///
-/// Users only need to provide a handler function with typed input/output parameters.
-/// Input and output types are automatically inferred from the handler function signature.
+/// The function signature is preserved and can be tested directly.
+/// Input and output types are automatically inferred from the function signature.
 /// The generated schema functions enable workflow validation and type checking.
-/// Features are enabled by specifying them in the `features` array: `features: [env, http]`
-#[proc_macro]
-pub fn lambda_fn(input: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(input as LambdaFnInput);
+/// Features are enabled by specifying them in the attribute: `#[lambda_fn(features = [env, http])]`
+///
+/// ## Usage
+///
+/// ### Basic usage (no features):
+/// ```rust
+/// #[lambda_fn]
+/// fn my_lambda(input: MyInput) -> MyOutput {
+///     // Your business logic here with full IDE support!
+/// }
+/// ```
+///
+/// ### With features:
+/// ```rust
+/// #[lambda_fn(features = [http, env])]
+/// fn my_lambda(input: MyInput) -> MyOutput {
+///     // HTTP and environment functions available
+/// }
+/// ```
+#[proc_macro_attribute]
+pub fn lambda_fn(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let input_fn = parse_macro_input!(item as ItemFn);
 
-    let features = input.features;
-    let handler = input.handler;
+    // Parse features from attribute
+    let features = if attr.is_empty() {
+        Vec::new()
+    } else {
+        parse_features(attr)
+    };
 
-    // Extract input and output types from handler signature
-    let input_type = &handler.input;
-    let output_type = &handler.output;
-    let input_param = &handler.input_param;
-    let handler_body = &handler.body;
+    // Extract function information
+    let fn_name = &input_fn.sig.ident;
+    let fn_vis = &input_fn.vis;
+    let fn_block = &input_fn.block;
+
+    // Use simple function names for easier metadata extraction
+    let input_schema_fn = syn::Ident::new("get_input_schema", fn_name.span());
+    let output_schema_fn = syn::Ident::new("get_output_schema", fn_name.span());
+    let metadata_fn = syn::Ident::new("get_lambda_metadata", fn_name.span());
+    let handler_fn = syn::Ident::new("handler", fn_name.span());
+    let wasm_malloc_fn = syn::Ident::new("wasm_malloc", fn_name.span());
+    let wasm_free_impl_fn = syn::Ident::new("wasm_free_impl", fn_name.span());
+
+    // Extract input and output types from function signature
+    let (input_param, input_type) = extract_input_info(&input_fn.sig.inputs);
+    let output_type = extract_output_type(&input_fn.sig.output);
 
     // Check which features are enabled
     let has_http = features.contains(&"http".to_string());
@@ -370,6 +400,11 @@ pub fn lambda_fn(input: TokenStream) -> TokenStream {
     };
 
     let generated_code = quote! {
+        // ===== ORIGINAL FUNCTION (PRESERVED FOR TESTING) =====
+
+        /// Original user function - can be called directly for testing
+        #fn_vis fn #fn_name(#input_param: #input_type) -> #output_type #fn_block
+
         // ===== HOST FUNCTIONALITY (AUTO-GENERATED) =====
 
         extern "C" {
@@ -387,7 +422,7 @@ pub fn lambda_fn(input: TokenStream) -> TokenStream {
 
         /// Allocate memory in WASM that can be accessed by the host
         #[no_mangle]
-        pub extern "C" fn wasm_malloc(size: usize) -> *mut u8 {
+        pub extern "C" fn #wasm_malloc_fn(size: usize) -> *mut u8 {
             let mut buf = Vec::with_capacity(size);
             let ptr = buf.as_mut_ptr();
             std::mem::forget(buf);
@@ -396,7 +431,7 @@ pub fn lambda_fn(input: TokenStream) -> TokenStream {
 
         /// Free memory allocated by wasm_malloc
         #[no_mangle]
-        pub extern "C" fn wasm_free_impl(ptr: *mut u8, size: usize) {
+        pub extern "C" fn #wasm_free_impl_fn(ptr: *mut u8, size: usize) {
             unsafe {
                 let _ = Vec::from_raw_parts(ptr, 0, size);
             }
@@ -406,7 +441,7 @@ pub fn lambda_fn(input: TokenStream) -> TokenStream {
 
         /// Get JSON Schema for input type
         #[no_mangle]
-        pub extern "C" fn get_input_schema(ptr_out: *mut u8, max_out_len: usize) -> usize {
+        pub extern "C" fn #input_schema_fn(ptr_out: *mut u8, max_out_len: usize) -> usize {
             use schemars::{schema_for, JsonSchema};
 
             // Generate schema for input type
@@ -428,7 +463,7 @@ pub fn lambda_fn(input: TokenStream) -> TokenStream {
 
         /// Get JSON Schema for output type
         #[no_mangle]
-        pub extern "C" fn get_output_schema(ptr_out: *mut u8, max_out_len: usize) -> usize {
+        pub extern "C" fn #output_schema_fn(ptr_out: *mut u8, max_out_len: usize) -> usize {
             use schemars::{schema_for, JsonSchema};
 
             // Generate schema for output type
@@ -450,7 +485,7 @@ pub fn lambda_fn(input: TokenStream) -> TokenStream {
 
         /// Get metadata as JSON (features, input/output types, macro version)
         #[no_mangle]
-        pub extern "C" fn get_lambda_metadata(ptr_out: *mut u8, max_out_len: usize) -> usize {
+        pub extern "C" fn #metadata_fn(ptr_out: *mut u8, max_out_len: usize) -> usize {
             let metadata = serde_json::json!({
                 "features": {
                     "http_enabled": #has_http,
@@ -481,7 +516,7 @@ pub fn lambda_fn(input: TokenStream) -> TokenStream {
         /// Main handler function - GENERATED BY MACRO
         /// Handles all WASM interface complexity (pointers, serialization, etc.)
         #[no_mangle]
-        pub extern "C" fn handler(
+        pub extern "C" fn #handler_fn(
             ptr_in: *const u8,
             len_in: usize,
             ptr_out: *mut u8,
@@ -504,7 +539,7 @@ pub fn lambda_fn(input: TokenStream) -> TokenStream {
             };
 
             // Call user's business logic function
-            let output = lambda_fn_impl(input);
+            let output = #fn_name(input);
 
             // Serialize output to JSON
             let output_bytes = match serde_json::to_vec(&output) {
@@ -528,133 +563,56 @@ pub fn lambda_fn(input: TokenStream) -> TokenStream {
             }
             copy_len
         }
-
-        // ===== BUSINESS LOGIC FUNCTION =====
-
-        /// User's business logic - PURE RUST, NO WASM CONCERNS
-        fn lambda_fn_impl(#input_param: #input_type) -> #output_type #handler_body
     };
 
     TokenStream::from(generated_code)
 }
 
-// ===== PARSING STRUCTURES =====
+// ===== HELPER FUNCTIONS =====
 
-struct LambdaFnInput {
-    features: Vec<String>,
-    handler: HandlerInfo,
-}
+fn parse_features(attr: TokenStream) -> Vec<String> {
+    if attr.is_empty() {
+        return Vec::new();
+    }
 
-struct HandlerInfo {
-    input_param: Ident,
-    input: syn::Type,
-    output: syn::Type,
-    body: syn::Block,
-}
+    // Simple string-based parsing for features = [http, env]
+    let attr_str = attr.to_string();
+    let mut features = Vec::new();
 
-impl syn::parse::Parse for LambdaFnInput {
-    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        let mut features = Vec::new();
-        let mut handler: Option<HandlerInfo> = None;
-
-        while !input.is_empty() {
-            let lookahead = input.lookahead1();
-
-            if lookahead.peek(syn::Ident) {
-                let ident: Ident = input.parse()?;
-
-                if ident == "features" {
-                    input.parse::<Token![:]>()?;
-                    let features_content;
-                    syn::bracketed!(features_content in input);
-                    let features_array: syn::punctuated::Punctuated<syn::Ident, Token![,]> =
-                        syn::punctuated::Punctuated::parse_separated_nonempty(&features_content)?;
-
-                    for feature in features_array {
+    // Look for "features = [...]" pattern
+    if let Some(features_start) = attr_str.find("features") {
+        let remaining = &attr_str[features_start..];
+        if let Some(bracket_start) = remaining.find('[') {
+            if let Some(bracket_end) = remaining.find(']') {
+                let features_content = &remaining[bracket_start + 1..bracket_end];
+                for feature in features_content.split(',') {
+                    let feature = feature.trim();
+                    if !feature.is_empty() {
                         features.push(feature.to_string());
                     }
-                } else if ident == "handler" {
-                    input.parse::<Token![:]>()?;
-                    let closure: ExprClosure = input.parse()?;
-
-                    // Extract handler information
-                    if closure.inputs.len() != 1 {
-                        return Err(syn::Error::new_spanned(
-                            &closure,
-                            "Handler must have exactly one input parameter",
-                        ));
-                    }
-
-                    let input_param = match &closure.inputs[0] {
-                        syn::Pat::Type(pat_type) => match &*pat_type.pat {
-                            syn::Pat::Ident(pat_ident) => pat_ident.ident.clone(),
-                            _ => {
-                                return Err(syn::Error::new_spanned(
-                                    pat_type,
-                                    "Input parameter must be an identifier",
-                                ))
-                            }
-                        },
-                        _ => {
-                            return Err(syn::Error::new_spanned(
-                                &closure.inputs[0],
-                                "Input parameter must be typed",
-                            ))
-                        }
-                    };
-
-                    let input_type = match &closure.inputs[0] {
-                        syn::Pat::Type(pat_type) => (*pat_type.ty).clone(),
-                        _ => {
-                            return Err(syn::Error::new_spanned(
-                                &closure.inputs[0],
-                                "Input parameter must be typed",
-                            ))
-                        }
-                    };
-
-                    let output_type = match &closure.output {
-                        syn::ReturnType::Type(_, ty) => (**ty).clone(),
-                        _ => {
-                            return Err(syn::Error::new_spanned(
-                                &closure.output,
-                                "Handler must have explicit return type",
-                            ))
-                        }
-                    };
-
-                    let body = match &*closure.body {
-                        syn::Expr::Block(block) => block.block.clone(),
-                        _ => {
-                            return Err(syn::Error::new_spanned(
-                                &closure.body,
-                                "Handler body must be a block",
-                            ))
-                        }
-                    };
-
-                    handler = Some(HandlerInfo {
-                        input_param,
-                        input: input_type,
-                        output: output_type,
-                        body,
-                    });
-                } else {
-                    return Err(syn::Error::new_spanned(ident, "Unknown field"));
                 }
-            } else {
-                return Err(lookahead.error());
-            }
-
-            // Parse comma if present
-            if input.peek(Token![,]) {
-                input.parse::<Token![,]>()?;
             }
         }
-
-        let handler =
-            handler.ok_or_else(|| syn::Error::new(input.span(), "Handler is required"))?;
-
-        Ok(LambdaFnInput { features, handler })
     }
+
+    features
+}
+
+fn extract_input_info(
+    inputs: &syn::punctuated::Punctuated<FnArg, syn::token::Comma>,
+) -> (syn::Ident, &Type) {
+    // Extract the first parameter (input parameter)
+    if let Some(FnArg::Typed(pat_type)) = inputs.first() {
+        if let Pat::Ident(pat_ident) = &*pat_type.pat {
+            return (pat_ident.ident.clone(), &*pat_type.ty);
+        }
+    }
+    panic!("Lambda function must have exactly one typed parameter");
+}
+
+fn extract_output_type(output: &ReturnType) -> &Type {
+    if let ReturnType::Type(_, ty) = output {
+        return &**ty;
+    }
+    panic!("Lambda function must have explicit return type");
 }

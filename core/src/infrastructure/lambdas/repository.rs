@@ -35,6 +35,11 @@ impl LambdaRepository for LambdaStorage {
             let path = entry.path();
 
             if path.is_file() {
+                // Skip mod.rs files - they are not lambda functions
+                if path.file_name().and_then(|s| s.to_str()) == Some("mod.rs") {
+                    continue;
+                }
+
                 // Extract filename without extension as lambda name
                 let name = path
                     .file_stem()
