@@ -16,6 +16,7 @@ use crate::{
     error_handling::types::AppResult,
     infrastructure::step_functions::StepFunctionStorage,
     state::AppState,
+    ui::step_functions::EditStepFunctionPageUi,
 };
 
 /// Execute a workflow (step function) with custom JSON input
@@ -214,4 +215,50 @@ pub async fn update_workflow_handler(
             Err(e)
         }
     }
+}
+
+/// Generate workflow graph visualization
+#[instrument(
+    skip_all,
+    fields(handler = "generate_workflow_graph", operation = "api_generate_graph")
+)]
+pub async fn generate_workflow_graph_handler(
+    State(_state): State<AppState>,
+    _auth_session: AuthSession<AuthBackend>,
+    Json(request): Json<serde_json::Value>,
+) -> AppResult<Json<serde_json::Value>> {
+    info!("Workflow graph generation request received");
+
+    // Extract definition from request
+    let definition = match request.get("definition").and_then(|d| d.as_str()) {
+        Some(def) => def,
+        None => {
+            warn!("No definition provided in graph generation request");
+            return Err(crate::error_handling::types::AppError::validation(
+                "Definition is required for graph generation",
+            ));
+        }
+    };
+
+    // Validate JSON
+    let _workflow: serde_json::Value = match serde_json::from_str(definition) {
+        Ok(w) => w,
+        Err(e) => {
+            warn!(error = %e, "Invalid JSON provided for graph generation");
+            return Err(crate::error_handling::types::AppError::validation(
+                &format!("Invalid JSON: {}", e),
+            ));
+        }
+    };
+
+    // Generate workflow graph using static method
+
+    let graph_svg = EditStepFunctionPageUi::render_workflow_graph_static(definition);
+
+    info!("Successfully generated workflow graph");
+
+    Ok(Json(serde_json::json!({
+        "success": true,
+        "graph": graph_svg
+    })))
 }

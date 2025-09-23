@@ -106,6 +106,11 @@ where
     pub fn get_metrics(&self) -> &LambdasMetrics {
         self.repository.get_metrics()
     }
+
+    /// Get lambda metadata including input/output schemas
+    pub async fn get_lambda_metadata(&self, lambda_name: &str) -> AppResult<Option<crate::business_logic::lambdas::dto::LambdaMetadata>> {
+        self.repository.get_lambda_metadata(lambda_name).await
+    }
 }
 
 /// Extract LambdasService directly from request using FromRequestParts

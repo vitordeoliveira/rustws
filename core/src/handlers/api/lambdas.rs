@@ -365,3 +365,67 @@ pub async fn get_lambda_metrics_handler(
 
     Ok(Json(metrics))
 }
+
+/// Get lambda metadata including input/output schemas
+#[instrument(
+    skip_all,
+    fields(
+        handler = "lambda_metadata", 
+        operation = "api_get_metadata",
+        lambda_name = %lambda_name
+    )
+)]
+pub async fn get_lambda_metadata_handler(
+    State(_state): State<AppState>,
+    _auth_session: AuthSession<AuthBackend>,
+    lambda_service: LambdasService<LambdaStorage>,
+    Path(lambda_name): Path<String>,
+) -> AppResult<Json<crate::business_logic::lambdas::dto::LambdaMetadata>> {
+    info!(
+        lambda_name = %lambda_name,
+        "Lambda metadata request received"
+    );
+
+    // Validate lambda name
+    if lambda_name.trim().is_empty() {
+        warn!(
+            lambda_name = %lambda_name,
+            "Invalid lambda name provided - empty or whitespace"
+        );
+        return Err(crate::error_handling::types::AppError::validation(
+            "Lambda name cannot be empty or contain only whitespace",
+        ));
+    }
+
+    // Get lambda metadata from the service
+    match lambda_service.get_lambda_metadata(&lambda_name).await {
+        Ok(Some(metadata)) => {
+            info!(
+                lambda_name = %lambda_name,
+                input_type = %metadata.input_type,
+                output_type = %metadata.output_type,
+                http_enabled = metadata.features.http_enabled,
+                env_enabled = metadata.features.env_enabled,
+                "Lambda metadata retrieved successfully"
+            );
+            Ok(Json(metadata))
+        }
+        Ok(None) => {
+            warn!(
+                lambda_name = %lambda_name,
+                "Lambda metadata not found - lambda may not be compiled or may not support metadata"
+            );
+            Err(crate::error_handling::types::AppError::not_found(
+                &format!("Lambda '{}' not found or metadata not available", lambda_name),
+            ))
+        }
+        Err(e) => {
+            error!(
+                lambda_name = %lambda_name,
+                error = %e,
+                "Lambda metadata retrieval service error"
+            );
+            Err(e)
+        }
+    }
+}

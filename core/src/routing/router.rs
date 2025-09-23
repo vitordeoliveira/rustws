@@ -73,6 +73,10 @@ pub fn create_private_router() -> Router<AppState> {
             get(api::lambdas::get_lambda_metrics_handler),
         )
         .route(
+            "/api/lambda/metadata/{lambda_name}",
+            get(api::lambdas::get_lambda_metadata_handler),
+        )
+        .route(
             "/api/workflow/execute/{workflow_name}",
             post(api::workflows::execute_workflow_handler),
         )
@@ -83,6 +87,10 @@ pub fn create_private_router() -> Router<AppState> {
         .route(
             "/api/workflow/update/{workflow_name}",
             put(api::workflows::update_workflow_handler),
+        )
+        .route(
+            "/api/workflow/graph",
+            post(api::workflows::generate_workflow_graph_handler),
         )
         .route_layer(login_required!(AuthBackend, login_url = "/login"))
 }

@@ -648,93 +648,8 @@ async function compileLambda(lambdaName) {
 }
 
 async function testLambda(lambdaName) {
-    const button = event.target.closest('button');
-    const originalClasses = button.className;
-    
-    // Prompt user for JSON input
-    const inputJson = prompt(
-        `Enter JSON input for ${lambdaName} lambda:\n\nExample for hello_world:\n{"text": "Hello World", "count": 42}`,
-        '{"text": "Hello World", "count": 42}'
-    );
-    
-    // User cancelled the prompt
-    if (inputJson === null) {
-        return;
-    }
-    
-    // Validate JSON input
-    let parsedInput;
-    try {
-        parsedInput = JSON.parse(inputJson);
-    } catch (error) {
-        showToast(`❌ Invalid JSON input: ${error.message}`, false);
-        return;
-    }
-    
-    try {
-        // Show loading state - maintain button style but indicate loading
-        button.className = 'text-gray-400 hover:text-gray-500 hover:bg-gray-50 p-2 rounded-md cursor-wait transition-all duration-200';
-        button.disabled = true;
-        
-        showToast(`Executing ${lambdaName} with custom input...`, true);
-        
-        const response = await fetch(`/api/lambda/execute/${lambdaName}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(parsedInput)
-        });
-        
-        const result = await response.json();
-        
-        if (response.ok) {
-            if (result.Success) {
-                const outputData = result.Success.output_data;
-                const executionTimeMs = result.Success.execution_time_ms;
-                const executionTimestamp = result.Success.execution_timestamp;
-                
-                // Parse JSON output and display in modal
-                try {
-                    const jsonString = new TextDecoder().decode(new Uint8Array(outputData));
-                    const parsedJson = JSON.parse(jsonString);
-                    
-                    // Show formatted JSON in modal
-                    showExecutionResultModal(lambdaName, jsonString, parsedJson, outputData.length, 'Success', executionTimeMs, executionTimestamp);
-                    
-                    // Also show success toast
-                    showToast(`✅ ${lambdaName} executed successfully in ${executionTimeMs}ms! Click to view JSON output.`, true);
-                } catch (parseError) {
-                    console.error('Failed to parse JSON output:', parseError);
-                    
-                    // Show raw output in modal if JSON parsing fails
-                    const rawString = new TextDecoder().decode(new Uint8Array(outputData));
-                    showExecutionResultModal(lambdaName, rawString, null, outputData.length, 'Success (Raw)', executionTimeMs, executionTimestamp);
-                    
-                    showToast(`✅ ${lambdaName} executed successfully in ${executionTimeMs}ms! Raw output: ${outputData.length} bytes`, true);
-                }
-                
-                // Refresh metrics after successful execution
-                await refreshLambdaMetrics();
-            } else if (result.Failed) {
-                const errorJson = JSON.stringify({ error: result.Failed.error_message }, null, 2);
-                const executionTimeMs = result.Failed.execution_time_ms;
-                const executionTimestamp = result.Failed.execution_timestamp;
-                
-                showExecutionResultModal(lambdaName, errorJson, null, errorJson.length, 'Failed', executionTimeMs, executionTimestamp);
-                showToast(`❌ Execution failed after ${executionTimeMs}ms: ${result.Failed.error_message}`, false);
-            }
-        } else {
-            showToast(`❌ Error executing ${lambdaName}`, false);
-        }
-    } catch (error) {
-        console.error('Execution error:', error);
-        showToast(`❌ Error executing ${lambdaName}: ${error.message}`, false);
-    } finally {
-        // Restore button state
-        button.className = originalClasses;
-        button.disabled = false;
-    }
+    // Open the test modal with dynamic form generation
+    await openTestModal(lambdaName);
 }
 
 async function deleteLambda(lambdaName) {
@@ -772,5 +687,8 @@ async function deleteLambda(lambdaName) {
     }
 }
 </script>
+
+<!-- Include the test modal component -->
+{% include "lambda/test-modal.html" %}
 
 {% endblock %}

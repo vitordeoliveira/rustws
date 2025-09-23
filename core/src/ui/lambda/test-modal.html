@@ -1,0 +1,453 @@
+<!-- Lambda Test Modal - Progressive Enhancement with Dynamic Form Generation -->
+<!-- This modal works without JavaScript and enhances with dynamic form generation -->
+
+<!-- Modal Backdrop -->
+<div id="testModalBackdrop" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50" onclick="closeTestModal()">
+    <!-- Modal Container -->
+    <div class="flex items-center justify-center min-h-screen p-4" onclick="event.stopPropagation()">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900" id="testModalTitle">
+                            Test Lambda Function
+                        </h3>
+                        <p class="text-sm text-gray-600 mt-1" id="testModalSubtitle">
+                            Enter input parameters for the lambda function
+                        </p>
+                    </div>
+                    <button 
+                        type="button" 
+                        class="text-gray-400 hover:text-gray-600 transition-colors"
+                        onclick="closeTestModal()"
+                        aria-label="Close modal"
+                    >
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="px-6 py-4 overflow-y-auto max-h-[60vh]">
+                <!-- Loading State -->
+                <div id="testModalLoading" class="text-center py-8">
+                    <div class="inline-flex items-center">
+                        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-orange-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Loading lambda schema...
+                    </div>
+                </div>
+
+                <!-- Error State -->
+                <div id="testModalError" class="hidden text-center py-8">
+                    <div class="text-red-600 mb-4">
+                        <svg class="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                        </svg>
+                    </div>
+                    <h4 class="text-lg font-medium text-gray-900 mb-2">Unable to Load Schema</h4>
+                    <p class="text-gray-600 mb-4" id="testModalErrorMessage">
+                        The lambda function schema could not be loaded. This may be because the function is not compiled or doesn't support metadata.
+                    </p>
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <h5 class="font-medium text-gray-900 mb-2">Manual JSON Input</h5>
+                        <p class="text-sm text-gray-600 mb-3">You can still test the function by providing JSON input manually:</p>
+                        <textarea 
+                            id="manualJsonInput" 
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm font-mono"
+                            rows="4"
+                            placeholder='{"example": "value"}'
+                        ></textarea>
+                    </div>
+                </div>
+
+                <!-- Form State -->
+                <div id="testModalForm" class="hidden">
+                    <!-- Schema Info -->
+                    <div class="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <div class="flex items-start">
+                            <svg class="w-5 h-5 text-blue-600 mt-0.5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <div>
+                                <h4 class="text-sm font-medium text-blue-900 mb-1">Input Schema</h4>
+                                <p class="text-sm text-blue-700" id="schemaInfo">
+                                    This form is generated based on the lambda's input schema.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Form Fields -->
+                    <form id="testLambdaForm" class="space-y-4">
+                        <div id="dynamicFormFields">
+                            <!-- Form fields will be generated here -->
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-4 border-t border-gray-200 bg-gray-50">
+                <div class="flex flex-col sm:flex-row justify-end gap-3">
+                    <button 
+                        type="button" 
+                        class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-colors"
+                        onclick="closeTestModal()"
+                    >
+                        Cancel
+                    </button>
+                    <button 
+                        type="button" 
+                        id="testLambdaButton"
+                        class="px-4 py-2 text-sm font-medium text-white bg-orange-600 border border-transparent rounded-md hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        onclick="executeTestLambda()"
+                        disabled
+                    >
+                        <span id="testButtonText">Test Lambda</span>
+                        <span id="testButtonLoading" class="hidden">
+                            <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Testing...
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Global variables for the test modal
+let currentLambdaName = null;
+let currentLambdaMetadata = null;
+
+// Open the test modal for a specific lambda
+async function openTestModal(lambdaName) {
+    currentLambdaName = lambdaName;
+    
+    // Update modal title
+    document.getElementById('testModalTitle').textContent = `Test Lambda: ${lambdaName}`;
+    document.getElementById('testModalSubtitle').textContent = 'Enter input parameters for the lambda function';
+    
+    // Show modal
+    document.getElementById('testModalBackdrop').classList.remove('hidden');
+    
+    // Show loading state
+    document.getElementById('testModalLoading').classList.remove('hidden');
+    document.getElementById('testModalError').classList.add('hidden');
+    document.getElementById('testModalForm').classList.add('hidden');
+    
+    // Disable test button
+    document.getElementById('testLambdaButton').disabled = true;
+    
+    try {
+        // Fetch lambda metadata
+        const response = await fetch(`/api/lambda/metadata/${lambdaName}`);
+        
+        if (response.ok) {
+            currentLambdaMetadata = await response.json();
+            generateFormFromSchema(currentLambdaMetadata);
+        } else {
+            showErrorState('Unable to load lambda schema. The function may not be compiled or may not support metadata.');
+        }
+    } catch (error) {
+        console.error('Error fetching lambda metadata:', error);
+        showErrorState(`Error loading lambda schema: ${error.message}`);
+    }
+}
+
+// Show error state in the modal
+function showErrorState(message) {
+    document.getElementById('testModalLoading').classList.add('hidden');
+    document.getElementById('testModalError').classList.remove('hidden');
+    document.getElementById('testModalForm').classList.add('hidden');
+    document.getElementById('testModalErrorMessage').textContent = message;
+    
+    // Enable test button for manual JSON input
+    document.getElementById('testLambdaButton').disabled = false;
+}
+
+// Generate form fields from JSON schema
+function generateFormFromSchema(metadata) {
+    const schema = metadata.input_schema;
+    const formFieldsContainer = document.getElementById('dynamicFormFields');
+    
+    // Clear existing fields
+    formFieldsContainer.innerHTML = '';
+    
+    // Update schema info
+    document.getElementById('schemaInfo').textContent = 
+        `Input type: ${metadata.input_type} | Features: ${getFeatureString(metadata.features)}`;
+    
+    // Generate form fields based on schema properties
+    if (schema.properties) {
+        Object.entries(schema.properties).forEach(([fieldName, fieldSchema]) => {
+            const fieldElement = createFormField(fieldName, fieldSchema);
+            formFieldsContainer.appendChild(fieldElement);
+        });
+    } else {
+        // If no properties, show a generic JSON input
+        const genericField = document.createElement('div');
+        genericField.className = 'space-y-2';
+        genericField.innerHTML = `
+            <label class="block text-sm font-medium text-gray-700">JSON Input</label>
+            <textarea 
+                name="json_input" 
+                class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm font-mono"
+                rows="6"
+                placeholder='{"field": "value"}'
+                required
+            ></textarea>
+            <p class="text-xs text-gray-500">Enter valid JSON input for the lambda function</p>
+        `;
+        formFieldsContainer.appendChild(genericField);
+    }
+    
+    // Show form and enable test button
+    document.getElementById('testModalLoading').classList.add('hidden');
+    document.getElementById('testModalError').classList.add('hidden');
+    document.getElementById('testModalForm').classList.remove('hidden');
+    document.getElementById('testLambdaButton').disabled = false;
+}
+
+// Create a form field based on schema
+function createFormField(fieldName, fieldSchema) {
+    const fieldDiv = document.createElement('div');
+    fieldDiv.className = 'space-y-2';
+    
+    // Field label
+    const label = document.createElement('label');
+    label.className = 'block text-sm font-medium text-gray-700';
+    label.textContent = fieldName;
+    if (fieldSchema.description) {
+        label.title = fieldSchema.description;
+    }
+    fieldDiv.appendChild(label);
+    
+    // Field input based on type
+    let inputElement;
+    const fieldType = fieldSchema.type || 'string';
+    
+    switch (fieldType) {
+        case 'string':
+            if (fieldSchema.enum) {
+                // Enum field - use select
+                inputElement = document.createElement('select');
+                inputElement.name = fieldName;
+                inputElement.className = 'w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500';
+                
+                // Add options
+                fieldSchema.enum.forEach(option => {
+                    const optionElement = document.createElement('option');
+                    optionElement.value = option;
+                    optionElement.textContent = option;
+                    inputElement.appendChild(optionElement);
+                });
+            } else {
+                // String field - use textarea for long text, input for short
+                const isLongText = fieldSchema.maxLength && fieldSchema.maxLength > 100;
+                inputElement = document.createElement(isLongText ? 'textarea' : 'input');
+                inputElement.name = fieldName;
+                inputElement.className = 'w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500';
+                
+                if (isLongText) {
+                    inputElement.rows = 4;
+                } else {
+                    inputElement.type = 'text';
+                }
+            }
+            break;
+            
+        case 'number':
+        case 'integer':
+            inputElement = document.createElement('input');
+            inputElement.name = fieldName;
+            inputElement.type = 'number';
+            inputElement.className = 'w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500';
+            break;
+            
+        case 'boolean':
+            inputElement = document.createElement('input');
+            inputElement.name = fieldName;
+            inputElement.type = 'checkbox';
+            inputElement.className = 'h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded';
+            break;
+            
+        default:
+            // Default to textarea for complex types
+            inputElement = document.createElement('textarea');
+            inputElement.name = fieldName;
+            inputElement.className = 'w-full px-3 py-2 border border-gray-300 rounded-md text-sm font-mono focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500';
+            inputElement.rows = 3;
+            inputElement.placeholder = 'Enter JSON value...';
+    }
+    
+    // Add required attribute
+    if (fieldSchema.required || (fieldSchema.type && !fieldSchema.type.includes('null'))) {
+        inputElement.required = true;
+    }
+    
+    // Add default value
+    if (fieldSchema.default !== undefined) {
+        if (inputElement.type === 'checkbox') {
+            inputElement.checked = fieldSchema.default;
+        } else {
+            inputElement.value = fieldSchema.default;
+        }
+    }
+    
+    fieldDiv.appendChild(inputElement);
+    
+    // Add help text
+    if (fieldSchema.description) {
+        const helpText = document.createElement('p');
+        helpText.className = 'text-xs text-gray-500';
+        helpText.textContent = fieldSchema.description;
+        fieldDiv.appendChild(helpText);
+    }
+    
+    return fieldDiv;
+}
+
+// Get feature string for display
+function getFeatureString(features) {
+    const featureList = [];
+    if (features.http_enabled) featureList.push('HTTP');
+    if (features.env_enabled) featureList.push('ENV');
+    return featureList.length > 0 ? featureList.join(', ') : 'None';
+}
+
+// Execute the lambda test
+async function executeTestLambda() {
+    const button = document.getElementById('testLambdaButton');
+    const buttonText = document.getElementById('testButtonText');
+    const buttonLoading = document.getElementById('testButtonLoading');
+    
+    // Show loading state
+    button.disabled = true;
+    buttonText.classList.add('hidden');
+    buttonLoading.classList.remove('hidden');
+    
+    try {
+        let inputData;
+        
+        // Check if we're in error state (manual JSON input)
+        if (document.getElementById('testModalError').classList.contains('hidden')) {
+            // Generate JSON from form fields
+            inputData = generateJsonFromForm();
+        } else {
+            // Use manual JSON input
+            const manualInput = document.getElementById('manualJsonInput').value.trim();
+            if (!manualInput) {
+                throw new Error('Please enter JSON input');
+            }
+            inputData = JSON.parse(manualInput);
+        }
+        
+        // Execute the lambda
+        const response = await fetch(`/api/lambda/execute/${currentLambdaName}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(inputData)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            if (result.Success) {
+                const outputData = result.Success.output_data;
+                const executionTimeMs = result.Success.execution_time_ms;
+                const executionTimestamp = result.Success.execution_timestamp;
+                
+                // Parse JSON output and display in modal
+                try {
+                    const jsonString = new TextDecoder().decode(new Uint8Array(outputData));
+                    const parsedJson = JSON.parse(jsonString);
+                    
+                    // Show formatted JSON in modal
+                    showExecutionResultModal(currentLambdaName, jsonString, parsedJson, outputData.length, 'Success', executionTimeMs, executionTimestamp);
+                    
+                    // Also show success toast
+                    showToast(`✅ ${currentLambdaName} executed successfully in ${executionTimeMs}ms! Click to view JSON output.`, true);
+                } catch (parseError) {
+                    console.error('Failed to parse JSON output:', parseError);
+                    
+                    // Show raw output in modal if JSON parsing fails
+                    const rawString = new TextDecoder().decode(new Uint8Array(outputData));
+                    showExecutionResultModal(currentLambdaName, rawString, null, outputData.length, 'Success (Raw)', executionTimeMs, executionTimestamp);
+                    
+                    showToast(`✅ ${currentLambdaName} executed successfully in ${executionTimeMs}ms! Raw output: ${outputData.length} bytes`, true);
+                }
+                
+                // Close the test modal
+                closeTestModal();
+                
+                // Refresh metrics after successful execution
+                if (typeof refreshLambdaMetrics === 'function') {
+                    await refreshLambdaMetrics();
+                }
+            } else if (result.Failed) {
+                const errorJson = JSON.stringify({ error: result.Failed.error_message }, null, 2);
+                const executionTimeMs = result.Failed.execution_time_ms;
+                const executionTimestamp = result.Failed.execution_timestamp;
+                
+                showExecutionResultModal(currentLambdaName, errorJson, null, errorJson.length, 'Failed', executionTimeMs, executionTimestamp);
+                showToast(`❌ Execution failed after ${executionTimeMs}ms: ${result.Failed.error_message}`, false);
+                
+                // Close the test modal
+                closeTestModal();
+            }
+        } else {
+            showToast(`❌ Request failed: ${result.message || 'Unknown error'}`, false);
+        }
+        
+    } catch (error) {
+        console.error('Error executing lambda:', error);
+        showToast(`❌ Error: ${error.message}`, false);
+    } finally {
+        // Reset button state
+        button.disabled = false;
+        buttonText.classList.remove('hidden');
+        buttonLoading.classList.add('hidden');
+    }
+}
+
+// Generate JSON from form fields
+function generateJsonFromForm() {
+    const form = document.getElementById('testLambdaForm');
+    const formData = new FormData(form);
+    const jsonData = {};
+    
+    for (const [key, value] of formData.entries()) {
+        // Try to parse as JSON for complex fields, otherwise use as string
+        try {
+            jsonData[key] = JSON.parse(value);
+        } catch {
+            jsonData[key] = value;
+        }
+    }
+    
+    return jsonData;
+}
+
+// Close the test modal
+function closeTestModal() {
+    document.getElementById('testModalBackdrop').classList.add('hidden');
+    currentLambdaName = null;
+    currentLambdaMetadata = null;
+    
+    // Reset form
+    document.getElementById('testLambdaForm').reset();
+    document.getElementById('manualJsonInput').value = '';
+}
+</script>

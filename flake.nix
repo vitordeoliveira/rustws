@@ -41,9 +41,6 @@
             export PATH="$HOME/.cargo/bin:$PATH"
             echo "🦀 Added Cargo bin to PATH: ~/.cargo/bin"
 
-            
-
-            
             # Set DATABASE_URL for sqlx and other tools
             
             echo ""

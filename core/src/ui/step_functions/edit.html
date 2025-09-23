@@ -71,6 +71,32 @@
                 </div>
             </div>
 
+            <!-- Workflow Graph Visualization -->
+            <div>
+                <div class="flex items-center justify-between mb-3">
+                    <label class="block text-sm font-medium text-gray-700">
+                        Workflow Graph
+                    </label>
+                    <button 
+                        type="button" 
+                        onclick="refreshGraph()" 
+                        class="inline-flex items-center px-3 py-1 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-colors duration-200"
+                    >
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                        Refresh Graph
+                    </button>
+                </div>
+                <div id="workflowGraph" class="mb-6">
+                    {{ workflow_graph|safe }}
+                </div>
+                <p class="text-xs text-gray-500 mb-4">
+                    Visual representation of your workflow states and transitions. 
+                    The graph updates automatically when you modify the JSON definition below.
+                </p>
+            </div>
+
             <!-- Workflow Definition -->
             <div>
                 <div class="flex items-center justify-between mb-3">
@@ -278,6 +304,86 @@ function validateDefinition() {
         return false;
     }
 }
+
+// Refresh workflow graph
+function refreshGraph() {
+    const definition = document.getElementById('workflowDefinition').value;
+    
+    if (!definition.trim()) {
+        showToast('❌ Please provide a workflow definition first', false);
+        return;
+    }
+    
+    // Validate JSON first
+    if (!validateDefinition()) {
+        return;
+    }
+    
+    // Show loading state
+    const graphContainer = document.getElementById('workflowGraph');
+    graphContainer.innerHTML = `
+        <div class="flex items-center justify-center h-64 bg-gray-50 rounded-lg border border-gray-200">
+            <div class="text-center">
+                <svg class="animate-spin h-8 w-8 text-cyan-600 mx-auto mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <p class="text-sm text-gray-600">Generating workflow graph...</p>
+            </div>
+        </div>
+    `;
+    
+    // Call API to generate new graph
+    fetch('/api/workflow/graph', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ definition: definition })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            graphContainer.innerHTML = data.graph;
+            showToast('✅ Workflow graph refreshed!', true);
+        } else {
+            throw new Error(data.error || 'Failed to generate graph');
+        }
+    })
+    .catch(error => {
+        console.error('Error refreshing graph:', error);
+        graphContainer.innerHTML = `
+            <div class="flex items-center justify-center h-64 bg-red-50 rounded-lg border border-red-200">
+                <div class="text-center">
+                    <svg class="h-8 w-8 text-red-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                    </svg>
+                    <p class="text-sm text-red-600">Failed to generate graph</p>
+                    <p class="text-xs text-red-500 mt-1">${error.message}</p>
+                </div>
+            </div>
+        `;
+        showToast(`❌ Failed to refresh graph: ${error.message}`, false);
+    });
+}
+
+// Auto-refresh graph when definition changes (with debounce)
+let graphUpdateTimeout;
+document.getElementById('workflowDefinition').addEventListener('input', function() {
+    clearTimeout(graphUpdateTimeout);
+    graphUpdateTimeout = setTimeout(() => {
+        // Only auto-refresh if JSON is valid
+        try {
+            const definition = this.value;
+            if (definition.trim()) {
+                JSON.parse(definition);
+                refreshGraph();
+            }
+        } catch (error) {
+            // Don't auto-refresh on invalid JSON
+        }
+    }, 1000); // 1 second debounce
+});
 
 // Handle tab key in textarea for proper indentation
 document.getElementById('workflowDefinition').addEventListener('keydown', function(e) {

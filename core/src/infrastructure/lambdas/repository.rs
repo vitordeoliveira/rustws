@@ -778,4 +778,20 @@ impl LambdaRepository for LambdaStorage {
         // This is a bit of a hack - consider changing the trait to return owned values
         Box::leak(Box::new(LambdaStorage::get_metrics(self)))
     }
+
+    /// Get lambda metadata including input/output schemas
+    async fn get_lambda_metadata(&self, lambda_name: &str) -> AppResult<Option<crate::business_logic::lambdas::dto::LambdaMetadata>> {
+        tracing::info!(
+            lambda_name = %lambda_name,
+            "Retrieving lambda metadata"
+        );
+
+        // Validate function name
+        if lambda_name.trim().is_empty() {
+            return Err(AppError::validation("Lambda name cannot be empty"));
+        }
+
+        // Use the existing load_lambda_metadata method from LambdaStorage
+        self.load_lambda_metadata(lambda_name).await
+    }
 }

@@ -51,4 +51,7 @@ pub trait LambdaRepository: Send + Sync {
 
     /// Get lambda execution metrics
     fn get_metrics(&self) -> &LambdasMetrics;
+
+    /// Get lambda metadata including input/output schemas
+    async fn get_lambda_metadata(&self, lambda_name: &str) -> AppResult<Option<crate::business_logic::lambdas::dto::LambdaMetadata>>;
 }
