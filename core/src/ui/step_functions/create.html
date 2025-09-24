@@ -106,6 +106,20 @@
                         </button>
                     </div>
                 </div>
+                
+                <!-- Visual Workflow Graph -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Visual Workflow Designer
+                    </label>
+                    <div id="stepfunctions-graph" class="w-full h-96 border border-gray-300 rounded-lg bg-gray-50">
+                        <!-- React Flow will be rendered here -->
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">
+                        Drag nodes to design your workflow visually. Changes will sync with the JSON below.
+                    </p>
+                </div>
+                
                 <div class="relative">
                     <textarea 
                         id="workflowDefinition" 
@@ -319,5 +333,12 @@ function createStepFunction(event) {
 // Attach form submission handler
 document.getElementById('createStepFunctionForm').addEventListener('submit', createStepFunction);
 </script>
+
+<!-- React and ReactFlow CDN -->
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+<!-- Step Functions Graph Bundle -->
+<script src="/step-functions/react/bundle.js"></script>
 
 {% endblock %}

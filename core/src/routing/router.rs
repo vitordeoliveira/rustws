@@ -4,10 +4,13 @@ use axum::{
     Router,
     body::Body,
     extract::Request,
+    http::{StatusCode, header},
     middleware,
+    response::Response,
     routing::{get, post, put},
 };
 use axum_login::login_required;
+use std::path::Path;
 use tower_http::{services::ServeDir, trace::TraceLayer};
 
 use tracing::error_span;
@@ -92,6 +95,10 @@ pub fn create_private_router() -> Router<AppState> {
             "/api/workflow/graph",
             post(api::workflows::generate_workflow_graph_handler),
         )
+        .route(
+            "/step-functions/react/bundle.js",
+            get(serve_step_functions_bundle),
+        )
         .route_layer(login_required!(AuthBackend, login_url = "/login"))
 }
 
@@ -129,4 +136,39 @@ pub async fn create_router(state: AppState, session_manager: SessionManager) -> 
         .with_state(state);
 
     Ok(router)
+}
+
+/// Serve the React bundle for step functions graph
+async fn serve_step_functions_bundle() -> Result<Response<String>, StatusCode> {
+    let bundle_path = Path::new("src/ui/step_functions/react/dist/bundle.js");
+
+    match tokio::fs::read_to_string(bundle_path).await {
+        Ok(content) => {
+            let response = Response::builder()
+                .status(StatusCode::OK)
+                .header(header::CONTENT_TYPE, "application/javascript")
+                .header(header::CACHE_CONTROL, "public, max-age=3600")
+                .body(content)
+                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+            Ok(response)
+        }
+        Err(_) => {
+            // Return a minimal JavaScript that logs an error
+            let fallback_js = r#"
+                console.error('Step Functions React bundle not found. Please run: cd src/ui/step_functions/react && npm install && npm run build');
+                window.initStepFunctionsGraph = function() { 
+                    console.error('React bundle not available'); 
+                };
+            "#;
+
+            let response = Response::builder()
+                .status(StatusCode::OK)
+                .header(header::CONTENT_TYPE, "application/javascript")
+                .body(fallback_js.to_string())
+                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+            Ok(response)
+        }
+    }
 }

@@ -1,4 +1,9 @@
 {
+  "scripts": {
+    "build:css": "tailwindcss -i ./assets/src/main.css -o ./assets/public/output.css --watch",
+    "build:react": "cd src/ui/step_functions/react && npm install && npm run build",
+    "build:all": "npm run build:css && npm run build:react"
+  },
   "dependencies": {
     "@tailwindcss/cli": "^4.1.13",
     "tailwindcss": "^4.1.13"

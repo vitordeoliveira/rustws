@@ -72,28 +72,35 @@ pub fn enable_livereload(app: Router, tera: TeraEngine) -> AppResult<(Recommende
         let mut watcher = notify::recommended_watcher(move |res: Result<Event, _>| {
             if let Ok(event) = res {
                 if event.kind.is_modify() {
-                    // Log the specific file that changed for debugging
-                    let changed_files: Vec<_> = event
+                    // Filter out node_modules files to avoid unnecessary reloads
+                    let relevant_files: Vec<_> = event
                         .paths
                         .iter()
+                        .filter(|path| !path.to_string_lossy().contains("node_modules"))
                         .map(|p| p.display().to_string())
                         .collect();
-                    tracing::warn!("🔄 File change detected: {:?}", changed_files);
 
-                    // Compile Tailwind CSS on file changes
-                    if let Err(e) = compile_tailwind() {
-                        tracing::error!("❌ Tailwind CSS compilation failed: {}", e);
+                    // Only proceed if there are relevant file changes
+                    if !relevant_files.is_empty() {
+                        tracing::warn!("🔄 File change detected: {:?}", relevant_files);
+
+                        // Compile Tailwind CSS on file changes
+                        if let Err(e) = compile_tailwind() {
+                            tracing::error!("❌ Tailwind CSS compilation failed: {}", e);
+                        }
+
+                        // Reload templates in debug mode
+                        #[cfg(debug_assertions)]
+                        if let Err(e) = tera.reload_templates() {
+                            tracing::error!("❌ Failed to reload templates: {}", e);
+                        }
+
+                        // Trigger browser reload
+                        tracing::debug!("🌐 Triggering browser reload");
+                        reloader.reload()
+                    } else {
+                        tracing::debug!("🔄 Ignoring node_modules file changes");
                     }
-
-                    // Reload templates in debug mode
-                    #[cfg(debug_assertions)]
-                    if let Err(e) = tera.reload_templates() {
-                        tracing::error!("❌ Failed to reload templates: {}", e);
-                    }
-
-                    // Trigger browser reload
-                    tracing::debug!("🌐 Triggering browser reload");
-                    reloader.reload()
                 }
             }
         })
