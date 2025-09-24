@@ -263,11 +263,13 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
                                         </svg>
                                     </a>
+                                    {% if lambda.status == "Active" %}
                                     <button class="text-blue-600 hover:text-blue-700 hover:bg-blue-50 p-2 rounded-md cursor-pointer transition-all duration-200 transform hover:scale-105" title="Test" onclick="testLambda('{{ lambda.name }}')">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1.5a2.5 2.5 0 010 5H9m-3-5a5 5 0 1110 0m-6 7v.01"></path>
                                         </svg>
                                     </button>
+                                    {% endif %}
                                     <a href="/lambda/metrics/{{ lambda.name }}" class="text-purple-600 hover:text-purple-700 hover:bg-purple-50 p-2 rounded-md cursor-pointer transition-all duration-200 transform hover:scale-105" title="Metrics">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
