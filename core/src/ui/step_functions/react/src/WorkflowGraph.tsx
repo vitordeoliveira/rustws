@@ -80,143 +80,9 @@ const TaskNode = ({ data, id }: { data: { label: string; resource?: Resource; is
   );
 };
 
-const ChoiceNode = ({ data }: { data: { label: string } }) => (
-  <div className="px-4 py-2 shadow-md rounded-md bg-yellow-500 text-white border-2 border-yellow-600 relative">
-    <div className="font-bold">{data.label}</div>
-    <div className="text-xs opacity-80">Choice</div>
-    
-    {/* Bottom handles - input (left) and output (right) */}
-    <Handle 
-      type="target" 
-      position={Position.Bottom} 
-      className="w-3 h-3" 
-      style={{ 
-        background: '#fb923c', 
-        border: '2px solid #ea580c',
-        left: '25%',
-        transform: 'translateX(-50%)'
-      }}
-    />
-    <Handle 
-      type="source" 
-      position={Position.Bottom} 
-      className="w-3 h-3" 
-      style={{ 
-        background: '#60a5fa', 
-        border: '2px solid #2563eb',
-        left: '75%',
-        transform: 'translateX(-50%)'
-      }}
-    />
-    
-    {/* Additional choice output on the right */}
-    <Handle 
-      type="source" 
-      position={Position.Right} 
-      className="w-3 h-3" 
-      style={{ background: '#60a5fa', border: '2px solid #2563eb' }}
-    />
-  </div>
-);
-
-const WaitNode = ({ data }: { data: { label: string } }) => (
-  <div className="px-4 py-2 shadow-md rounded-md bg-purple-500 text-white border-2 border-purple-600 relative">
-    <div className="font-bold">{data.label}</div>
-    <div className="text-xs opacity-80">Wait</div>
-    
-    {/* Bottom handles - input (left) and output (right) */}
-    <Handle 
-      type="target" 
-      position={Position.Bottom} 
-      className="w-3 h-3" 
-      style={{ 
-        background: '#fb923c', 
-        border: '2px solid #ea580c',
-        left: '25%',
-        transform: 'translateX(-50%)'
-      }}
-    />
-    <Handle 
-      type="source" 
-      position={Position.Bottom} 
-      className="w-3 h-3" 
-      style={{ 
-        background: '#60a5fa', 
-        border: '2px solid #2563eb',
-        left: '75%',
-        transform: 'translateX(-50%)'
-      }}
-    />
-  </div>
-);
-
-const SucceedNode = ({ data }: { data: { label: string } }) => (
-  <div className="px-4 py-2 shadow-md rounded-md bg-green-500 text-white border-2 border-green-600 relative">
-    <div className="font-bold">{data.label}</div>
-    <div className="text-xs opacity-80">Succeed</div>
-    
-    {/* Terminal state - only input, no output */}
-    <Handle 
-      type="target" 
-      position={Position.Bottom} 
-      className="w-3 h-3" 
-      style={{ 
-        background: '#fb923c', 
-        border: '2px solid #ea580c',
-        left: '50%',
-        transform: 'translateX(-50%)'
-      }}
-    />
-  </div>
-);
-
-const FailNode = ({ data }: { data: { label: string } }) => (
-  <div className="px-4 py-2 shadow-md rounded-md bg-red-500 text-white border-2 border-red-600 relative">
-    <div className="font-bold">{data.label}</div>
-    <div className="text-xs opacity-80">Fail</div>
-    
-    {/* Terminal state - only input, no output */}
-    <Handle 
-      type="target" 
-      position={Position.Bottom} 
-      className="w-3 h-3" 
-      style={{ 
-        background: '#fb923c', 
-        border: '2px solid #ea580c',
-        left: '50%',
-        transform: 'translateX(-50%)'
-      }}
-    />
-  </div>
-);
-
-const StartNode = ({ data }: { data: { label: string } }) => (
-  <div className="px-4 py-2 shadow-md rounded-md bg-emerald-500 text-white border-2 border-emerald-600 relative">
-    <div className="font-bold">{data.label}</div>
-    <div className="text-xs opacity-80">Start</div>
-    
-    {/* Start nodes only have output - no input needed */}
-    <Handle 
-      type="source" 
-      position={Position.Bottom} 
-      className="w-3 h-3" 
-      style={{ 
-        background: '#60a5fa', 
-        border: '2px solid #2563eb',
-        left: '50%',
-        transform: 'translateX(-50%)'
-      }}
-    />
-  </div>
-);
 
 const nodeTypes: NodeTypes = {
   task: TaskNode,
-  choice: ChoiceNode,
-  wait: WaitNode,
-  succeed: SucceedNode,
-  fail: FailNode,
-  start: StartNode,
 };
 
 interface Resource {
@@ -276,18 +142,13 @@ const WorkflowGraph: React.FC = () => {
       const newNodes: Node[] = [];
       const newEdges: Edge[] = [];
 
-      // Create nodes for each state
+      // Create nodes for each state (only Task type supported)
       Object.keys(states).forEach((stateName, index) => {
         const state = states[stateName];
         const stateType = state.Type || 'Task';
-        const isStart = stateName === startAt;
         
-        let nodeType = 'task';
-        if (stateType === 'Choice') nodeType = 'choice';
-        else if (stateType === 'Wait') nodeType = 'wait';
-        else if (stateType === 'Succeed') nodeType = 'succeed';
-        else if (stateType === 'Fail') nodeType = 'fail';
-        else if (isStart) nodeType = 'start';
+        // Only support Task type for now
+        const nodeType = 'task';
 
         // Parse resource from JSON if present
         let resource: Resource | undefined = undefined;
@@ -322,49 +183,12 @@ const WorkflowGraph: React.FC = () => {
           },
         });
 
-        // Create edges based on Next, Choices, and Default
+        // Create edges based on Next (only simple Next transitions for Task nodes)
         if (state.Next) {
           newEdges.push({
             id: `${stateName}-${state.Next}`,
             source: stateName,
             target: state.Next,
-            label: 'Next',
-            type: 'default',
-            markerEnd: {
-              type: MarkerType.ArrowClosed,
-              width: 20,
-              height: 20,
-              color: '#374151',
-            },
-          });
-        }
-
-        if (state.Choices) {
-          state.Choices.forEach((choice: any, choiceIndex: number) => {
-            if (choice.Next) {
-              newEdges.push({
-                id: `${stateName}-choice-${choiceIndex}`,
-                source: stateName,
-                target: choice.Next,
-                label: 'Choice',
-                type: 'default',
-                markerEnd: {
-                  type: MarkerType.ArrowClosed,
-                  width: 20,
-                  height: 20,
-                  color: '#374151',
-                },
-              });
-            }
-          });
-        }
-
-        if (state.Default) {
-          newEdges.push({
-            id: `${stateName}-default`,
-            source: stateName,
-            target: state.Default,
-            label: 'Default',
             type: 'default',
             markerEnd: {
               type: MarkerType.ArrowClosed,
@@ -543,40 +367,32 @@ const WorkflowGraph: React.FC = () => {
       const outgoingEdges = edges.filter(edge => edge.source === nodeId);
       
       if (outgoingEdges.length === 0) {
-        // No outgoing edges - determine type based on node type
-        let stateData: any = {};
+        // No outgoing edges - Task with no connections
+        const stateData: any = {
+          Type: 'Task'
+        };
         
-        if (node.type === 'task') {
-          // Task nodes are always Type: "Task" 
-          stateData = {
-            Type: 'Task'
-          };
-          
-          // Add resource if assigned
-          if (node.data.resource) {
-            const resource = node.data.resource;
-            // Use our local resource format
-            stateData.Resource = `${resource.namespace}:${resource.service_type}:${resource.resource_name}`;
-          }
-          
-          // Add End field ONLY if explicitly marked as end
-          if (node.data.isEnd) {
-            stateData.End = true;
-          }
-        } else {
-          // Other node types default to Succeed for end states
-          stateData = { Type: 'Succeed' };
+        // Add resource if assigned
+        if (node.data.resource) {
+          const resource = node.data.resource;
+          // Use our local resource format
+          stateData.Resource = `${resource.namespace}:${resource.service_type}:${resource.resource_name}`;
+        }
+        
+        // Add End field ONLY if explicitly marked as end
+        if (node.data.isEnd) {
+          stateData.End = true;
         }
         
         states[nodeId] = stateData;
       } else if (outgoingEdges.length === 1) {
         // Simple next transition
         const stateData: any = {
-          Type: node.type === 'task' ? 'Task' : 'Pass'
+          Type: 'Task'
         };
         
-        // Add resource if assigned (only for task nodes, before Next)
-        if (node.type === 'task' && node.data.resource) {
+        // Add resource if assigned
+        if (node.data.resource) {
           const resource = node.data.resource;
           // Use our local resource format
           stateData.Resource = `${resource.namespace}:${resource.service_type}:${resource.resource_name}`;
@@ -591,27 +407,10 @@ const WorkflowGraph: React.FC = () => {
         }
         
         states[nodeId] = stateData;
-      } else {
-        // Choice state
-        const choices = outgoingEdges
-          .filter(edge => edge.label !== 'Default')
-          .map(edge => ({
-            Variable: '$.status',
-            StringEquals: 'success',
-            Next: edge.target,
-          }));
-        
-        const defaultEdge = outgoingEdges.find(edge => edge.label === 'Default');
-        
-        states[nodeId] = {
-          Type: 'Choice',
-          Choices: choices,
-          ...(defaultEdge && { Default: defaultEdge.target }),
-        };
       }
 
-      // Find start node
-      if (node.type === 'start' || !startAt) {
+      // Set first node as start if no startAt is set
+      if (!startAt) {
         startAt = nodeId;
       }
     });
@@ -670,13 +469,6 @@ const WorkflowGraph: React.FC = () => {
           <div className="px-3 py-2 text-sm font-medium text-gray-700 border-b border-gray-200">
             Add Node
           </div>
-          {/* <button
-            className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex items-center"
-            onClick={() => handleContextMenuAction('start')}
-          >
-            <div className="w-3 h-3 bg-emerald-500 rounded mr-2"></div>
-            Start
-          </button> */}
           <button
             className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex items-center"
             onClick={() => handleContextMenuAction('task')}
@@ -684,34 +476,6 @@ const WorkflowGraph: React.FC = () => {
             <div className="w-3 h-3 bg-blue-500 rounded mr-2"></div>
             Task
           </button>
-          {/* <button
-            className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex items-center"
-            onClick={() => handleContextMenuAction('choice')}
-          >
-            <div className="w-3 h-3 bg-yellow-500 rounded mr-2"></div>
-            Choice
-          </button>
-          <button
-            className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex items-center"
-            onClick={() => handleContextMenuAction('wait')}
-          >
-            <div className="w-3 h-3 bg-purple-500 rounded mr-2"></div>
-            Wait
-          </button>
-          <button
-            className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex items-center"
-            onClick={() => handleContextMenuAction('succeed')}
-          >
-            <div className="w-3 h-3 bg-green-500 rounded mr-2"></div>
-            Succeed
-          </button>
-          <button
-            className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex items-center"
-            onClick={() => handleContextMenuAction('fail')}
-          >
-            <div className="w-3 h-3 bg-red-500 rounded mr-2"></div>
-            Fail
-          </button> */}
         </div>
       )}
       
@@ -729,21 +493,18 @@ const WorkflowGraph: React.FC = () => {
           </div>
           {(() => {
             const node = nodes.find(n => n.id === nodeContextMenu.nodeId);
-            const isTaskNode = node?.type === 'task';
             
             return (
               <>
-                {isTaskNode && (
-                  <button
-                    className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex items-center text-blue-600"
-                    onClick={() => toggleTaskEndState(nodeContextMenu.nodeId)}
-                  >
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    {node?.data.isEnd ? 'Remove End State' : 'Set as End State'}
-                  </button>
-                )}
+                <button
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex items-center text-blue-600"
+                  onClick={() => toggleTaskEndState(nodeContextMenu.nodeId)}
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {node?.data.isEnd ? 'Remove End State' : 'Set as End State'}
+                </button>
                 <button
                   className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex items-center text-red-600"
                   onClick={() => deleteNode(nodeContextMenu.nodeId)}
