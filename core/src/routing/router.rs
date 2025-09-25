@@ -96,6 +96,10 @@ pub fn create_private_router() -> Router<AppState> {
             post(api::workflows::generate_workflow_graph_handler),
         )
         .route(
+            "/api/resources",
+            get(api::resources::get_all_resources_handler),
+        )
+        .route(
             "/step-functions/react/bundle.js",
             get(serve_step_functions_bundle),
         )

@@ -15,10 +15,16 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 
 // Custom node types for different AWS Step Functions states
-const TaskNode = ({ data }: { data: { label: string } }) => (
-  <div className="px-4 py-2 shadow-md rounded-md bg-blue-500 text-white border-2 border-blue-600">
+const TaskNode = ({ data }: { data: { label: string; resource?: Resource } }) => (
+  <div className={`px-4 py-2 shadow-md rounded-md text-white border-2 cursor-pointer ${
+    data.resource 
+      ? 'bg-blue-500 border-blue-600' 
+      : 'bg-blue-300 border-blue-400 border-dashed'
+  }`}>
     <div className="font-bold">{data.label}</div>
-    <div className="text-xs opacity-80">Task</div>
+    <div className="text-xs opacity-80">
+      {data.resource ? `Resource: ${data.resource.resource_name}` : 'Click to assign resource'}
+    </div>
   </div>
 );
 
@@ -66,12 +72,21 @@ const nodeTypes: NodeTypes = {
   start: StartNode,
 };
 
+interface Resource {
+  namespace: string;
+  service_type: 'Lambda' | 'Workflow';
+  resource_name: string;
+}
+
 const WorkflowGraph: React.FC = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [workflowDefinition, setWorkflowDefinition] = useState<string>('');
   const [contextMenu, setContextMenu] = useState<{ visible: boolean; x: number; y: number } | null>(null);
   const [nodeContextMenu, setNodeContextMenu] = useState<{ visible: boolean; x: number; y: number; nodeId: string } | null>(null);
+  const [resourceModal, setResourceModal] = useState<{ visible: boolean; nodeId: string } | null>(null);
+  const [resources, setResources] = useState<Resource[]>([]);
+  const [loadingResources, setLoadingResources] = useState(false);
 
   // Sync with the textarea in the parent form
   useEffect(() => {
@@ -118,11 +133,36 @@ const WorkflowGraph: React.FC = () => {
         else if (stateType === 'Fail') nodeType = 'fail';
         else if (isStart) nodeType = 'start';
 
+        // Parse resource from JSON if present
+        let resource: Resource | undefined = undefined;
+        if (state.Resource) {
+          // Try to parse our local resource format: namespace:service_type:resource_name
+          const localMatch = state.Resource.match(/^([^:]+):([^:]+):(.+)$/);
+          
+          if (localMatch) {
+            resource = {
+              namespace: localMatch[1],
+              service_type: localMatch[2] as 'Lambda' | 'Workflow',
+              resource_name: localMatch[3]
+            };
+          } else {
+            // Fallback: treat as simple resource name
+            resource = {
+              namespace: 'default',
+              service_type: 'Lambda',
+              resource_name: state.Resource
+            };
+          }
+        }
+
         newNodes.push({
           id: stateName,
           type: nodeType,
           position: { x: 100 + (index % 3) * 200, y: 100 + Math.floor(index / 3) * 150 },
-          data: { label: stateName },
+          data: { 
+            label: stateName,
+            resource: resource
+          },
         });
 
         // Create edges based on Next, Choices, and Default
@@ -197,6 +237,45 @@ const WorkflowGraph: React.FC = () => {
     setContextMenu(null); // Hide pane context menu
   }, []);
 
+  // Handle left-click on task nodes to open resource modal
+  const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
+    if (node.type === 'task') {
+      event.stopPropagation();
+      setResourceModal({ visible: true, nodeId: node.id });
+      fetchResources();
+    }
+  }, []);
+
+  // Fetch available resources from API
+  const fetchResources = useCallback(async () => {
+    setLoadingResources(true);
+    try {
+      const response = await fetch('/api/resources');
+      if (response.ok) {
+        const data = await response.json();
+        setResources(data);
+      } else {
+        console.error('Failed to fetch resources');
+      }
+    } catch (error) {
+      console.error('Error fetching resources:', error);
+    } finally {
+      setLoadingResources(false);
+    }
+  }, []);
+
+  // Assign resource to a task node
+  const assignResource = useCallback((nodeId: string, resource: Resource) => {
+    setNodes((nds) => 
+      nds.map((node) => 
+        node.id === nodeId 
+          ? { ...node, data: { ...node.data, resource: resource } }
+          : node
+      )
+    );
+    setResourceModal(null);
+  }, [setNodes]);
+
   // Delete a node and its connected edges
   const deleteNode = useCallback((nodeId: string) => {
     setNodes((nds) => nds.filter((node) => node.id !== nodeId));
@@ -252,14 +331,42 @@ const WorkflowGraph: React.FC = () => {
       const outgoingEdges = edges.filter(edge => edge.source === nodeId);
       
       if (outgoingEdges.length === 0) {
-        // End state
-        states[nodeId] = { Type: 'Succeed' };
+        // End state - determine type based on node type
+        let stateData: any = {};
+        
+        if (node.type === 'task') {
+          // Task nodes are always Type: "Task"
+          stateData = {
+            Type: 'Task'
+          };
+          
+          // Add resource if assigned
+          if (node.data.resource) {
+            const resource = node.data.resource;
+            // Use our local resource format
+            stateData.Resource = `${resource.namespace}:${resource.service_type}:${resource.resource_name}`;
+          }
+        } else {
+          // Other node types default to Succeed for end states
+          stateData = { Type: 'Succeed' };
+        }
+        
+        states[nodeId] = stateData;
       } else if (outgoingEdges.length === 1) {
         // Simple next transition
-        states[nodeId] = {
-          Type: 'Task',
+        const stateData: any = {
+          Type: node.type === 'task' ? 'Task' : 'Pass',
           Next: outgoingEdges[0].target,
         };
+        
+        // Add resource if assigned (only for task nodes)
+        if (node.type === 'task' && node.data.resource) {
+          const resource = node.data.resource;
+          // Use our local resource format
+          stateData.Resource = `${resource.namespace}:${resource.service_type}:${resource.resource_name}`;
+        }
+        
+        states[nodeId] = stateData;
       } else {
         // Choice state
         const choices = outgoingEdges
@@ -315,6 +422,7 @@ const WorkflowGraph: React.FC = () => {
         onConnect={onConnect}
         onPaneContextMenu={onPaneContextMenu}
         onNodeContextMenu={onNodeContextMenu}
+        onNodeClick={onNodeClick}
         nodeTypes={nodeTypes}
         fitView
         attributionPosition="bottom-left"
@@ -401,6 +509,57 @@ const WorkflowGraph: React.FC = () => {
             </svg>
             Delete Node
           </button>
+        </div>
+      )}
+      
+      {/* Resource Selection Modal */}
+      {resourceModal?.visible && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full mx-4 max-h-96 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-medium text-gray-900">
+                Select Resource for Task: {resourceModal.nodeId}
+              </h3>
+            </div>
+            
+            <div className="px-6 py-4 max-h-64 overflow-y-auto">
+              {loadingResources ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="text-gray-500">Loading resources...</div>
+                </div>
+              ) : resources.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  No resources available
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {resources.map((resource, index) => (
+                    <button
+                      key={index}
+                      className="w-full p-3 text-left border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-blue-300 transition-colors"
+                      onClick={() => assignResource(resourceModal.nodeId, resource)}
+                    >
+                      <div className="font-medium text-gray-900">
+                        {resource.resource_name}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {resource.service_type} • {resource.namespace}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            <div className="px-6 py-4 border-t border-gray-200 flex justify-end">
+              <button
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                onClick={() => setResourceModal(null)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
