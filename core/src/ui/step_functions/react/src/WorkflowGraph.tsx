@@ -15,6 +15,7 @@ import ReactFlow, {
   Position,
   MarkerType,
 } from 'reactflow';
+import dagre from 'dagre';
 import 'reactflow/dist/style.css';
 
 // Custom node types for different AWS Step Functions states  
@@ -91,6 +92,42 @@ interface Resource {
   resource_name: string;
 }
 
+// Dagre layout configuration
+const dagreGraph = new dagre.graphlib.Graph();
+dagreGraph.setDefaultEdgeLabel(() => ({}));
+
+const nodeWidth = 200;
+const nodeHeight = 80;
+
+// Auto-layout function using dagre
+const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = 'TB') => {
+  dagreGraph.setGraph({ rankdir: direction, ranksep: 100, nodesep: 50 });
+
+  nodes.forEach((node) => {
+    dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
+  });
+
+  edges.forEach((edge) => {
+    dagreGraph.setEdge(edge.source, edge.target);
+  });
+
+  dagre.layout(dagreGraph);
+
+  return {
+    nodes: nodes.map((node) => {
+      const nodeData = dagreGraph.node(node.id);
+      return {
+        ...node,
+        position: {
+          x: nodeData.x - nodeWidth / 2,
+          y: nodeData.y - nodeHeight / 2,
+        },
+      };
+    }),
+    edges,
+  };
+};
+
 const WorkflowGraph: React.FC = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -110,22 +147,14 @@ const WorkflowGraph: React.FC = () => {
   const [resources, setResources] = useState<Resource[]>([]);
   const [loadingResources, setLoadingResources] = useState(false);
 
-  // Sync with the textarea in the parent form
-  useEffect(() => {
-    const textarea = document.getElementById('workflowDefinition') as HTMLTextAreaElement;
-    if (textarea) {
-      setWorkflowDefinition(textarea.value);
-      
-      // Listen for changes in the textarea
-      const handleTextareaChange = () => {
-        setWorkflowDefinition(textarea.value);
-        parseWorkflowDefinition(textarea.value);
-      };
-      
-      textarea.addEventListener('input', handleTextareaChange);
-      return () => textarea.removeEventListener('input', handleTextareaChange);
+  // Function to organize layout
+  const organizeLayout = useCallback(() => {
+    if (nodes.length > 0) {
+      const layouted = getLayoutedElements(nodes, edges);
+      setNodes(layouted.nodes);
+      setEdges(layouted.edges);
     }
-  }, []);
+  }, [nodes, edges, setNodes, setEdges]);
 
   const parseWorkflowDefinition = useCallback((definition: string) => {
     if (!definition.trim()) {
@@ -175,7 +204,7 @@ const WorkflowGraph: React.FC = () => {
         newNodes.push({
           id: stateName,
           type: nodeType,
-          position: { x: 100 + (index % 3) * 200, y: 100 + Math.floor(index / 3) * 150 },
+          position: { x: 0, y: 0 }, // Will be set by layout algorithm
           data: { 
             label: stateName,
             resource: resource,
@@ -200,13 +229,38 @@ const WorkflowGraph: React.FC = () => {
         }
       });
 
-      setNodes(newNodes);
-      setEdges(newEdges);
+      // Apply auto-layout before setting nodes and edges
+      const layouted = getLayoutedElements(newNodes, newEdges);
+      setNodes(layouted.nodes);
+      setEdges(layouted.edges);
     } catch (error) {
       console.error('Error parsing workflow definition:', error);
       // Keep existing nodes/edges on parse error
     }
   }, [setNodes, setEdges]);
+
+  // Sync with the textarea in the parent form
+  useEffect(() => {
+    const textarea = document.getElementById('workflowDefinition') as HTMLTextAreaElement;
+    if (textarea) {
+      const initialDefinition = textarea.value;
+      setWorkflowDefinition(initialDefinition);
+      
+      // Parse initial definition if it exists
+      if (initialDefinition && initialDefinition.trim()) {
+        parseWorkflowDefinition(initialDefinition);
+      }
+      
+      // Listen for changes in the textarea
+      const handleTextareaChange = () => {
+        setWorkflowDefinition(textarea.value);
+        parseWorkflowDefinition(textarea.value);
+      };
+      
+      textarea.addEventListener('input', handleTextareaChange);
+      return () => textarea.removeEventListener('input', handleTextareaChange);
+    }
+  }, [parseWorkflowDefinition]);
 
   const onConnect = useCallback(
     (params: Connection) => {
@@ -342,9 +396,14 @@ const WorkflowGraph: React.FC = () => {
       data: { label: nodeId },
     };
 
-    setNodes((nds) => [...nds, newNode]);
+    setNodes((nds) => {
+      const updatedNodes = [...nds, newNode];
+      // Apply auto-layout after adding new node
+      const layouted = getLayoutedElements(updatedNodes, edges);
+      return layouted.nodes;
+    });
     setContextMenu(null);
-  }, [setNodes]);
+  }, [setNodes, edges]);
 
   // Handle context menu item click
   const handleContextMenuAction = useCallback((nodeType: string) => {
@@ -455,6 +514,20 @@ const WorkflowGraph: React.FC = () => {
       >
         <Controls />
         <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
+        
+        {/* Custom Organize Layout Button */}
+        <div className="absolute top-4 right-4 z-10">
+          <button
+            onClick={organizeLayout}
+            className="bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-cyan-500 shadow-sm transition-colors duration-200"
+            title="Organize Layout"
+          >
+            <svg className="w-4 h-4 mr-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+            Organize
+          </button>
+        </div>
       </ReactFlow>
       
       {/* Context Menu */}

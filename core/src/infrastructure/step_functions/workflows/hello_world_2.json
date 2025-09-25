@@ -4,13 +4,13 @@
   "States": {
     "task_1758807422884": {
       "Type": "Task",
-      "Next": "task_1758807426236",
-      "Resource": "rustws:lambda:hello_without_http_request"
+      "Resource": "rustws:lambda:hello_without_http_request",
+      "Next": "task_1758807426236"
     },
     "task_1758807426236": {
       "Type": "Task",
-      "End": true,
-      "Resource": "rustws:lambda:hello_without_http_request"
+      "Resource": "rustws:lambda:hello_without_http_request",
+      "End": true
     }
   }
 }

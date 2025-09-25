@@ -71,29 +71,21 @@
                 </div>
             </div>
 
-            <!-- Workflow Graph Visualization -->
+            <!-- Visual Workflow Graph -->
             <div>
                 <div class="flex items-center justify-between mb-3">
                     <label class="block text-sm font-medium text-gray-700">
-                        Workflow Graph
+                        Visual Workflow Designer
                     </label>
-                    <button 
-                        type="button" 
-                        onclick="refreshGraph()" 
-                        class="inline-flex items-center px-3 py-1 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-colors duration-200"
-                    >
-                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                        </svg>
-                        Refresh Graph
-                    </button>
+                    <span class="text-sm text-gray-500 font-medium">
+                        Interactive workflow editor
+                    </span>
                 </div>
-                <div id="workflowGraph" class="mb-6">
-                    {{ workflow_graph|safe }}
+                <div id="stepfunctions-graph" class="w-full h-96 border border-gray-300 rounded-lg bg-gray-50 mb-4">
+                    <!-- React Flow will be rendered here -->
                 </div>
                 <p class="text-xs text-gray-500 mb-4">
-                    Visual representation of your workflow states and transitions. 
-                    The graph updates automatically when you modify the JSON definition below.
+                    Drag nodes to design your workflow visually. Changes will sync with the JSON below.
                 </p>
             </div>
 
@@ -101,44 +93,28 @@
             <div>
                 <div class="flex items-center justify-between mb-3">
                     <label for="workflowDefinition" class="block text-sm font-medium text-gray-700">
-                        Workflow Definition (JSON) *
+                        Workflow Definition *
                     </label>
-                    <div class="flex space-x-2">
-                        <button 
-                            type="button" 
-                            onclick="validateDefinition()" 
-                            class="inline-flex items-center px-3 py-1 border border-cyan-300 text-xs font-medium rounded-md text-cyan-700 bg-cyan-50 hover:bg-cyan-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-colors duration-200"
-                        >
-                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                            Validate JSON
-                        </button>
-                        <button 
-                            type="button" 
-                            onclick="loadTemplate()" 
-                            class="inline-flex items-center px-3 py-1 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-colors duration-200"
-                        >
-                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
-                            </svg>
-                            Reset to Template
-                        </button>
-                    </div>
+                    <span class="text-sm text-gray-500 font-medium">
+                        Auto-generated from visual graph
+                    </span>
                 </div>
                 <textarea 
                     id="workflowDefinition" 
                     name="workflowDefinition" 
                     rows="15" 
                     required
-                    class="block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 focus:ring-1 font-mono text-sm"
-                    placeholder="Enter your AWS Step Functions state machine definition in JSON format..."
+                    readonly
+                    class="block w-full rounded-md border-gray-300 bg-gray-50 cursor-not-allowed font-mono text-sm"
+                    placeholder="Workflow definition will be generated from the visual graph above..."
                 >{{ definition|safe }}</textarea>
+                <div class="relative">
+                    <div class="absolute bottom-2 right-2 text-xs text-gray-400">
+                        Generated from visual graph
+                    </div>
+                </div>
                 <p class="text-xs text-gray-500 mt-2">
-                    Define your state machine using AWS Step Functions JSON specification. 
-                    <a href="https://docs.aws.amazon.com/step-functions/latest/dg/amazon-states-language-reference.html" target="_blank" class="text-cyan-600 hover:text-cyan-700 underline">
-                        View documentation →
-                    </a>
+                    Workflow definition is automatically generated from the visual graph above. Use the visual designer to modify your workflow.
                 </p>
             </div>
 
@@ -200,6 +176,11 @@
     </div>
 </div>
 
+<!-- React and React Flow Scripts -->
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="/step-functions/react/bundle.js"></script>
+
 <script>
 // Store original workflow definition for reset functionality
 const originalWorkflowDefinition = `{{ definition|safe }}`;
@@ -238,46 +219,6 @@ function resetToOriginal() {
     showToast('✅ Definition reset to original!', true);
 }
 
-// Load sample workflow template
-function loadTemplate() {
-    const template = `{
-  "Comment": "Simple workflow template",
-  "StartAt": "FirstState",
-  "States": {
-    "FirstState": {
-      "Type": "Task",
-      "Resource": "arn:aws:lambda:us-east-1:123456789012:function:HelloWorld",
-      "Next": "SecondState"
-    },
-    "SecondState": {
-      "Type": "Task",
-      "Resource": "arn:aws:lambda:us-east-1:123456789012:function:ProcessData",
-      "Next": "ChoiceState"
-    },
-    "ChoiceState": {
-      "Type": "Choice",
-      "Choices": [
-        {
-          "Variable": "$.status",
-          "StringEquals": "success",
-          "Next": "SuccessState"
-        }
-      ],
-      "Default": "FailState"
-    },
-    "SuccessState": {
-      "Type": "Succeed"
-    },
-    "FailState": {
-      "Type": "Fail",
-      "Cause": "Workflow failed"
-    }
-  }
-}`;
-    
-    document.getElementById('workflowDefinition').value = template;
-    showToast('✅ Template loaded successfully!', true);
-}
 
 // Validate JSON definition
 function validateDefinition() {
@@ -305,104 +246,19 @@ function validateDefinition() {
     }
 }
 
-// Refresh workflow graph
-function refreshGraph() {
-    const definition = document.getElementById('workflowDefinition').value;
-    
-    if (!definition.trim()) {
-        showToast('❌ Please provide a workflow definition first', false);
-        return;
-    }
-    
-    // Validate JSON first
-    if (!validateDefinition()) {
-        return;
-    }
-    
-    // Show loading state
-    const graphContainer = document.getElementById('workflowGraph');
-    graphContainer.innerHTML = `
-        <div class="flex items-center justify-center h-64 bg-gray-50 rounded-lg border border-gray-200">
-            <div class="text-center">
-                <svg class="animate-spin h-8 w-8 text-cyan-600 mx-auto mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <p class="text-sm text-gray-600">Generating workflow graph...</p>
-            </div>
-        </div>
-    `;
-    
-    // Call API to generate new graph
-    fetch('/api/workflow/graph', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ definition: definition })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            graphContainer.innerHTML = data.graph;
-            showToast('✅ Workflow graph refreshed!', true);
-        } else {
-            throw new Error(data.error || 'Failed to generate graph');
-        }
-    })
-    .catch(error => {
-        console.error('Error refreshing graph:', error);
-        graphContainer.innerHTML = `
-            <div class="flex items-center justify-center h-64 bg-red-50 rounded-lg border border-red-200">
-                <div class="text-center">
-                    <svg class="h-8 w-8 text-red-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
-                    </svg>
-                    <p class="text-sm text-red-600">Failed to generate graph</p>
-                    <p class="text-xs text-red-500 mt-1">${error.message}</p>
-                </div>
-            </div>
-        `;
-        showToast(`❌ Failed to refresh graph: ${error.message}`, false);
-    });
-}
-
-// Auto-refresh graph when definition changes (with debounce)
-let graphUpdateTimeout;
-document.getElementById('workflowDefinition').addEventListener('input', function() {
-    clearTimeout(graphUpdateTimeout);
-    graphUpdateTimeout = setTimeout(() => {
-        // Only auto-refresh if JSON is valid
-        try {
-            const definition = this.value;
-            if (definition.trim()) {
-                JSON.parse(definition);
-                refreshGraph();
-            }
-        } catch (error) {
-            // Don't auto-refresh on invalid JSON
-        }
-    }, 1000); // 1 second debounce
-});
-
-// Handle tab key in textarea for proper indentation
-document.getElementById('workflowDefinition').addEventListener('keydown', function(e) {
-    if (e.key === 'Tab') {
-        e.preventDefault();
-        const start = this.selectionStart;
-        const end = this.selectionEnd;
-        
-        // Insert 2 spaces at cursor position
-        this.value = this.value.substring(0, start) + '  ' + this.value.substring(end);
-        
-        // Move cursor to after the inserted spaces
-        this.selectionStart = this.selectionEnd = start + 2;
-    }
-});
 
 // Form submission
 document.getElementById('editStepFunctionForm').addEventListener('submit', async function(e) {
     e.preventDefault();
+    
+    // Debug: Log what triggered the form submission
+    console.log('Form submission triggered by:', e.submitter);
+    
+    // Safety check: Only proceed if the submitter is the update button
+    if (e.submitter && e.submitter.id !== 'updateStepFunctionButton') {
+        console.log('Form submission prevented - not triggered by update button');
+        return;
+    }
     
     const form = e.target;
     const formData = new FormData(form);
@@ -456,10 +312,12 @@ document.getElementById('editStepFunctionForm').addEventListener('submit', async
         
         showToast(`✅ Step function '${workflowName}' updated successfully!`, true);
         
-        // Redirect to step functions list after short delay
+        // Show success message with option to stay or go back
         setTimeout(() => {
-            window.location.href = '/step-functions';
-        }, 1500);
+            if (confirm('Step function updated successfully! Would you like to return to the step functions list?')) {
+                window.location.href = '/step-functions';
+            }
+        }, 1000);
         
     } catch (error) {
         console.error('Error updating step function:', error);

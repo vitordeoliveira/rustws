@@ -1,5 +1,5 @@
 {
-  "Comment": "Clean lambda chaining - each lambda defines its own input/output contract",
+  "Comment": "Generated workflow",
   "StartAt": "FirstHelloWorld",
   "States": {
     "FirstHelloWorld": {
@@ -8,12 +8,12 @@
       "Next": "SecondHelloWorld"
     },
     "SecondHelloWorld": {
-      "Type": "Task", 
+      "Type": "Task",
       "Resource": "rustws:lambda:hello_without_http_request",
       "Next": "ThirdHelloWorld"
     },
     "ThirdHelloWorld": {
-      "Type": "Task", 
+      "Type": "Task",
       "Resource": "rustws:lambda:hello_without_http_request",
       "End": true
     }
