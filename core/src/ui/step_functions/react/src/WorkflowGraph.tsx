@@ -45,9 +45,10 @@ const TaskNode = ({ data, id }: { data: { label: string; resource?: Resource; is
         position={Position.Top} 
         className="w-3 h-3" 
         style={{ 
-          background: '#fb923c', 
-          border: '2px solid #ea580c'
+          background: data.resource ? '#fb923c' : '#9ca3af', 
+          border: data.resource ? '2px solid #ea580c' : '2px solid #6b7280'
         }}
+        isConnectable={!!data.resource}
       />
       
       <div className="font-bold flex items-center">
@@ -64,6 +65,11 @@ const TaskNode = ({ data, id }: { data: { label: string; resource?: Resource; is
           : (data.resource ? `Resource: ${data.resource.resource_name}` : 'Click to assign resource')
         }
       </div>
+      {!data.resource && (
+        <div className="text-xs text-yellow-200 mt-1 opacity-90">
+          ⚠️ Assign resource to enable connections
+        </div>
+      )}
       
       {/* Output handle - only when NOT an end state */}
       {!isEndState && (
@@ -72,9 +78,10 @@ const TaskNode = ({ data, id }: { data: { label: string; resource?: Resource; is
           position={Position.Bottom} 
           className="w-3 h-3" 
           style={{ 
-            background: '#60a5fa', 
-            border: '2px solid #2563eb'
+            background: data.resource ? '#60a5fa' : '#9ca3af', 
+            border: data.resource ? '2px solid #2563eb' : '2px solid #6b7280'
           }}
+          isConnectable={!!data.resource}
         />
       )}
     </div>
@@ -265,6 +272,21 @@ const WorkflowGraph: React.FC = () => {
 
   const onConnect = useCallback(
     (params: Connection) => {
+      // Check if both source and target nodes have resources assigned
+      const sourceNode = nodes.find(n => n.id === params.source);
+      const targetNode = nodes.find(n => n.id === params.target);
+      
+      // Prevent connection if either node is a task without a resource
+      if (sourceNode?.type === 'task' && !sourceNode.data.resource) {
+        console.log('Cannot connect from task without resource:', sourceNode.id);
+        return;
+      }
+      
+      if (targetNode?.type === 'task' && !targetNode.data.resource) {
+        console.log('Cannot connect to task without resource:', targetNode.id);
+        return;
+      }
+
       const newEdge = {
         ...params,
         type: 'default',
@@ -281,7 +303,7 @@ const WorkflowGraph: React.FC = () => {
         nds.map((node) => ({ ...node, data: { ...node.data } }))
       );
     },
-    [setEdges, setNodes]
+    [setEdges, setNodes, nodes]
   );
 
   // Handle right-click on pane to show context menu
