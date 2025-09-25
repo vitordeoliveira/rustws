@@ -143,6 +143,7 @@ const WorkflowGraph: React.FC = () => {
   const [workflowDefinition, setWorkflowDefinition] = useState<string>('');
   const [contextMenu, setContextMenu] = useState<{ visible: boolean; x: number; y: number } | null>(null);
   const [nodeContextMenu, setNodeContextMenu] = useState<{ visible: boolean; x: number; y: number; nodeId: string } | null>(null);
+  const [edgeContextMenu, setEdgeContextMenu] = useState<{ visible: boolean; x: number; y: number; edgeId: string } | null>(null);
   const [resourceModal, setResourceModal] = useState<{ visible: boolean; nodeId: string } | null>(null);
   const [resources, setResources] = useState<Resource[]>([]);
   const [loadingResources, setLoadingResources] = useState(false);
@@ -292,6 +293,7 @@ const WorkflowGraph: React.FC = () => {
       y: event.clientY,
     });
     setNodeContextMenu(null); // Hide node context menu
+    setEdgeContextMenu(null); // Hide edge context menu
   }, []);
 
   // Handle right-click on node to show context menu
@@ -304,6 +306,20 @@ const WorkflowGraph: React.FC = () => {
       nodeId: node.id,
     });
     setContextMenu(null); // Hide pane context menu
+    setEdgeContextMenu(null); // Hide edge context menu
+  }, []);
+
+  // Handle right-click on edge to show context menu
+  const onEdgeContextMenu = useCallback((event: React.MouseEvent, edge: Edge) => {
+    event.preventDefault(); // Prevent browser context menu
+    setEdgeContextMenu({
+      visible: true,
+      x: event.clientX,
+      y: event.clientY,
+      edgeId: edge.id,
+    });
+    setContextMenu(null); // Hide pane context menu
+    setNodeContextMenu(null); // Hide node context menu
   }, []);
 
   // Handle left-click on task nodes to open resource modal
@@ -352,6 +368,16 @@ const WorkflowGraph: React.FC = () => {
     setNodeContextMenu(null);
   }, [setNodes, setEdges]);
 
+  // Delete an edge
+  const deleteEdge = useCallback((edgeId: string) => {
+    setEdges((eds) => eds.filter((edge) => edge.id !== edgeId));
+    setEdgeContextMenu(null);
+    // Force nodes to re-render to update end state visuals
+    setNodes((nds) => 
+      nds.map((node) => ({ ...node, data: { ...node.data } }))
+    );
+  }, [setEdges, setNodes]);
+
   // Toggle a task as end state
   const toggleTaskEndState = useCallback((nodeId: string) => {
     const node = nodes.find(n => n.id === nodeId);
@@ -378,13 +404,14 @@ const WorkflowGraph: React.FC = () => {
     const handleClickOutside = () => {
       setContextMenu(null);
       setNodeContextMenu(null);
+      setEdgeContextMenu(null);
     };
     
-    if (contextMenu?.visible || nodeContextMenu?.visible) {
+    if (contextMenu?.visible || nodeContextMenu?.visible || edgeContextMenu?.visible) {
       document.addEventListener('click', handleClickOutside);
       return () => document.removeEventListener('click', handleClickOutside);
     }
-  }, [contextMenu, nodeContextMenu]);
+  }, [contextMenu, nodeContextMenu, edgeContextMenu]);
 
   // Create a new node at the specified position
   const createNode = useCallback((nodeType: string, position: { x: number; y: number }) => {
@@ -504,6 +531,7 @@ const WorkflowGraph: React.FC = () => {
         onConnect={onConnect}
         onPaneContextMenu={onPaneContextMenu}
         onNodeContextMenu={onNodeContextMenu}
+        onEdgeContextMenu={onEdgeContextMenu}
         onNodeClick={onNodeClick}
         nodeTypes={nodeTypes}
         fitView
@@ -590,6 +618,30 @@ const WorkflowGraph: React.FC = () => {
               </>
             );
           })()}
+        </div>
+      )}
+      
+      {/* Edge Context Menu */}
+      {edgeContextMenu?.visible && (
+        <div
+          className="fixed z-50 bg-white border border-gray-300 rounded-lg shadow-lg py-2 min-w-40"
+          style={{
+            left: edgeContextMenu.x,
+            top: edgeContextMenu.y,
+          }}
+        >
+          <div className="px-3 py-2 text-sm font-medium text-gray-700 border-b border-gray-200">
+            Connection Actions
+          </div>
+          <button
+            className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex items-center text-red-600"
+            onClick={() => deleteEdge(edgeContextMenu.edgeId)}
+          >
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            Remove Connection
+          </button>
         </div>
       )}
       
