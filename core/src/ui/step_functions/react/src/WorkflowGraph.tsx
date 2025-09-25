@@ -10,7 +10,6 @@ import ReactFlow, {
   Background,
   BackgroundVariant,
   NodeTypes,
-  EdgeTypes,
   Handle,
   Position,
   MarkerType,
@@ -20,11 +19,6 @@ import 'reactflow/dist/style.css';
 
 // Custom node types for different AWS Step Functions states  
 const TaskNode = ({ data, id }: { data: { label: string; resource?: Resource; isEnd?: boolean }; id: string }) => {
-  // Get current React Flow instance to check for outgoing edges
-  const reactFlowInstance = (window as any).reactFlowInstance;
-  const edges = reactFlowInstance?.getEdges?.() || [];
-  const hasOutgoingEdges = edges.some((edge: any) => edge.source === id);
-  
   // A task is an end state ONLY when explicitly marked as end
   const isEndState = data.isEnd;
 
@@ -742,7 +736,6 @@ const WorkflowGraph: React.FC = () => {
       {resourceModal?.visible && (() => {
         const compatibleResources = getCompatibleResources(resourceModal.nodeId);
         const hasFiltering = compatibleResources.length < resources.length;
-        const currentNode = nodes.find(n => n.id === resourceModal.nodeId);
         const incomingEdges = edges.filter(edge => edge.target === resourceModal.nodeId);
         const outgoingEdges = edges.filter(edge => edge.source === resourceModal.nodeId);
         
