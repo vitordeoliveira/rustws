@@ -22,6 +22,12 @@ pub struct Resource {
     pub service_type: ServiceType,
     /// Specific resource name (e.g., "hello_world")
     pub resource_name: String,
+    /// Input data type expected by this resource
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub input_type: Option<String>,
+    /// Output data type produced by this resource
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub output_type: Option<String>,
 }
 
 impl Resource {

@@ -97,6 +97,8 @@ interface Resource {
   namespace: string;
   service_type: 'Lambda' | 'Workflow';
   resource_name: string;
+  input_type?: string;
+  output_type?: string;
 }
 
 // Dagre layout configuration
@@ -279,12 +281,34 @@ const WorkflowGraph: React.FC = () => {
       // Prevent connection if either node is a task without a resource
       if (sourceNode?.type === 'task' && !sourceNode.data.resource) {
         console.log('Cannot connect from task without resource:', sourceNode.id);
+        alert('⚠️ Cannot connect from task without assigned resource. Please assign a resource first.');
         return;
       }
       
       if (targetNode?.type === 'task' && !targetNode.data.resource) {
         console.log('Cannot connect to task without resource:', targetNode.id);
+        alert('⚠️ Cannot connect to task without assigned resource. Please assign a resource first.');
         return;
+      }
+
+      // Validate type compatibility if both nodes have resources with type information
+      if (sourceNode?.type === 'task' && targetNode?.type === 'task' && 
+          sourceNode.data.resource && targetNode.data.resource) {
+        
+        const sourceOutputType = sourceNode.data.resource.output_type;
+        const targetInputType = targetNode.data.resource.input_type;
+        
+        // Only validate if both types are available
+        if (sourceOutputType && targetInputType && sourceOutputType !== targetInputType) {
+          console.log('Type mismatch:', {
+            source: sourceNode.id,
+            sourceOutputType,
+            target: targetNode.id,
+            targetInputType
+          });
+          alert(`⚠️ Type mismatch: ${sourceNode.data.resource.resource_name} outputs "${sourceOutputType}" but ${targetNode.data.resource.resource_name} expects "${targetInputType}". Connection not allowed.`);
+          return;
+        }
       }
 
       const newEdge = {
@@ -370,6 +394,53 @@ const WorkflowGraph: React.FC = () => {
       setLoadingResources(false);
     }
   }, []);
+
+  // Get compatible resources for a node based on its connections
+  const getCompatibleResources = useCallback((nodeId: string) => {
+    // Find incoming and outgoing edges for this node
+    const incomingEdges = edges.filter(edge => edge.target === nodeId);
+    const outgoingEdges = edges.filter(edge => edge.source === nodeId);
+    
+    let requiredInputType: string | undefined;
+    let requiredOutputType: string | undefined;
+    
+    // Check what input type is required based on incoming connections
+    if (incomingEdges.length > 0) {
+      for (const edge of incomingEdges) {
+        const sourceNode = nodes.find(n => n.id === edge.source);
+        if (sourceNode?.data.resource?.output_type) {
+          requiredInputType = sourceNode.data.resource.output_type;
+          break; // Use the first one we find
+        }
+      }
+    }
+    
+    // Check what output type is required based on outgoing connections
+    if (outgoingEdges.length > 0) {
+      for (const edge of outgoingEdges) {
+        const targetNode = nodes.find(n => n.id === edge.target);
+        if (targetNode?.data.resource?.input_type) {
+          requiredOutputType = targetNode.data.resource.input_type;
+          break; // Use the first one we find
+        }
+      }
+    }
+    
+    // Filter resources based on required types
+    return resources.filter(resource => {
+      // If we need a specific input type, check if this resource accepts it
+      if (requiredInputType && resource.input_type && resource.input_type !== requiredInputType) {
+        return false;
+      }
+      
+      // If we need a specific output type, check if this resource produces it
+      if (requiredOutputType && resource.output_type && resource.output_type !== requiredOutputType) {
+        return false;
+      }
+      
+      return true;
+    });
+  }, [resources, edges, nodes]);
 
   // Assign resource to a task node
   const assignResource = useCallback((nodeId: string, resource: Resource) => {
@@ -668,55 +739,100 @@ const WorkflowGraph: React.FC = () => {
       )}
       
       {/* Resource Selection Modal */}
-      {resourceModal?.visible && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full mx-4 max-h-96 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">
-                Select Resource for Task: {resourceModal.nodeId}
-              </h3>
-            </div>
-            
-            <div className="px-6 py-4 max-h-64 overflow-y-auto">
-              {loadingResources ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="text-gray-500">Loading resources...</div>
-                </div>
-              ) : resources.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  No resources available
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {resources.map((resource, index) => (
-                    <button
-                      key={index}
-                      className="w-full p-3 text-left border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-blue-300 transition-colors"
-                      onClick={() => assignResource(resourceModal.nodeId, resource)}
-                    >
-                      <div className="font-medium text-gray-900">
-                        {resource.resource_name}
+      {resourceModal?.visible && (() => {
+        const compatibleResources = getCompatibleResources(resourceModal.nodeId);
+        const hasFiltering = compatibleResources.length < resources.length;
+        const currentNode = nodes.find(n => n.id === resourceModal.nodeId);
+        const incomingEdges = edges.filter(edge => edge.target === resourceModal.nodeId);
+        const outgoingEdges = edges.filter(edge => edge.source === resourceModal.nodeId);
+        
+        return (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full mx-4 max-h-96 overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h3 className="text-lg font-medium text-gray-900">
+                  Select Resource for Task: {resourceModal.nodeId}
+                </h3>
+                {hasFiltering && (
+                  <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
+                    <p className="text-sm text-blue-800">
+                      🔍 Showing only compatible resources based on existing connections
+                    </p>
+                    {incomingEdges.length > 0 && (
+                      <p className="text-xs text-blue-600 mt-1">
+                        • Must accept input from connected source(s)
+                      </p>
+                    )}
+                    {outgoingEdges.length > 0 && (
+                      <p className="text-xs text-blue-600 mt-1">
+                        • Must provide compatible output to connected target(s)
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+              
+              <div className="px-6 py-4 max-h-64 overflow-y-auto">
+                {loadingResources ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="text-gray-500">Loading resources...</div>
+                  </div>
+                ) : compatibleResources.length === 0 ? (
+                  <div className="text-center py-8">
+                    <div className="text-gray-500 mb-2">
+                      {hasFiltering ? 'No compatible resources found' : 'No resources available'}
+                    </div>
+                    {hasFiltering && (
+                      <div className="text-sm text-gray-400">
+                        Remove connections to see all resources
                       </div>
-                      <div className="text-sm text-gray-500">
-                        {resource.service_type} • {resource.namespace}
-                      </div>
-                    </button>
-                  ))}
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {compatibleResources.map((resource, index) => (
+                      <button
+                        key={index}
+                        className="w-full p-3 text-left border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-blue-300 transition-colors"
+                        onClick={() => assignResource(resourceModal.nodeId, resource)}
+                      >
+                        <div className="font-medium text-gray-900">
+                          {resource.resource_name}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {resource.service_type} • {resource.namespace}
+                        </div>
+                        {(resource.input_type || resource.output_type) && (
+                          <div className="text-xs text-gray-400 mt-1">
+                            {resource.input_type && <span>In: {resource.input_type}</span>}
+                            {resource.input_type && resource.output_type && <span> → </span>}
+                            {resource.output_type && <span>Out: {resource.output_type}</span>}
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              <div className="px-6 py-4 border-t border-gray-200 flex justify-between items-center">
+                <div className="text-sm text-gray-500">
+                  {hasFiltering 
+                    ? `${compatibleResources.length} of ${resources.length} resources shown`
+                    : `${resources.length} resources available`
+                  }
                 </div>
-              )}
-            </div>
-            
-            <div className="px-6 py-4 border-t border-gray-200 flex justify-end">
-              <button
-                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
-                onClick={() => setResourceModal(null)}
-              >
-                Cancel
-              </button>
+                <button
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                  onClick={() => setResourceModal(null)}
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 };
