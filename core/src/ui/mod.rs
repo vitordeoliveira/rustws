@@ -12,6 +12,7 @@ pub mod filters;
 pub mod home;
 pub mod lambda;
 pub mod monitoring;
+pub mod reports;
 pub mod shared;
 pub mod step_functions;
 pub mod testers;

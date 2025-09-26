@@ -47,9 +47,12 @@
                             <a href="/step-functions" class="text-blue-100 hover:text-white hover:bg-white/10 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200">
                                 Step Functions
                             </a>
-                            <!-- <a href="/monitoring" class="text-blue-100 hover:text-white hover:bg-white/10 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200">
+                            <a href="/monitoring" class="text-blue-100 hover:text-white hover:bg-white/10 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200">
                                 Monitoring
-                            </a> -->
+                            </a>
+                            <a href="/reports" class="text-blue-100 hover:text-white hover:bg-white/10 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200">
+                                Reports
+                            </a>
                             
                             <!-- User Info & Logout -->
                             <div class="h-6 w-px bg-blue-400 mx-2"></div>
@@ -116,12 +119,18 @@
                                 </svg>
                                 Step Functions
                             </a>
-                            <!-- <a href="/monitoring" class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                            <a href="/monitoring" class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
                                 <svg class="w-4 h-4 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                                 </svg>
                                 Monitoring
-                            </a> -->
+                            </a>
+                            <a href="/reports" class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                                <svg class="w-4 h-4 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                                Reports
+                            </a>
                             <hr class="my-2 border-gray-200">
                             <div class="px-4 py-2 text-xs text-gray-500 font-medium">{{ user.role | title }}</div>
                             <form method="POST" action="/auth/logout" class="block">

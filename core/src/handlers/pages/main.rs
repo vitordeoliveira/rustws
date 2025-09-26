@@ -18,7 +18,8 @@ use crate::{
     },
     error_handling::types::AppResult,
     infrastructure::{
-        api_gateways::ApiGatewayStorage, lambdas::LambdaStorage,
+        api_gateways::ApiGatewayStorage,
+        lambdas::{LambdaStorage, metrics::ExecutionStatus},
         step_functions::StepFunctionStorage,
     },
     state::AppState,
@@ -28,6 +29,7 @@ use crate::{
         home::HomePageUi,
         lambda::{CreateLambdaPageUi, EditLambdaPageUi, LambdaMetricsPageUi, LambdaPageUi},
         monitoring::{MonitoringPageUi, get_mock_monitoring_data},
+        reports::{ReportSummary, ReportsPageUi},
         step_functions::{CreateStepFunctionPageUi, EditStepFunctionPageUi, StepFunctionsPageUi},
     },
 };
@@ -473,4 +475,123 @@ pub async fn monitoring_handler(
     let html = monitoring_page_ui.render_html(&state.tera)?;
 
     Ok(html)
+}
+
+/// Reports page handler - displays vulnerability assessment reports
+#[instrument(skip_all, fields(handler = "reports", operation = "page_render"))]
+pub async fn reports_handler(
+    State(state): State<AppState>,
+    auth_session: AuthSession<AuthBackend>,
+    _lambda_service: LambdasService<LambdaStorage>,
+) -> AppResult<Html<String>> {
+    let user = auth_session.user.unwrap();
+
+    // Get vulnerability reporter executions from lambda metrics ledger
+    let lambda_storage = LambdaStorage::new();
+    let ledger = lambda_storage.get_metrics_ledger();
+    let vulnerability_reports: Vec<ReportSummary> = ledger
+        .entries
+        .iter()
+        .filter(|entry| {
+            entry.lambda_name == "vulnerability_reporter"
+                && matches!(entry.status, ExecutionStatus::Success)
+        })
+        .filter_map(|entry| {
+            // Parse the output to extract report summary
+            if let Some(output_data) = &entry.output_data {
+                if let Ok(report_data) = serde_json::from_str::<serde_json::Value>(output_data) {
+                    Some(ReportSummary {
+                        report_id: report_data["report_id"]
+                            .as_str()
+                            .unwrap_or("unknown")
+                            .to_string(),
+                        execution_id: entry.execution_id.clone(),
+                        generated_at: entry.timestamp.to_rfc3339(),
+                        security_rating: report_data["executive_summary"]["security_rating"]
+                            .as_str()
+                            .unwrap_or("Unknown")
+                            .to_string(),
+                        critical_vulnerabilities:
+                            report_data["executive_summary"]["critical_vulnerabilities"]
+                                .as_u64()
+                                .unwrap_or(0) as u32,
+                        overall_robustness_score: extract_robustness_score(output_data)
+                            .unwrap_or(0.0),
+                        tests_analyzed: extract_tests_analyzed(output_data).unwrap_or(0),
+                    })
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        })
+        .take(10) // Show last 10 reports
+        .collect();
+
+    let total_reports = vulnerability_reports.len() as u32;
+
+    let reports_page_ui = ReportsPageUi::new(user, vulnerability_reports, total_reports);
+    let html = reports_page_ui.render_html(&state.tera)?;
+
+    Ok(html)
+}
+
+/// Helper function to extract robustness score from nested JSON
+fn extract_robustness_score(output_data: &str) -> Option<f64> {
+    if let Ok(report_data) = serde_json::from_str::<serde_json::Value>(output_data) {
+        // Try different paths where robustness score might be
+        if let Some(score) =
+            report_data["technical_appendices"]["raw_data_summary"]["robustness_score"].as_f64()
+        {
+            return Some(score);
+        }
+        // Check if it's embedded in the robustness_data_json
+        if let Some(robustness_json) =
+            report_data["technical_appendices"]["raw_data_summary"]["robustness_data_json"].as_str()
+        {
+            if let Ok(robustness_data) = serde_json::from_str::<serde_json::Value>(robustness_json)
+            {
+                if let Some(score) = robustness_data["overall_robustness_score"].as_f64() {
+                    return Some(score);
+                }
+            }
+        }
+        // Fallback: try to infer from security rating
+        if let Some(rating) = report_data["executive_summary"]["security_rating"].as_str() {
+            return Some(match rating {
+                "Excellent" => 95.0,
+                "Good" => 80.0,
+                "Fair" => 65.0,
+                "Poor" => 45.0,
+                "Critical" => 25.0,
+                _ => 50.0,
+            });
+        }
+    }
+    None
+}
+
+/// Helper function to extract tests analyzed count
+fn extract_tests_analyzed(output_data: &str) -> Option<u32> {
+    if let Ok(report_data) = serde_json::from_str::<serde_json::Value>(output_data) {
+        // Try different paths where tests count might be
+        if let Some(count) =
+            report_data["technical_appendices"]["raw_data_summary"]["total_tests"].as_u64()
+        {
+            return Some(count as u32);
+        }
+        // Check embedded robustness data
+        if let Some(robustness_json) =
+            report_data["technical_appendices"]["raw_data_summary"]["robustness_data_json"].as_str()
+        {
+            if let Ok(robustness_data) = serde_json::from_str::<serde_json::Value>(robustness_json)
+            {
+                if let Some(count) = robustness_data["tests_analyzed"].as_u64() {
+                    return Some(count as u32);
+                }
+            }
+        }
+    }
+    Some(5) // Default fallback
 }

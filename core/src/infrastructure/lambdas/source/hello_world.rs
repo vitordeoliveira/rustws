@@ -17,7 +17,7 @@ use std::collections::HashMap;
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct HelloWorld {
     pub text: String,
-    pub count: isize
+    pub count: isize,
 }
 
 /// Example JSONPlaceholder post structure for HTTP demo
@@ -31,7 +31,7 @@ pub struct Post {
 
 // ===== LAMBDA IMPLEMENTATION USING ATTRIBUTE MACRO =====
 
-#[lambda_fn(features = [http])]
+#[lambda_fn(features = [env, http])]
 fn hello_world_lambda(input: HelloWorld) -> HelloWorld {
     // 🎉 FULL IDE AUTOCOMPLETE WORKS HERE! 🎉
 
@@ -60,7 +60,7 @@ fn hello_world_lambda(input: HelloWorld) -> HelloWorld {
                         "Processed: {} (original count: {}). Got post '{}' by user {}!",
                         input.text, input.count, post.title, post.userId
                     ),
-                    count: input.count + 10
+                    count: input.count + 10,
                 },
                 Err(_) => HelloWorld {
                     text: format!(
@@ -69,7 +69,7 @@ fn hello_world_lambda(input: HelloWorld) -> HelloWorld {
                         input.count,
                         response.text()
                     ),
-                    count: input.count + 10
+                    count: input.count + 10,
                 },
             }
         }
@@ -80,14 +80,14 @@ fn hello_world_lambda(input: HelloWorld) -> HelloWorld {
                 input.count,
                 response.status()
             ),
-            count: input.count + 10
+            count: input.count + 10,
         },
         Err(e) => HelloWorld {
             text: format!(
                 "Processed: {} (original count: {}). HTTP request error: {}",
                 input.text, input.count, e
             ),
-            count: input.count + 10
+            count: input.count + 10,
         },
     }
 }
