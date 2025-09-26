@@ -4,7 +4,7 @@
 //! organized into focused sub-modules for better maintainability.
 
 // Sub-modules
-mod metrics;
+pub mod metrics;
 mod repository;
 mod source;  // Lambda source files with auto-discovery
 mod storage;

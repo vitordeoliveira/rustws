@@ -17,6 +17,20 @@
                             Enter input parameters for the lambda function
                         </p>
                     </div>
+                    <div class="flex items-center gap-3">
+                        <!-- JSON Mode Toggle -->
+                        <div class="flex items-center">
+                            <label class="text-sm font-medium text-gray-700 mr-2">JSON Mode:</label>
+                            <button 
+                                type="button" 
+                                id="lambdaJsonModeToggle"
+                                class="relative inline-flex items-center h-6 rounded-full w-11 bg-gray-200 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
+                                onclick="toggleLambdaJsonMode()"
+                                aria-label="Toggle JSON input mode"
+                            >
+                                <span id="lambdaToggleIndicator" class="inline-block w-4 h-4 transform bg-white rounded-full transition-transform translate-x-1"></span>
+                            </button>
+                        </div>
                     <button 
                         type="button" 
                         class="text-gray-400 hover:text-gray-600 transition-colors"
@@ -83,12 +97,29 @@
                         </div>
                     </div>
 
-                    <!-- Dynamic Form Fields -->
-                    <form id="testLambdaForm" class="space-y-4">
-                        <div id="dynamicFormFields">
-                            <!-- Form fields will be generated here -->
+                    <!-- Form Mode -->
+                    <div id="lambdaFormMode">
+                        <form id="testLambdaForm" class="space-y-4">
+                            <div id="dynamicFormFields">
+                                <!-- Form fields will be generated here -->
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- JSON Mode -->
+                    <div id="lambdaJsonMode" class="hidden">
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">JSON Input</label>
+                            <textarea 
+                                id="lambdaJsonInput" 
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm font-mono focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                rows="12"
+                                placeholder='{"field": "value"}'
+                                x-autofocus
+                            ></textarea>
+                            <p class="text-xs text-gray-500 mt-1">Enter valid JSON input for the lambda function</p>
                         </div>
-                    </form>
+                    </div>
                 </div>
             </div>
 
@@ -128,6 +159,7 @@
 // Global variables for the test modal
 let currentLambdaName = null;
 let currentLambdaMetadata = null;
+let isLambdaJsonMode = false;
 
 // Open the test modal for a specific lambda
 async function openTestModal(lambdaName) {
@@ -339,12 +371,22 @@ async function executeTestLambda() {
     try {
         let inputData;
         
-        // Check if we're in error state (manual JSON input)
+        // Check which input mode we're using
         if (document.getElementById('testModalError').classList.contains('hidden')) {
-            // Generate JSON from form fields
-            inputData = generateJsonFromForm();
+            // Form is loaded successfully
+            if (isLambdaJsonMode) {
+                // Use JSON mode input
+                const jsonInput = document.getElementById('lambdaJsonInput').value.trim();
+                if (!jsonInput) {
+                    throw new Error('Please enter JSON input');
+                }
+                inputData = JSON.parse(jsonInput);
+            } else {
+                // Use form mode input
+                inputData = generateJsonFromForm();
+            }
         } else {
-            // Use manual JSON input
+            // Use manual JSON input (error state)
             const manualInput = document.getElementById('manualJsonInput').value.trim();
             if (!manualInput) {
                 throw new Error('Please enter JSON input');
@@ -440,14 +482,104 @@ function generateJsonFromForm() {
     return jsonData;
 }
 
+// Toggle between JSON and Form mode for lambda
+function toggleLambdaJsonMode() {
+    isLambdaJsonMode = !isLambdaJsonMode;
+    
+    const toggle = document.getElementById('lambdaJsonModeToggle');
+    const indicator = document.getElementById('lambdaToggleIndicator');
+    const formMode = document.getElementById('lambdaFormMode');
+    const jsonMode = document.getElementById('lambdaJsonMode');
+    const jsonInput = document.getElementById('lambdaJsonInput');
+    
+    if (isLambdaJsonMode) {
+        // Switch to JSON mode
+        toggle.classList.remove('bg-gray-200');
+        toggle.classList.add('bg-orange-600');
+        indicator.classList.remove('translate-x-1');
+        indicator.classList.add('translate-x-6');
+        
+        formMode.classList.add('hidden');
+        jsonMode.classList.remove('hidden');
+        
+        // Convert current form data to JSON
+        try {
+            const formData = generateJsonFromForm();
+            jsonInput.value = JSON.stringify(formData, null, 2);
+        } catch (error) {
+            // If form is invalid, provide empty JSON
+            jsonInput.value = '{}';
+        }
+        
+        // Focus JSON input
+        setTimeout(() => jsonInput.focus(), 100);
+    } else {
+        // Switch to Form mode
+        toggle.classList.remove('bg-orange-600');
+        toggle.classList.add('bg-gray-200');
+        indicator.classList.remove('translate-x-6');
+        indicator.classList.add('translate-x-1');
+        
+        jsonMode.classList.add('hidden');
+        formMode.classList.remove('hidden');
+        
+        // Try to populate form from JSON
+        try {
+            const jsonData = JSON.parse(jsonInput.value);
+            populateLambdaFormFromJson(jsonData);
+        } catch (error) {
+            // Invalid JSON, keep form as is
+            console.log('Could not parse JSON for form population:', error);
+        }
+    }
+}
+
+// Populate lambda form fields from JSON data
+function populateLambdaFormFromJson(jsonData) {
+    const form = document.getElementById('testLambdaForm');
+    if (!form) return;
+    
+    Object.entries(jsonData).forEach(([key, value]) => {
+        const field = form.elements[key];
+        if (field) {
+            if (field.type === 'checkbox') {
+                field.checked = Boolean(value);
+            } else if (field.classList.contains('font-mono')) {
+                // JSON field
+                field.value = typeof value === 'string' ? value : JSON.stringify(value);
+            } else {
+                field.value = value;
+            }
+        }
+    });
+}
+
 // Close the test modal
 function closeTestModal() {
     document.getElementById('testModalBackdrop').classList.add('hidden');
     currentLambdaName = null;
     currentLambdaMetadata = null;
+    isLambdaJsonMode = false;
+    
+    // Reset toggle to form mode
+    const toggle = document.getElementById('lambdaJsonModeToggle');
+    const indicator = document.getElementById('lambdaToggleIndicator');
+    toggle.classList.remove('bg-orange-600');
+    toggle.classList.add('bg-gray-200');
+    indicator.classList.remove('translate-x-6');
+    indicator.classList.add('translate-x-1');
+    
+    // Show form mode, hide JSON mode
+    document.getElementById('lambdaFormMode').classList.remove('hidden');
+    document.getElementById('lambdaJsonMode').classList.add('hidden');
     
     // Reset form
     document.getElementById('testLambdaForm').reset();
     document.getElementById('manualJsonInput').value = '';
+    
+    const jsonInput = document.getElementById('lambdaJsonInput');
+    if (jsonInput) {
+        jsonInput.value = '';
+    }
 }
 </script>

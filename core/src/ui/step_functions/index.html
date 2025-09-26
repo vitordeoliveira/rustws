@@ -382,67 +382,10 @@ function hideToast() {
     document.getElementById('toast').classList.add('hidden');
 }
 
-// Execute step function with custom JSON input
+// Execute step function with enhanced modal form
 async function executeStepFunction(workflowName) {
-    // Prompt user for JSON input
-    const inputJson = prompt(
-        `Enter JSON input for ${workflowName} workflow:\n\nExample:\n{"message": "Hello from workflow", "data": {"key": "value"}}`,
-        '{"message": "Hello from workflow", "data": {"key": "value"}}'
-    );
-    
-    // User cancelled the prompt
-    if (inputJson === null) {
-        return;
-    }
-    
-    // Validate JSON input
-    let parsedInput;
-    try {
-        parsedInput = JSON.parse(inputJson);
-    } catch (error) {
-        showToast(`❌ Invalid JSON input: ${error.message}`, false);
-        return;
-    }
-    
-    try {
-        showToast(`🚀 Executing workflow '${workflowName}' with custom input...`, true);
-        
-        const response = await fetch(`/api/workflow/execute/${workflowName}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(parsedInput)
-        });
-        
-        const result = await response.json();
-        
-        if (response.ok) {
-            if (result.Success) {
-                const { output_data, execution_time_ms, states_executed } = result.Success;
-                
-                // Show formatted JSON in modal-like display
-                showExecutionResultModal(workflowName, JSON.stringify(output_data, null, 2), output_data, JSON.stringify(output_data).length, `Success (${execution_time_ms}ms)`);
-                
-                // Also show success toast
-                showToast(`✅ Workflow '${workflowName}' executed successfully in ${execution_time_ms}ms!`, true);
-            } else if (result.Failed) {
-                const errorJson = JSON.stringify({ 
-                    error: result.Failed.error_message,
-                    failed_at_state: result.Failed.failed_at_state,
-                    execution_time_ms: result.Failed.execution_time_ms 
-                }, null, 2);
-                
-                showExecutionResultModal(workflowName, errorJson, null, errorJson.length, 'Failed');
-                showToast(`❌ Workflow execution failed: ${result.Failed.error_message}`, false);
-            }
-        } else {
-            showToast(`❌ Error executing workflow '${workflowName}'`, false);
-        }
-    } catch (error) {
-        console.error('Workflow execution error:', error);
-        showToast(`❌ Error executing workflow: ${error.message}`, false);
-    }
+    // Open the test modal with dynamic form generation
+    await openWorkflowTestModal(workflowName);
 }
 
 // Enhanced view definition
@@ -733,5 +676,8 @@ document.addEventListener('keydown', function(e) {
     }
 });
 </script>
+
+<!-- Include the workflow test modal component -->
+{% include "step_functions/test-modal.html" %}
 
 {% endblock %}

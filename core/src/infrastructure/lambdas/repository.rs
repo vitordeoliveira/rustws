@@ -181,16 +181,26 @@ impl LambdaRepository for LambdaStorage {
         let ledger = self.get_metrics_ledger_mut();
 
         match &result {
-            ExecuteLambdaResponse::Success { .. } => {
-                ledger.record_success(lambda_name.clone(), execution_time_ms);
+            ExecuteLambdaResponse::Success { output_data, .. } => {
+                ledger.record_success_with_data(
+                    lambda_name.clone(),
+                    execution_time_ms,
+                    String::from_utf8_lossy(&request.input_data).to_string(),
+                    String::from_utf8_lossy(output_data).to_string(),
+                );
                 tracing::info!(
                     lambda_name = %lambda_name,
                     execution_time_ms = execution_time_ms,
                     "Lambda execution successful"
                 );
             }
-            ExecuteLambdaResponse::Failed { .. } => {
-                ledger.record_failure(lambda_name.clone(), execution_time_ms);
+            ExecuteLambdaResponse::Failed { error_message, .. } => {
+                ledger.record_failure_with_data(
+                    lambda_name.clone(),
+                    execution_time_ms,
+                    String::from_utf8_lossy(&request.input_data).to_string(),
+                    error_message.clone(),
+                );
                 tracing::warn!(
                     lambda_name = %lambda_name,
                     execution_time_ms = execution_time_ms,
@@ -780,7 +790,10 @@ impl LambdaRepository for LambdaStorage {
     }
 
     /// Get lambda metadata including input/output schemas
-    async fn get_lambda_metadata(&self, lambda_name: &str) -> AppResult<Option<crate::business_logic::lambdas::dto::LambdaMetadata>> {
+    async fn get_lambda_metadata(
+        &self,
+        lambda_name: &str,
+    ) -> AppResult<Option<crate::business_logic::lambdas::dto::LambdaMetadata>> {
         tracing::info!(
             lambda_name = %lambda_name,
             "Retrieving lambda metadata"

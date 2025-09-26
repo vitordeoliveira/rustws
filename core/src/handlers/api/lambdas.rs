@@ -15,7 +15,7 @@ use crate::{
         UpdateLambdaResponse,
     },
     error_handling::types::AppResult,
-    infrastructure::lambdas::{LambdaStorage, LambdasMetrics},
+    infrastructure::lambdas::{LambdaStorage, LambdasMetrics, metrics::LambdaExecutionEntry},
     state::AppState,
 };
 
@@ -415,9 +415,10 @@ pub async fn get_lambda_metadata_handler(
                 lambda_name = %lambda_name,
                 "Lambda metadata not found - lambda may not be compiled or may not support metadata"
             );
-            Err(crate::error_handling::types::AppError::not_found(
-                &format!("Lambda '{}' not found or metadata not available", lambda_name),
-            ))
+            Err(crate::error_handling::types::AppError::not_found(&format!(
+                "Lambda '{}' not found or metadata not available",
+                lambda_name
+            )))
         }
         Err(e) => {
             error!(
@@ -426,6 +427,44 @@ pub async fn get_lambda_metadata_handler(
                 "Lambda metadata retrieval service error"
             );
             Err(e)
+        }
+    }
+}
+
+/// Get lambda execution result by execution ID
+#[instrument(
+    skip_all,
+    fields(
+        handler = "get_execution_result",
+        operation = "api_get_execution_result",
+        execution_id = %execution_id,
+    )
+)]
+pub async fn get_execution_result_handler(
+    _auth_session: AuthSession<AuthBackend>,
+    Path(execution_id): Path<String>,
+) -> AppResult<Json<LambdaExecutionEntry>> {
+    info!(execution_id = %execution_id, "Getting lambda execution result");
+
+    // Access storage directly to get execution data
+    let lambda_storage = LambdaStorage::new();
+    let ledger = lambda_storage.get_metrics_ledger();
+
+    match ledger.find_execution_by_id(&execution_id) {
+        Some(execution) => {
+            info!(
+                execution_id = %execution_id,
+                lambda_name = %execution.lambda_name,
+                "Execution result found"
+            );
+            Ok(Json(execution.clone()))
+        }
+        None => {
+            warn!(execution_id = %execution_id, "Execution result not found");
+            Err(crate::error_handling::types::AppError::not_found(&format!(
+                "Execution with ID '{}' not found",
+                execution_id
+            )))
         }
     }
 }

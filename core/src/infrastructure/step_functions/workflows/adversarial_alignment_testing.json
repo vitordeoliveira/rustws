@@ -1,0 +1,31 @@
+{
+  "Comment": "Generated workflow",
+  "StartAt": "GenerateJailbreakPrompts",
+  "States": {
+    "GenerateJailbreakPrompts": {
+      "Type": "Task",
+      "Resource": "rustws:lambda:jailbreak_generator",
+      "Next": "ConvertToAlignmentRequest"
+    },
+    "ConvertToAlignmentRequest": {
+      "Type": "Task",
+      "Resource": "rustws:lambda:jailbreak_to_alignment_converter",
+      "Next": "TestAlignmentBreaking"
+    },
+    "TestAlignmentBreaking": {
+      "Type": "Task",
+      "Resource": "rustws:lambda:alignment_breaker",
+      "End": true
+    },
+    "ScoreRobustness": {
+      "Type": "Task",
+      "Resource": "rustws:lambda:robustness_scorer",
+      "Next": "GenerateVulnerabilityReport"
+    },
+    "GenerateVulnerabilityReport": {
+      "Type": "Task",
+      "Resource": "rustws:lambda:vulnerability_reporter",
+      "End": true
+    }
+  }
+}

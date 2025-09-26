@@ -1,0 +1,727 @@
+<!-- Workflow Test Modal - Progressive Enhancement with Schema-Based Form Generation -->
+<!-- This modal analyzes workflow's first step and generates form like lambda test modal -->
+
+<!-- Modal Backdrop -->
+<div id="workflowTestModalBackdrop" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50" onclick="closeWorkflowTestModal()">
+    <!-- Modal Container -->
+    <div class="flex items-center justify-center min-h-screen p-4" onclick="event.stopPropagation()">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900" id="workflowTestModalTitle">
+                            Test Workflow
+                        </h3>
+                        <p class="text-sm text-gray-600 mt-1" id="workflowTestModalSubtitle">
+                            Enter input parameters for the workflow's first step
+                        </p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <!-- JSON Mode Toggle -->
+                        <div class="flex items-center">
+                            <label class="text-sm font-medium text-gray-700 mr-2">JSON Mode:</label>
+                            <button 
+                                type="button" 
+                                id="workflowJsonModeToggle"
+                                class="relative inline-flex items-center h-6 rounded-full w-11 bg-gray-200 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                                onclick="toggleWorkflowJsonMode()"
+                                aria-label="Toggle JSON input mode"
+                            >
+                                <span id="workflowToggleIndicator" class="inline-block w-4 h-4 transform bg-white rounded-full transition-transform translate-x-1"></span>
+                            </button>
+                        </div>
+                    <button 
+                        type="button" 
+                        class="text-gray-400 hover:text-gray-600 transition-colors"
+                        onclick="closeWorkflowTestModal()"
+                        aria-label="Close modal"
+                    >
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="px-6 py-4 overflow-y-auto max-h-[60vh]">
+                
+                <!-- Loading State -->
+                <div id="workflowTestModalLoading" class="text-center py-8">
+                    <div class="inline-flex items-center">
+                        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Loading workflow schema...
+                    </div>
+                </div>
+
+                <!-- Error State -->
+                <div id="workflowTestModalError" class="hidden text-center py-8">
+                    <div class="text-red-600 mb-4">
+                        <svg class="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                        </svg>
+                    </div>
+                    <h4 class="text-lg font-medium text-gray-900 mb-2">Unable to Load Schema</h4>
+                    <p class="text-gray-600 mb-4" id="workflowTestModalErrorMessage">
+                        The workflow's first step schema could not be loaded. This may be because the workflow definition is invalid or the first step's lambda is not available.
+                    </p>
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <h5 class="font-medium text-gray-900 mb-2">Manual JSON Input</h5>
+                        <p class="text-sm text-gray-600 mb-3">You can still test the workflow by providing JSON input manually:</p>
+                        <textarea 
+                            id="workflowManualJsonInput" 
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm font-mono"
+                            rows="4"
+                            placeholder='{"example": "value"}'
+                        ></textarea>
+                    </div>
+                </div>
+
+                <!-- Form State -->
+                <div id="workflowTestModalForm" class="hidden">
+                    <!-- Schema Info -->
+                    <div class="mb-6 p-4 bg-indigo-50 rounded-lg border border-indigo-200">
+                        <div class="flex items-start">
+                            <svg class="w-5 h-5 text-indigo-600 mt-0.5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <div>
+                                <h4 class="text-sm font-medium text-indigo-900 mb-1">First Step Input Schema</h4>
+                                <p class="text-sm text-indigo-700" id="workflowSchemaInfo">
+                                    This form is generated based on the workflow's first step input schema.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Form Mode -->
+                    <div id="workflowFormMode">
+                        <form id="testWorkflowForm" class="space-y-4">
+                            <div id="dynamicWorkflowFormFields">
+                                <!-- Form fields will be generated here -->
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- JSON Mode -->
+                    <div id="workflowJsonMode" class="hidden">
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">JSON Input</label>
+                            <textarea 
+                                id="workflowJsonInput" 
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                rows="12"
+                                placeholder='{"target_topic": "content_policy", "strategy": "Roleplay", "variant_count": 3, "severity_level": 5}'
+                                x-autofocus
+                            ></textarea>
+                            <p class="text-xs text-gray-500 mt-1">Enter valid JSON input for the workflow's first step</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-4 border-t border-gray-200 bg-gray-50">
+                <div class="flex flex-col sm:flex-row justify-end gap-3">
+                    <button 
+                        type="button" 
+                        class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors"
+                        onclick="closeWorkflowTestModal()"
+                    >
+                        Cancel
+                    </button>
+                    <button 
+                        type="button" 
+                        id="testWorkflowButton"
+                        class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        onclick="executeTestWorkflow()"
+                        disabled
+                    >
+                        <span id="testWorkflowButtonText">Execute Workflow</span>
+                        <span id="testWorkflowButtonLoading" class="hidden">
+                            <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Testing...
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Global variables for the workflow test modal
+let currentWorkflowName = null;
+let currentFirstStepLambdaMetadata = null;
+let isWorkflowJsonMode = false;
+
+// Open the workflow test modal for a specific workflow
+async function openWorkflowTestModal(workflowName) {
+    currentWorkflowName = workflowName;
+    
+    // Update modal title
+    document.getElementById('workflowTestModalTitle').textContent = `Test Workflow: ${workflowName}`;
+    document.getElementById('workflowTestModalSubtitle').textContent = 'Enter input parameters for the workflow\'s first step';
+    
+    // Show modal
+    document.getElementById('workflowTestModalBackdrop').classList.remove('hidden');
+    
+    // Show loading state
+    document.getElementById('workflowTestModalLoading').classList.remove('hidden');
+    document.getElementById('workflowTestModalError').classList.add('hidden');
+    document.getElementById('workflowTestModalForm').classList.add('hidden');
+    
+    // Disable test button
+    document.getElementById('testWorkflowButton').disabled = true;
+    
+    try {
+        // Step 1: Get workflow definition to find first step
+        const workflowDefinition = await getWorkflowDefinition(workflowName);
+        
+        if (!workflowDefinition) {
+            throw new Error('Unable to load workflow definition');
+        }
+        
+        // Step 2: Extract first step lambda name
+        const firstStepLambdaName = extractFirstStepLambdaName(workflowDefinition);
+        
+        if (!firstStepLambdaName) {
+            throw new Error('Unable to determine first step lambda from workflow definition');
+        }
+        
+        // Step 3: Get first step lambda metadata (same as lambda modal)
+        const response = await fetch(`/api/lambda/metadata/${firstStepLambdaName}`);
+        
+        if (response.ok) {
+            currentFirstStepLambdaMetadata = await response.json();
+            generateFormFromLambdaSchema(currentFirstStepLambdaMetadata, firstStepLambdaName);
+        } else {
+            showWorkflowErrorState(`Unable to load schema for first step lambda '${firstStepLambdaName}'. The lambda may not be compiled or may not support metadata.`);
+        }
+    } catch (error) {
+        console.error('Error loading workflow schema:', error);
+        showWorkflowErrorState(`Error loading workflow schema: ${error.message}`);
+    }
+}
+
+// Get workflow definition using multiple fallback methods
+async function getWorkflowDefinition(workflowName) {
+    // Method 1: Try API endpoint for stored workflows
+    try {
+        const response = await fetch(`/api/workflow/definition/${encodeURIComponent(workflowName)}`);
+        if (response.ok) {
+            const workflowData = await response.json();
+            return JSON.parse(workflowData.definition);
+        }
+    } catch (apiError) {
+        console.log('API method failed, trying static file method:', apiError);
+    }
+    
+    // Method 2: Try static workflow file
+    try {
+        const staticResponse = await fetch(`/static/workflows/${workflowName}.json`);
+        if (staticResponse.ok) {
+            return await staticResponse.json();
+        }
+    } catch (staticError) {
+        console.log('Static file method failed:', staticError);
+    }
+    
+    // Method 3: Known workflow definitions (fallback)
+    return getKnownWorkflowDefinition(workflowName);
+}
+
+// Extract first step lambda name from workflow definition
+function extractFirstStepLambdaName(workflowDefinition) {
+    try {
+        const startAt = workflowDefinition.StartAt;
+        const firstState = workflowDefinition.States[startAt];
+        
+        if (!firstState || firstState.Type !== 'Task') {
+            throw new Error('First step is not a Task or is missing');
+        }
+        
+        // Extract lambda name from resource (format: rustws:lambda:lambda_name)
+        const resourceMatch = firstState.Resource.match(/^rustws:lambda:(.+)$/);
+        if (!resourceMatch) {
+            throw new Error('Invalid resource format in first step');
+        }
+        
+        return resourceMatch[1];
+    } catch (error) {
+        console.error('Error extracting first step lambda name:', error);
+        return null;
+    }
+}
+
+// Generate form from lambda metadata schema (identical to lambda modal logic)
+function generateFormFromLambdaSchema(metadata, lambdaName) {
+    const schema = metadata.input_schema;
+    const formFieldsContainer = document.getElementById('dynamicWorkflowFormFields');
+    
+    // Clear existing fields
+    formFieldsContainer.innerHTML = '';
+    
+    // Update schema info
+    document.getElementById('workflowSchemaInfo').textContent = 
+        `First step: ${lambdaName} | Input type: ${metadata.input_type} | Features: ${getFeatureString(metadata.features)}`;
+    
+    // Generate form fields based on schema properties (same as lambda modal)
+    if (schema.properties) {
+        Object.entries(schema.properties).forEach(([fieldName, fieldSchema]) => {
+            const fieldElement = createWorkflowFormField(fieldName, fieldSchema);
+            formFieldsContainer.appendChild(fieldElement);
+        });
+    } else {
+        // If no properties, show a generic JSON input
+        const genericField = document.createElement('div');
+        genericField.className = 'space-y-2';
+        genericField.innerHTML = `
+            <label class="block text-sm font-medium text-gray-700">JSON Input</label>
+            <textarea 
+                name="json_input" 
+                class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm font-mono"
+                rows="6"
+                placeholder='{"field": "value"}'
+                required
+                x-autofocus
+            ></textarea>
+            <p class="text-xs text-gray-500">Enter valid JSON input for the workflow's first step</p>
+        `;
+        formFieldsContainer.appendChild(genericField);
+    }
+    
+    // Show form and enable test button
+    document.getElementById('workflowTestModalLoading').classList.add('hidden');
+    document.getElementById('workflowTestModalError').classList.add('hidden');
+    document.getElementById('workflowTestModalForm').classList.remove('hidden');
+    document.getElementById('testWorkflowButton').disabled = false;
+}
+
+// Create a form field based on schema (identical to lambda modal logic)
+function createWorkflowFormField(fieldName, fieldSchema) {
+    const fieldDiv = document.createElement('div');
+    fieldDiv.className = 'space-y-2';
+    
+    // Field label
+    const label = document.createElement('label');
+    label.className = 'block text-sm font-medium text-gray-700';
+    label.textContent = fieldName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    if (fieldSchema.description) {
+        label.title = fieldSchema.description;
+    }
+    fieldDiv.appendChild(label);
+    
+    // Field input based on type
+    let inputElement;
+    const fieldType = fieldSchema.type || 'string';
+    
+    switch (fieldType) {
+        case 'string':
+            if (fieldSchema.enum) {
+                // Enum field - use select
+                inputElement = document.createElement('select');
+                inputElement.name = fieldName;
+                inputElement.className = 'w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500';
+                
+                // Add options
+                fieldSchema.enum.forEach(option => {
+                    const optionElement = document.createElement('option');
+                    optionElement.value = option;
+                    optionElement.textContent = option;
+                    inputElement.appendChild(optionElement);
+                });
+            } else {
+                // String field - use textarea for long text, input for short
+                const isLongText = fieldSchema.maxLength && fieldSchema.maxLength > 100;
+                inputElement = document.createElement(isLongText ? 'textarea' : 'input');
+                inputElement.name = fieldName;
+                inputElement.className = 'w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500';
+                
+                if (isLongText) {
+                    inputElement.rows = 4;
+                } else {
+                    inputElement.type = 'text';
+                }
+            }
+            break;
+            
+        case 'number':
+        case 'integer':
+            inputElement = document.createElement('input');
+            inputElement.name = fieldName;
+            inputElement.type = 'number';
+            inputElement.className = 'w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500';
+            
+            if (fieldSchema.minimum !== undefined) {
+                inputElement.min = fieldSchema.minimum;
+            }
+            if (fieldSchema.maximum !== undefined) {
+                inputElement.max = fieldSchema.maximum;
+            }
+            break;
+            
+        case 'boolean':
+            inputElement = document.createElement('input');
+            inputElement.name = fieldName;
+            inputElement.type = 'checkbox';
+            inputElement.className = 'h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded';
+            break;
+            
+        default:
+            // Default to textarea for complex types
+            inputElement = document.createElement('textarea');
+            inputElement.name = fieldName;
+            inputElement.className = 'w-full px-3 py-2 border border-gray-300 rounded-md text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500';
+            inputElement.rows = 3;
+            inputElement.placeholder = 'Enter JSON value...';
+    }
+    
+    // Add required attribute
+    if (fieldSchema.required || (fieldSchema.type && !fieldSchema.type.includes('null'))) {
+        inputElement.required = true;
+    }
+    
+    // Add default value
+    if (fieldSchema.default !== undefined) {
+        if (inputElement.type === 'checkbox') {
+            inputElement.checked = fieldSchema.default;
+        } else {
+            inputElement.value = fieldSchema.default;
+        }
+    }
+    
+    // Add autofocus to first field
+    if (fieldName === 'target_topic' || fieldName === 'message' || fieldName === Object.keys(currentFirstStepLambdaMetadata.input_schema.properties || {})[0]) {
+        inputElement.setAttribute('x-autofocus', '');
+    }
+    
+    fieldDiv.appendChild(inputElement);
+    
+    // Add help text
+    if (fieldSchema.description) {
+        const helpText = document.createElement('p');
+        helpText.className = 'text-xs text-gray-500';
+        helpText.textContent = fieldSchema.description;
+        fieldDiv.appendChild(helpText);
+    }
+    
+    return fieldDiv;
+}
+
+// Get feature string for display (same as lambda modal)
+function getFeatureString(features) {
+    const featureList = [];
+    if (features.http_enabled) featureList.push('HTTP');
+    if (features.env_enabled) featureList.push('ENV');
+    return featureList.length > 0 ? featureList.join(', ') : 'None';
+}
+
+// Show error state in the modal
+function showWorkflowErrorState(message) {
+    document.getElementById('workflowTestModalLoading').classList.add('hidden');
+    document.getElementById('workflowTestModalError').classList.remove('hidden');
+    document.getElementById('workflowTestModalForm').classList.add('hidden');
+    document.getElementById('workflowTestModalErrorMessage').textContent = message;
+    
+    // Enable test button for manual JSON input
+    document.getElementById('testWorkflowButton').disabled = false;
+}
+
+// Execute the workflow test
+async function executeTestWorkflow() {
+    if (!currentWorkflowName) {
+        showToast('❌ No workflow selected', false);
+        return;
+    }
+    
+    const button = document.getElementById('testWorkflowButton');
+    const buttonText = document.getElementById('testWorkflowButtonText');
+    const buttonLoading = document.getElementById('testWorkflowButtonLoading');
+    
+    // Show loading state
+    button.disabled = true;
+    buttonText.classList.add('hidden');
+    buttonLoading.classList.remove('hidden');
+    
+    try {
+        let inputData;
+        
+        // Check which input mode we're using
+        if (document.getElementById('workflowTestModalError').classList.contains('hidden')) {
+            // Form is loaded successfully
+            if (isWorkflowJsonMode) {
+                // Use JSON mode input
+                const jsonInput = document.getElementById('workflowJsonInput').value.trim();
+                if (!jsonInput) {
+                    throw new Error('Please enter JSON input');
+                }
+                inputData = JSON.parse(jsonInput);
+            } else {
+                // Use form mode input
+                inputData = generateJsonFromWorkflowForm();
+            }
+        } else {
+            // Use manual JSON input (error state)
+            const manualInput = document.getElementById('workflowManualJsonInput').value.trim();
+            if (!manualInput) {
+                throw new Error('Please enter JSON input');
+            }
+            inputData = JSON.parse(manualInput);
+        }
+        
+        showToast(`🚀 Executing workflow '${currentWorkflowName}' with input...`, true);
+        
+        // Execute the workflow
+        const response = await fetch(`/api/workflow/execute/${encodeURIComponent(currentWorkflowName)}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(inputData)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            if (result.Success) {
+                const { output_data, execution_time_ms } = result.Success;
+                
+                // Close the test modal
+                closeWorkflowTestModal();
+                
+                // Show formatted JSON in modal-like display
+                showExecutionResultModal(currentWorkflowName, JSON.stringify(output_data, null, 2), output_data, JSON.stringify(output_data).length, `Success (${execution_time_ms}ms)`);
+                
+                // Also show success toast
+                showToast(`✅ Workflow '${currentWorkflowName}' executed successfully in ${execution_time_ms}ms!`, true);
+            } else if (result.Failed) {
+                const errorJson = JSON.stringify({ 
+                    error: result.Failed.error_message,
+                    failed_at_state: result.Failed.failed_at_state,
+                    execution_time_ms: result.Failed.execution_time_ms 
+                }, null, 2);
+                
+                closeWorkflowTestModal();
+                showExecutionResultModal(currentWorkflowName, errorJson, null, errorJson.length, 'Failed');
+                showToast(`❌ Workflow execution failed: ${result.Failed.error_message}`, false);
+            }
+        } else {
+            showToast(`❌ Error executing workflow '${currentWorkflowName}': ${result.message || 'Unknown error'}`, false);
+        }
+        
+    } catch (error) {
+        console.error('Error executing workflow:', error);
+        showToast(`❌ Error: ${error.message}`, false);
+    } finally {
+        // Reset button state
+        button.disabled = false;
+        buttonText.classList.remove('hidden');
+        buttonLoading.classList.add('hidden');
+    }
+}
+
+// Generate JSON from form fields (identical to lambda modal logic)
+function generateJsonFromWorkflowForm() {
+    const form = document.getElementById('testWorkflowForm');
+    const formData = new FormData(form);
+    const jsonData = {};
+    
+    for (const [key, value] of formData.entries()) {
+        // Handle different input types
+        const inputElement = form.elements[key];
+        
+        if (inputElement.type === 'checkbox') {
+            jsonData[key] = inputElement.checked;
+        } else if (inputElement.type === 'number') {
+            jsonData[key] = value ? Number(value) : null;
+        } else if (inputElement.classList.contains('font-mono')) {
+            // This is a JSON field, try to parse it
+            try {
+                jsonData[key] = value ? JSON.parse(value) : null;
+            } catch {
+                jsonData[key] = value;
+            }
+        } else {
+            jsonData[key] = value;
+        }
+    }
+    
+    return jsonData;
+}
+
+// Get known workflow definitions (fallback for static workflows)
+function getKnownWorkflowDefinition(workflowName) {
+    const knownWorkflows = {
+        'adversarial_alignment_testing': {
+            "Comment": "Generated workflow",
+            "StartAt": "GenerateJailbreakPrompts",
+            "States": {
+                "GenerateJailbreakPrompts": {
+                    "Type": "Task",
+                    "Resource": "rustws:lambda:jailbreak_generator",
+                    "Next": "TestAlignmentBreaking"
+                },
+                "TestAlignmentBreaking": {
+                    "Type": "Task", 
+                    "Resource": "rustws:lambda:alignment_breaker",
+                    "Next": "GenerateVulnerabilityReport"
+                },
+                "GenerateVulnerabilityReport": {
+                    "Type": "Task",
+                    "Resource": "rustws:lambda:vulnerability_reporter",
+                    "End": true
+                }
+            }
+        },
+        'hello_world_2': {
+            "Comment": "Generated workflow",
+            "StartAt": "task_1758807422884",
+            "States": {
+                "task_1758807422884": {
+                    "Type": "Task",
+                    "Resource": "rustws:lambda:hello_without_http_request",
+                    "Next": "task_1758807426236"
+                },
+                "task_1758807426236": {
+                    "Type": "Task",
+                    "Resource": "rustws:lambda:hello_without_http_request",
+                    "End": true
+                }
+            }
+        }
+    };
+    
+    return knownWorkflows[workflowName] || null;
+}
+
+// Toggle between JSON and Form mode for workflow
+function toggleWorkflowJsonMode() {
+    isWorkflowJsonMode = !isWorkflowJsonMode;
+    
+    const toggle = document.getElementById('workflowJsonModeToggle');
+    const indicator = document.getElementById('workflowToggleIndicator');
+    const formMode = document.getElementById('workflowFormMode');
+    const jsonMode = document.getElementById('workflowJsonMode');
+    const jsonInput = document.getElementById('workflowJsonInput');
+    
+    if (isWorkflowJsonMode) {
+        // Switch to JSON mode
+        toggle.classList.remove('bg-gray-200');
+        toggle.classList.add('bg-indigo-600');
+        indicator.classList.remove('translate-x-1');
+        indicator.classList.add('translate-x-6');
+        
+        formMode.classList.add('hidden');
+        jsonMode.classList.remove('hidden');
+        
+        // Convert current form data to JSON
+        try {
+            const formData = generateJsonFromWorkflowForm();
+            jsonInput.value = JSON.stringify(formData, null, 2);
+        } catch (error) {
+            // If form is invalid, provide example JSON
+            if (currentWorkflowName === 'adversarial_alignment_testing') {
+                jsonInput.value = `{
+  "target_topic": "content_policy",
+  "strategy": "Roleplay",
+  "variant_count": 3,
+  "severity_level": 5
+}`;
+            } else {
+                jsonInput.value = '{}';
+            }
+        }
+        
+        // Focus JSON input
+        setTimeout(() => jsonInput.focus(), 100);
+    } else {
+        // Switch to Form mode
+        toggle.classList.remove('bg-indigo-600');
+        toggle.classList.add('bg-gray-200');
+        indicator.classList.remove('translate-x-6');
+        indicator.classList.add('translate-x-1');
+        
+        jsonMode.classList.add('hidden');
+        formMode.classList.remove('hidden');
+        
+        // Try to populate form from JSON
+        try {
+            const jsonData = JSON.parse(jsonInput.value);
+            populateWorkflowFormFromJson(jsonData);
+        } catch (error) {
+            // Invalid JSON, keep form as is
+            console.log('Could not parse JSON for form population:', error);
+        }
+    }
+}
+
+// Populate workflow form fields from JSON data
+function populateWorkflowFormFromJson(jsonData) {
+    const form = document.getElementById('testWorkflowForm');
+    if (!form) return;
+    
+    Object.entries(jsonData).forEach(([key, value]) => {
+        const field = form.elements[key];
+        if (field) {
+            if (field.type === 'checkbox') {
+                field.checked = Boolean(value);
+            } else if (field.classList.contains('font-mono')) {
+                // JSON field
+                field.value = typeof value === 'string' ? value : JSON.stringify(value);
+            } else {
+                field.value = value;
+            }
+        }
+    });
+}
+
+// Close the workflow test modal
+function closeWorkflowTestModal() {
+    document.getElementById('workflowTestModalBackdrop').classList.add('hidden');
+    currentWorkflowName = null;
+    currentFirstStepLambdaMetadata = null;
+    isWorkflowJsonMode = false;
+    
+    // Reset toggle to form mode
+    const toggle = document.getElementById('workflowJsonModeToggle');
+    const indicator = document.getElementById('workflowToggleIndicator');
+    toggle.classList.remove('bg-indigo-600');
+    toggle.classList.add('bg-gray-200');
+    indicator.classList.remove('translate-x-6');
+    indicator.classList.add('translate-x-1');
+    
+    // Show form mode, hide JSON mode
+    document.getElementById('workflowFormMode').classList.remove('hidden');
+    document.getElementById('workflowJsonMode').classList.add('hidden');
+    
+    // Reset form
+    const form = document.getElementById('testWorkflowForm');
+    if (form) {
+        form.reset();
+    }
+    
+    const jsonInput = document.getElementById('workflowJsonInput');
+    if (jsonInput) {
+        jsonInput.value = '';
+    }
+    
+    const manualInput = document.getElementById('workflowManualJsonInput');
+    if (manualInput) {
+        manualInput.value = '';
+    }
+    
+    // Reset loading states
+    document.getElementById('workflowTestModalLoading').classList.remove('hidden');
+    document.getElementById('workflowTestModalError').classList.add('hidden');
+    document.getElementById('workflowTestModalForm').classList.add('hidden');
+    document.getElementById('testWorkflowButton').disabled = true;
+}
+</script>

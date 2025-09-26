@@ -7,6 +7,8 @@
 /// Individual lambda execution record (ledger entry)
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct LambdaExecutionEntry {
+    /// Unique identifier for this execution
+    pub execution_id: String,
     /// Name of the executed lambda
     pub lambda_name: String,
     /// Execution time in milliseconds
@@ -15,6 +17,12 @@ pub struct LambdaExecutionEntry {
     pub status: ExecutionStatus,
     /// When the execution occurred
     pub timestamp: chrono::DateTime<chrono::Utc>,
+    /// Input data provided to the lambda (JSON string)
+    pub input_data: Option<String>,
+    /// Output data returned by the lambda (JSON string)
+    pub output_data: Option<String>,
+    /// Error message if execution failed
+    pub error_message: Option<String>,
 }
 
 /// Execution status for ledger entries
@@ -52,10 +60,35 @@ impl LambdaExecutionEntry {
     /// Create a new execution entry
     pub fn new(lambda_name: String, execution_time_ms: u64, status: ExecutionStatus) -> Self {
         Self {
+            execution_id: uuid::Uuid::new_v4().to_string(),
             lambda_name,
             execution_time_ms,
             status,
             timestamp: chrono::Utc::now(),
+            input_data: None,
+            output_data: None,
+            error_message: None,
+        }
+    }
+
+    /// Create a new execution entry with complete data
+    pub fn new_with_data(
+        lambda_name: String,
+        execution_time_ms: u64,
+        status: ExecutionStatus,
+        input_data: Option<String>,
+        output_data: Option<String>,
+        error_message: Option<String>,
+    ) -> Self {
+        Self {
+            execution_id: uuid::Uuid::new_v4().to_string(),
+            lambda_name,
+            execution_time_ms,
+            status,
+            timestamp: chrono::Utc::now(),
+            input_data,
+            output_data,
+            error_message,
         }
     }
 
@@ -94,6 +127,47 @@ impl LambdaMetricsLedger {
             execution_time_ms,
             ExecutionStatus::Failed,
         ));
+    }
+
+    /// Record a successful execution with input/output data
+    pub fn record_success_with_data(
+        &mut self,
+        lambda_name: String,
+        execution_time_ms: u64,
+        input_data: String,
+        output_data: String,
+    ) {
+        self.add_execution(LambdaExecutionEntry::new_with_data(
+            lambda_name,
+            execution_time_ms,
+            ExecutionStatus::Success,
+            Some(input_data),
+            Some(output_data),
+            None,
+        ));
+    }
+
+    /// Record a failed execution with input and error data
+    pub fn record_failure_with_data(
+        &mut self,
+        lambda_name: String,
+        execution_time_ms: u64,
+        input_data: String,
+        error_message: String,
+    ) {
+        self.add_execution(LambdaExecutionEntry::new_with_data(
+            lambda_name,
+            execution_time_ms,
+            ExecutionStatus::Failed,
+            Some(input_data),
+            None,
+            Some(error_message),
+        ));
+    }
+
+    /// Find execution entry by ID
+    pub fn find_execution_by_id(&self, execution_id: &str) -> Option<&LambdaExecutionEntry> {
+        self.entries.iter().find(|e| e.execution_id == execution_id)
     }
 
     /// Calculate aggregated metrics from all entries

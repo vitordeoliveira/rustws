@@ -1,0 +1,331 @@
+<!-- Lambda Execution Results Modal -->
+<div id="executionResultsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 hidden">
+    <div class="relative top-20 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white">
+        <!-- Modal Header -->
+        <div class="flex items-center justify-between pb-4 border-b border-gray-200">
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900" id="executionModalTitle">
+                    Execution Result
+                </h3>
+                <p class="text-sm text-gray-600 mt-1" id="executionModalSubtitle">
+                    View input, output, and execution details
+                </p>
+            </div>
+            <button type="button" 
+                    class="text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                    onclick="closeExecutionResultsModal()">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Modal Content -->
+        <div class="mt-6">
+            <!-- Loading State -->
+            <div id="executionModalLoading" class="text-center py-8 hidden">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                <p class="mt-2 text-gray-600">Loading execution details...</p>
+            </div>
+
+            <!-- Error State -->
+            <div id="executionModalError" class="text-center py-8 hidden">
+                <div class="text-red-600 mb-4">
+                    <svg class="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                    </svg>
+                </div>
+                <h4 class="text-lg font-medium text-gray-900 mb-2">Error Loading Execution</h4>
+                <p class="text-gray-600" id="executionModalErrorMessage">
+                    Unable to load execution details. Please try again.
+                </p>
+            </div>
+
+            <!-- Execution Details -->
+            <div id="executionModalContent" class="hidden">
+                <!-- Execution Summary -->
+                <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                            <label class="text-sm font-medium text-gray-500">Execution ID</label>
+                            <p class="text-sm font-mono text-gray-900" id="executionId">-</p>
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium text-gray-500">Lambda</label>
+                            <p class="text-sm text-gray-900" id="executionLambdaName">-</p>
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium text-gray-500">Status</label>
+                            <span id="executionStatus" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
+                                -
+                            </span>
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium text-gray-500">Duration</label>
+                            <p class="text-sm font-mono text-gray-900" id="executionDuration">-</p>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <label class="text-sm font-medium text-gray-500">Timestamp</label>
+                        <p class="text-sm text-gray-900" id="executionTimestamp">-</p>
+                    </div>
+                </div>
+
+                <!-- Tabbed Content -->
+                <div class="border-b border-gray-200 mb-4">
+                    <nav class="-mb-px flex space-x-8">
+                        <button type="button" 
+                                class="execution-tab active border-purple-500 text-purple-600 border-b-2 font-medium text-sm px-1 pb-3"
+                                data-tab="input">
+                            Input Data
+                        </button>
+                        <button type="button" 
+                                class="execution-tab border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 border-b-2 font-medium text-sm px-1 pb-3"
+                                data-tab="output"
+                                id="outputTab">
+                            Output Data
+                        </button>
+                        <button type="button" 
+                                class="execution-tab border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 border-b-2 font-medium text-sm px-1 pb-3"
+                                data-tab="error"
+                                id="errorTab"
+                                style="display: none;">
+                            Error Details
+                        </button>
+                    </nav>
+                </div>
+
+                <!-- Tab Content -->
+                <div class="execution-tab-content">
+                    <!-- Input Tab -->
+                    <div id="inputTabContent" class="tab-pane active">
+                        <div class="bg-gray-900 rounded-lg p-4 overflow-x-auto">
+                            <div class="flex items-center justify-between mb-2">
+                                <label class="text-sm font-medium text-gray-300">Input JSON</label>
+                                <button type="button" 
+                                        class="text-xs text-gray-400 hover:text-gray-200"
+                                        onclick="copyToClipboard('executionInputData')">
+                                    Copy
+                                </button>
+                            </div>
+                            <pre class="text-sm text-gray-100 overflow-x-auto" id="executionInputData">
+{
+  "loading": "..."
+}
+                            </pre>
+                        </div>
+                    </div>
+
+                    <!-- Output Tab -->
+                    <div id="outputTabContent" class="tab-pane hidden">
+                        <div class="bg-gray-900 rounded-lg p-4 overflow-x-auto">
+                            <div class="flex items-center justify-between mb-2">
+                                <label class="text-sm font-medium text-gray-300">Output JSON</label>
+                                <button type="button" 
+                                        class="text-xs text-gray-400 hover:text-gray-200"
+                                        onclick="copyToClipboard('executionOutputData')">
+                                    Copy
+                                </button>
+                            </div>
+                            <pre class="text-sm text-gray-100 overflow-x-auto" id="executionOutputData">
+{
+  "loading": "..."
+}
+                            </pre>
+                        </div>
+                    </div>
+
+                    <!-- Error Tab -->
+                    <div id="errorTabContent" class="tab-pane hidden">
+                        <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <label class="text-sm font-medium text-red-800">Error Message</label>
+                                <button type="button" 
+                                        class="text-xs text-red-600 hover:text-red-800"
+                                        onclick="copyToClipboard('executionErrorData')">
+                                    Copy
+                                </button>
+                            </div>
+                            <pre class="text-sm text-red-700 overflow-x-auto whitespace-pre-wrap" id="executionErrorData">
+No error information available
+                            </pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="flex items-center justify-end pt-6 border-t border-gray-200">
+            <button type="button" 
+                    class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-md transition-colors duration-200"
+                    onclick="closeExecutionResultsModal()">
+                Close
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+// Execution Results Modal Functions
+async function showExecutionResults(executionId) {
+    const modal = document.getElementById('executionResultsModal');
+    const loading = document.getElementById('executionModalLoading');
+    const error = document.getElementById('executionModalError');
+    const content = document.getElementById('executionModalContent');
+    
+    // Show modal and loading state
+    modal.classList.remove('hidden');
+    loading.classList.remove('hidden');
+    error.classList.add('hidden');
+    content.classList.add('hidden');
+    
+    // Reset to input tab
+    switchExecutionTab('input');
+    
+    try {
+        console.log('Fetching execution result for ID:', executionId);
+        
+        const response = await fetch(`/api/lambda/execution/${executionId}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const execution = await response.json();
+        console.log('Received execution data:', execution);
+        
+        // Update modal content
+        updateExecutionModalContent(execution);
+        
+        // Show content, hide loading
+        loading.classList.add('hidden');
+        content.classList.remove('hidden');
+        
+    } catch (error) {
+        console.error('Error fetching execution result:', error);
+        
+        // Show error state
+        loading.classList.add('hidden');
+        document.getElementById('executionModalErrorMessage').textContent = error.message;
+        error.classList.remove('hidden');
+    }
+}
+
+function updateExecutionModalContent(execution) {
+    // Update basic info
+    document.getElementById('executionId').textContent = execution.execution_id || '-';
+    document.getElementById('executionLambdaName').textContent = execution.lambda_name || '-';
+    document.getElementById('executionDuration').textContent = `${execution.execution_time_ms || 0}ms`;
+    document.getElementById('executionTimestamp').textContent = 
+        execution.timestamp ? new Date(execution.timestamp).toLocaleString() : '-';
+    
+    // Update status badge
+    const statusElement = document.getElementById('executionStatus');
+    if (execution.status === 'Success') {
+        statusElement.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800';
+        statusElement.innerHTML = '<span class="w-2 h-2 bg-green-400 rounded-full mr-1"></span>Success';
+    } else {
+        statusElement.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800';
+        statusElement.innerHTML = '<span class="w-2 h-2 bg-red-400 rounded-full mr-1"></span>Failed';
+    }
+    
+    // Update input data
+    const inputData = execution.input_data || '{}';
+    try {
+        const formattedInput = JSON.stringify(JSON.parse(inputData), null, 2);
+        document.getElementById('executionInputData').textContent = formattedInput;
+    } catch (e) {
+        document.getElementById('executionInputData').textContent = inputData;
+    }
+    
+    // Update output data and show/hide tabs
+    const outputTab = document.getElementById('outputTab');
+    const errorTab = document.getElementById('errorTab');
+    
+    if (execution.output_data) {
+        try {
+            const formattedOutput = JSON.stringify(JSON.parse(execution.output_data), null, 2);
+            document.getElementById('executionOutputData').textContent = formattedOutput;
+        } catch (e) {
+            document.getElementById('executionOutputData').textContent = execution.output_data;
+        }
+        outputTab.style.display = 'block';
+    } else {
+        document.getElementById('executionOutputData').textContent = 'No output data available';
+        outputTab.style.display = 'none';
+    }
+    
+    // Update error data and show/hide error tab
+    if (execution.error_message) {
+        document.getElementById('executionErrorData').textContent = execution.error_message;
+        errorTab.style.display = 'block';
+    } else {
+        errorTab.style.display = 'none';
+    }
+}
+
+function switchExecutionTab(tabName) {
+    // Update tab buttons
+    document.querySelectorAll('.execution-tab').forEach(tab => {
+        tab.classList.remove('active', 'border-purple-500', 'text-purple-600');
+        tab.classList.add('border-transparent', 'text-gray-500');
+    });
+    
+    const activeTab = document.querySelector(`[data-tab="${tabName}"]`);
+    if (activeTab) {
+        activeTab.classList.add('active', 'border-purple-500', 'text-purple-600');
+        activeTab.classList.remove('border-transparent', 'text-gray-500');
+    }
+    
+    // Update tab content
+    document.querySelectorAll('.tab-pane').forEach(pane => {
+        pane.classList.add('hidden');
+        pane.classList.remove('active');
+    });
+    
+    const activePane = document.getElementById(`${tabName}TabContent`);
+    if (activePane) {
+        activePane.classList.remove('hidden');
+        activePane.classList.add('active');
+    }
+}
+
+function closeExecutionResultsModal() {
+    document.getElementById('executionResultsModal').classList.add('hidden');
+}
+
+function copyToClipboard(elementId) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        navigator.clipboard.writeText(element.textContent).then(() => {
+            // Could add a toast notification here
+            console.log('Copied to clipboard');
+        }).catch(err => {
+            console.error('Failed to copy to clipboard:', err);
+        });
+    }
+}
+
+// Add event listeners for tab switching
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.execution-tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+            const tabName = this.getAttribute('data-tab');
+            switchExecutionTab(tabName);
+        });
+    });
+    
+    // Close modal when clicking outside
+    document.getElementById('executionResultsModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeExecutionResultsModal();
+        }
+    });
+});
+</script>
