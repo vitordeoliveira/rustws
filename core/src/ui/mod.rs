@@ -7,6 +7,7 @@ use tracing::instrument;
 
 pub mod api_gateway;
 pub mod auth;
+pub mod documentation;
 pub mod engine;
 pub mod filters;
 pub mod home;

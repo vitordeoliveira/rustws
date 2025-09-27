@@ -1,0 +1,26 @@
+{
+  "Comment": "Children's Book Generation Pipeline - AI-generated content with safety validation",
+  "StartAt": "GenerateChildrensBook",
+  "States": {
+    "GenerateChildrensBook": {
+      "Type": "Task",
+      "Resource": "rustws:lambda:ai_doc_generator_v2",
+      "Next": "ConvertBookToJudgeRequest"
+    },
+    "ConvertBookToJudgeRequest": {
+      "Type": "Task", 
+      "Resource": "rustws:lambda:ai_doc_v2_to_judge_converter",
+      "Next": "JudgeContentSafety"
+    },
+    "JudgeContentSafety": {
+      "Type": "Task",
+      "Resource": "rustws:lambda:judge", 
+      "Next": "EnforceContentApproval"
+    },
+    "EnforceContentApproval": {
+      "Type": "Task",
+      "Resource": "rustws:lambda:judge_enforcer",
+      "End": true
+    }
+  }
+}

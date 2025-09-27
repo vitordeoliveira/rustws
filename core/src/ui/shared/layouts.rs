@@ -1,11 +1,11 @@
 //! Shared layout components
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tera::Context;
 
 use crate::{auth::dto::User, error_handling::types::AppResult};
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BaseLayoutProps {
     pub title: String,
     pub description: Option<String>,

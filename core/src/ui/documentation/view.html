@@ -1,0 +1,339 @@
+{% extends "shared/base.html" %}
+
+{% block content %}
+<script src="https://unpkg.com/marked@4.3.0/marked.min.js"></script>
+<style>
+    .markdown-content {
+        line-height: 1.6;
+        color: #374151;
+    }
+    .markdown-content h1 {
+        font-size: 1.875rem;
+        font-weight: 700;
+        margin-top: 2rem;
+        margin-bottom: 1.5rem;
+        color: #111827;
+        border-bottom: 1px solid #e5e7eb;
+        padding-bottom: 0.5rem;
+    }
+    .markdown-content h2 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-top: 1.5rem;
+        margin-bottom: 1rem;
+        color: #1f2937;
+    }
+    .markdown-content h3 {
+        font-size: 1.25rem;
+        font-weight: 500;
+        margin-top: 1.25rem;
+        margin-bottom: 0.75rem;
+        color: #374151;
+    }
+    .markdown-content h4 {
+        font-size: 1.125rem;
+        font-weight: 500;
+        margin-top: 1rem;
+        margin-bottom: 0.5rem;
+        color: #374151;
+    }
+    .markdown-content h5 {
+        font-size: 1rem;
+        font-weight: 500;
+        margin-top: 0.75rem;
+        margin-bottom: 0.5rem;
+        color: #374151;
+    }
+    .markdown-content h6 {
+        font-size: 0.875rem;
+        font-weight: 500;
+        margin-top: 0.75rem;
+        margin-bottom: 0.5rem;
+        color: #374151;
+    }
+    .markdown-content p {
+        margin-bottom: 1rem;
+        color: #374151;
+        line-height: 1.625;
+    }
+    .markdown-content ul {
+        list-style-type: disc;
+        list-style-position: inside;
+        margin-bottom: 1rem;
+        color: #374151;
+    }
+    .markdown-content ol {
+        list-style-type: decimal;
+        list-style-position: inside;
+        margin-bottom: 1rem;
+        color: #374151;
+    }
+    .markdown-content li {
+        margin-bottom: 0.25rem;
+    }
+    .markdown-content code {
+        background-color: #f3f4f6;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.875rem;
+        font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+        color: #1f2937;
+    }
+    .markdown-content pre {
+        background-color: #111827;
+        color: #f9fafb;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        overflow-x: auto;
+        margin-bottom: 1.5rem;
+        font-size: 0.875rem;
+    }
+    .markdown-content pre code {
+        background-color: transparent;
+        padding: 0;
+        color: #f9fafb;
+    }
+    .markdown-content blockquote {
+        border-left: 4px solid #3b82f6;
+        padding-left: 1.5rem;
+        padding-top: 0.5rem;
+        padding-bottom: 0.5rem;
+        font-style: italic;
+        color: #4b5563;
+        margin-bottom: 1.5rem;
+        background-color: #eff6ff;
+    }
+    .markdown-content a {
+        color: #2563eb;
+        text-decoration: underline;
+    }
+    .markdown-content a:hover {
+        color: #1d4ed8;
+    }
+    .markdown-content table {
+        width: 100%;
+        border-collapse: collapse;
+        border: 1px solid #d1d5db;
+        margin-bottom: 1.5rem;
+    }
+    .markdown-content th,
+    .markdown-content td {
+        border: 1px solid #d1d5db;
+        padding: 0.75rem 1rem;
+    }
+    .markdown-content th {
+        background-color: #f3f4f6;
+        font-weight: 600;
+        text-align: left;
+    }
+    .markdown-content hr {
+        border-color: #d1d5db;
+        margin: 2rem 0;
+    }
+    .markdown-content img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+        margin-bottom: 1rem;
+    }
+</style>
+    <div class="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8">
+        <!-- Header -->
+        <div class="px-4 py-6 sm:px-0">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <a href="/documentation" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                        ← Back to Documentation
+                    </a>
+                    <h1 class="text-3xl font-bold text-gray-900 mt-2">{{ documentation.content_type | title }} Documentation</h1>
+                </div>
+                <div class="flex space-x-3">
+                    <button onclick="copyToClipboard()" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                        Copy Markdown
+                    </button>
+                    <button onclick="downloadMarkdown()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                        Download
+                    </button>
+                </div>
+            </div>
+
+            <!-- Metadata -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Target Audience</dt>
+                        <dd class="mt-1 text-sm text-gray-900 font-medium">{{ documentation.target_audience | title }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Confidence Score</dt>
+                        <dd class="mt-1">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium
+                                {% if documentation.generation_info.confidence >= 0.8 %}bg-green-100 text-green-800
+                                {% elif documentation.generation_info.confidence >= 0.6 %}bg-yellow-100 text-yellow-800
+                                {% else %}bg-red-100 text-red-800{% endif %}">
+                                {{ (documentation.generation_info.confidence * 100) | round }}%
+                            </span>
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Word Count</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ documentation.generation_info.word_count }} words</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Generated</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ generated_at | date(format="%Y-%m-%d %H:%M") }}</dd>
+                    </div>
+                </div>
+                
+                {% if documentation.generation_info.sections_included %}
+                <div class="mt-4 pt-4 border-t border-gray-200">
+                    <dt class="text-sm font-medium text-gray-500 mb-2">Sections Included</dt>
+                    <dd class="flex flex-wrap gap-2">
+                        {% for section in documentation.generation_info.sections_included %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {{ section | replace(from="_", to=" ") | title }}
+                        </span>
+                        {% endfor %}
+                    </dd>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Documentation Content -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div class="p-8">
+                <div id="markdown-content" class="markdown-content">
+                    <!-- Fallback content in case JavaScript fails -->
+                    <noscript>
+                        <pre class="whitespace-pre-wrap">{{ documentation.documentation }}</pre>
+                    </noscript>
+                    <!-- Markdown will be rendered here by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden textarea for copying -->
+    <textarea id="markdown-source" style="position: absolute; left: -9999px;">{{ documentation.documentation }}</textarea>
+
+    <script>
+        // Render markdown content
+        function renderMarkdown() {
+            const markdownSource = document.getElementById('markdown-source');
+            const markdownContent = document.getElementById('markdown-content');
+            
+            if (!markdownSource || !markdownContent) {
+                console.error('Missing markdown elements');
+                return;
+            }
+            
+            const markdownText = markdownSource.value;
+            console.log('Markdown text:', markdownText);
+            
+            if (!markdownText || markdownText.trim() === '') {
+                markdownContent.innerHTML = '<p class="text-gray-500 italic">No documentation content available.</p>';
+                return;
+            }
+            
+            // Check if marked is available
+            if (typeof marked === 'undefined') {
+                console.error('Marked library not loaded');
+                markdownContent.innerHTML = '<pre class="whitespace-pre-wrap">' + markdownText + '</pre>';
+                return;
+            }
+            
+            // Render the markdown
+            try {
+                let renderedHtml;
+                
+                // Try different marked API versions
+                if (typeof marked.parse === 'function') {
+                    // Marked v4+ API
+                    renderedHtml = marked.parse(markdownText, {
+                        breaks: true,
+                        gfm: true
+                    });
+                } else if (typeof marked === 'function') {
+                    // Marked v3 and older API
+                    marked.setOptions({
+                        breaks: true,
+                        gfm: true
+                    });
+                    renderedHtml = marked(markdownText);
+                } else {
+                    throw new Error('Unknown marked API');
+                }
+                
+                markdownContent.innerHTML = renderedHtml;
+                console.log('Markdown rendered successfully');
+            } catch (error) {
+                console.error('Error rendering markdown:', error);
+                // Fallback: show raw markdown in a formatted way
+                markdownContent.innerHTML = '<pre class="whitespace-pre-wrap bg-gray-100 p-4 rounded">' + markdownText + '</pre>';
+            }
+        }
+
+        // Try to render markdown when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            // Try immediately
+            renderMarkdown();
+            
+            // If marked isn't loaded yet, try again after a short delay
+            if (typeof marked === 'undefined') {
+                setTimeout(renderMarkdown, 100);
+                setTimeout(renderMarkdown, 500);
+                setTimeout(renderMarkdown, 1000);
+            }
+        });
+
+        function copyToClipboard() {
+            const markdownSource = document.getElementById('markdown-source');
+            markdownSource.select();
+            markdownSource.setSelectionRange(0, 99999); // For mobile devices
+            
+            try {
+                document.execCommand('copy');
+                showNotification('Markdown copied to clipboard!', 'success');
+            } catch (err) {
+                showNotification('Failed to copy to clipboard', 'error');
+            }
+        }
+
+        function downloadMarkdown() {
+            const markdownSource = document.getElementById('markdown-source').value;
+            const contentType = '{{ documentation.content_type }}';
+            const filename = `${contentType}_documentation.md`;
+            
+            const blob = new Blob([markdownSource], { type: 'text/markdown' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            showNotification('Documentation downloaded!', 'success');
+        }
+
+        function showNotification(message, type) {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 px-4 py-2 rounded-md text-white z-50 ${
+                type === 'success' ? 'bg-green-500' : 'bg-red-500'
+            }`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                document.body.removeChild(notification);
+            }, 3000);
+        }
+    </script>
+
+{% endblock %}

@@ -30,6 +30,11 @@ pub fn create_private_router() -> Router<AppState> {
         .route("/lambda", get(pages::lambda_handler))
         .route("/monitoring", get(pages::monitoring_handler))
         .route("/reports", get(pages::reports_handler))
+        .route("/documentation", get(pages::documentation_handler))
+        .route(
+            "/documentation/view/{execution_id}",
+            get(pages::documentation_view_handler),
+        )
         .route("/step-functions", get(pages::step_functions_handler))
         .route(
             "/step-functions/create",

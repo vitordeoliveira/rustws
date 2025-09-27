@@ -1,5 +1,5 @@
 {
-  "Comment": "AI Documentation Generation Pipeline with Quality Validation and Converters",
+  "Comment": "AI Documentation Generation Pipeline with Quality Validation - Returns Final Documentation",
   "StartAt": "GenerateDocumentation",
   "States": {
     "GenerateDocumentation": {
@@ -70,6 +70,11 @@
     "EnforceClarityDecision": {
       "Type": "Task",
       "Resource": "rustws:lambda:judge_enforcer",
+      "Next": "ExtractFinalDocumentation"
+    },
+    "ExtractFinalDocumentation": {
+      "Type": "Task",
+      "Resource": "rustws:lambda:extract_documentation",
       "End": true
     }
   }

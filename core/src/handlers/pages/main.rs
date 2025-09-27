@@ -26,6 +26,10 @@ use crate::{
     ui::{
         Ui,
         api_gateway::ApiGatewayPageUi,
+        documentation::{
+            AIDocumentation, DocumentationPageUi, DocumentationSummary, DocumentationViewUi,
+            GenerationInfo,
+        },
         home::HomePageUi,
         lambda::{CreateLambdaPageUi, EditLambdaPageUi, LambdaMetricsPageUi, LambdaPageUi},
         monitoring::{MonitoringPageUi, get_mock_monitoring_data},
@@ -516,8 +520,8 @@ pub async fn reports_handler(
                                 .as_u64()
                                 .unwrap_or(0) as u32,
                         overall_robustness_score: extract_robustness_score(output_data)
-                            .unwrap_or(0.0),
-                        tests_analyzed: extract_tests_analyzed(output_data).unwrap_or(0),
+                            .unwrap_or(0.0), // 0.0 indicates no real data available
+                        tests_analyzed: extract_tests_analyzed(output_data).unwrap_or(0), // 0 indicates no real data available
                     })
                 } else {
                     None
@@ -557,16 +561,38 @@ fn extract_robustness_score(output_data: &str) -> Option<f64> {
                 }
             }
         }
-        // Fallback: try to infer from security rating
-        if let Some(rating) = report_data["executive_summary"]["security_rating"].as_str() {
-            return Some(match rating {
-                "Excellent" => 95.0,
-                "Good" => 80.0,
-                "Fair" => 65.0,
-                "Poor" => 45.0,
-                "Critical" => 25.0,
-                _ => 50.0,
-            });
+        // Try to get from robustness analysis in the report
+        if let Some(robustness_data_json) = report_data
+            .get("robustness_data_json")
+            .and_then(|v| v.as_str())
+        {
+            if let Ok(robustness_data) =
+                serde_json::from_str::<serde_json::Value>(robustness_data_json)
+            {
+                if let Some(score) = robustness_data["overall_robustness_score"].as_f64() {
+                    return Some(score);
+                }
+            }
+        }
+
+        // Try to extract from executive summary key findings text
+        if let Some(key_findings) = report_data["executive_summary"]["key_findings"].as_array() {
+            for finding in key_findings {
+                if let Some(finding_str) = finding.as_str() {
+                    if finding_str.contains("Overall robustness score:") {
+                        // Extract from "Overall robustness score: 79.5/100 (Good)"
+                        if let Some(score_part) =
+                            finding_str.split("Overall robustness score: ").nth(1)
+                        {
+                            if let Some(score_str) = score_part.split("/100").next() {
+                                if let Ok(score) = score_str.parse::<f64>() {
+                                    return Some(score);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
     None
@@ -592,6 +618,159 @@ fn extract_tests_analyzed(output_data: &str) -> Option<u32> {
                 }
             }
         }
+        // Try to get from robustness analysis in the report
+        if let Some(robustness_data_json) = report_data
+            .get("robustness_data_json")
+            .and_then(|v| v.as_str())
+        {
+            if let Ok(robustness_data) =
+                serde_json::from_str::<serde_json::Value>(robustness_data_json)
+            {
+                if let Some(count) = robustness_data["tests_analyzed"].as_u64() {
+                    return Some(count as u32);
+                }
+            }
+        }
     }
-    Some(5) // Default fallback
+    None // No fallback - use only real data
+}
+
+/// Documentation page handler - displays AI-generated documentation
+#[instrument(skip_all, fields(handler = "documentation", operation = "page_render"))]
+pub async fn documentation_handler(
+    State(state): State<AppState>,
+    auth_session: AuthSession<AuthBackend>,
+    _lambda_service: LambdasService<LambdaStorage>,
+) -> AppResult<Html<String>> {
+    let user = auth_session.user.unwrap();
+
+    // Get ai_doc_generator_v2 executions from lambda metrics ledger
+    let lambda_storage = LambdaStorage::new();
+    let ledger = lambda_storage.get_metrics_ledger();
+    let documentation_list: Vec<DocumentationSummary> = ledger
+        .entries
+        .iter()
+        .filter(|entry| {
+            entry.lambda_name == "ai_doc_generator_v2"
+                && matches!(entry.status, ExecutionStatus::Success)
+        })
+        .filter_map(|entry| {
+            // Parse the output to extract documentation summary
+            if let Some(output_data) = &entry.output_data {
+                if let Ok(doc_data) = serde_json::from_str::<serde_json::Value>(output_data) {
+                    let documentation = doc_data["documentation"].as_str().unwrap_or("");
+                    let preview = documentation
+                        .lines()
+                        .take(2)
+                        .collect::<Vec<_>>()
+                        .join(" ")
+                        .chars()
+                        .take(100)
+                        .collect::<String>();
+
+                    Some(DocumentationSummary {
+                        execution_id: entry.execution_id.clone(),
+                        content_type: doc_data["content_type"]
+                            .as_str()
+                            .unwrap_or("unknown")
+                            .to_string(),
+                        target_audience: doc_data["target_audience"]
+                            .as_str()
+                            .unwrap_or("unknown")
+                            .to_string(),
+                        generated_at: entry.timestamp.to_rfc3339(),
+                        confidence: doc_data["generation_info"]["confidence"]
+                            .as_f64()
+                            .unwrap_or(0.0),
+                        word_count: doc_data["generation_info"]["word_count"]
+                            .as_u64()
+                            .unwrap_or(0) as u32,
+                        preview,
+                    })
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    let documentation_page_ui = DocumentationPageUi::new(user, documentation_list);
+    let html = documentation_page_ui.render_html(&state.tera)?;
+
+    Ok(html)
+}
+
+/// Individual documentation view handler
+#[instrument(
+    skip_all,
+    fields(handler = "documentation_view", operation = "page_render")
+)]
+pub async fn documentation_view_handler(
+    Path(execution_id): Path<String>,
+    State(state): State<AppState>,
+    auth_session: AuthSession<AuthBackend>,
+    _lambda_service: LambdasService<LambdaStorage>,
+) -> AppResult<Html<String>> {
+    let user = auth_session.user.unwrap();
+
+    // Get the specific documentation execution from lambda metrics ledger
+    let lambda_storage = LambdaStorage::new();
+    let ledger = lambda_storage.get_metrics_ledger();
+
+    if let Some(entry) = ledger.entries.iter().find(|entry| {
+        entry.execution_id == execution_id
+            && entry.lambda_name == "ai_doc_generator_v2"
+            && matches!(entry.status, ExecutionStatus::Success)
+    }) {
+        if let Some(output_data) = &entry.output_data {
+            if let Ok(doc_data) = serde_json::from_str::<serde_json::Value>(output_data) {
+                let documentation = AIDocumentation {
+                    documentation: doc_data["documentation"].as_str().unwrap_or("").to_string(),
+                    content_type: doc_data["content_type"]
+                        .as_str()
+                        .unwrap_or("unknown")
+                        .to_string(),
+                    target_audience: doc_data["target_audience"]
+                        .as_str()
+                        .unwrap_or("unknown")
+                        .to_string(),
+                    generation_info: GenerationInfo {
+                        generation_method: doc_data["generation_info"]["generation_method"]
+                            .as_str()
+                            .unwrap_or("unknown")
+                            .to_string(),
+                        confidence: doc_data["generation_info"]["confidence"]
+                            .as_f64()
+                            .unwrap_or(0.0),
+                        word_count: doc_data["generation_info"]["word_count"]
+                            .as_u64()
+                            .unwrap_or(0) as u32,
+                        sections_included: doc_data["generation_info"]["sections_included"]
+                            .as_array()
+                            .map(|arr| {
+                                arr.iter()
+                                    .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                                    .collect()
+                            })
+                            .unwrap_or_default(),
+                    },
+                };
+
+                let documentation_view_ui = DocumentationViewUi::new(
+                    user,
+                    documentation,
+                    execution_id,
+                    entry.timestamp.to_rfc3339(),
+                );
+                return documentation_view_ui.render_html(&state.tera);
+            }
+        }
+    }
+
+    // If documentation not found, redirect to documentation list
+    Ok(Html(
+        r#"<script>window.location.href = '/documentation';</script>"#.to_string(),
+    ))
 }

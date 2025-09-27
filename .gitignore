@@ -1,9 +1,6 @@
 target/
 node_modules/
 wasm/
-source/
-!source/hello_world.rs
-
 # Lambda execution metrics (runtime data)
 **/metrics.json
 
