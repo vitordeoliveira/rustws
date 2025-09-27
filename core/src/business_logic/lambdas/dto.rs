@@ -183,6 +183,9 @@ pub struct LambdaMetadata {
 
     /// Macro version used to generate the lambda
     pub macro_version: String,
+
+    /// Timestamp when this lambda was last compiled
+    pub compiled_at: chrono::DateTime<chrono::Utc>,
 }
 
 /// Lambda feature flags and capabilities

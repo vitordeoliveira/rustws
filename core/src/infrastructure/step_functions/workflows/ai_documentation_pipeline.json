@@ -1,0 +1,76 @@
+{
+  "Comment": "AI Documentation Generation Pipeline with Quality Validation and Converters",
+  "StartAt": "GenerateDocumentation",
+  "States": {
+    "GenerateDocumentation": {
+      "Type": "Task",
+      "Resource": "rustws:lambda:ai_doc_generator",
+      "Next": "ConvertDocToJudgeRequest"
+    },
+    "ConvertDocToJudgeRequest": {
+      "Type": "Task",
+      "Resource": "rustws:lambda:ai_doc_to_judge_converter",
+      "Next": "JudgeDocumentationCompleteness"
+    },
+    "JudgeDocumentationCompleteness": {
+      "Type": "Task",
+      "Resource": "rustws:lambda:judge",
+      "Next": "EnforceCompletenessDecision"
+    },
+    "EnforceCompletenessDecision": {
+      "Type": "Task",
+      "Resource": "rustws:lambda:judge_enforcer",
+      "Next": "ConvertEnforcerToFormatRequest"
+    },
+    "ConvertEnforcerToFormatRequest": {
+      "Type": "Task",
+      "Resource": "rustws:lambda:enforcer_to_format_converter",
+      "Next": "CheckFormat"
+    },
+    "CheckFormat": {
+      "Type": "Task",
+      "Resource": "rustws:lambda:format_checker",
+      "Next": "ConvertFormatToJudgeRequest"
+    },
+    "ConvertFormatToJudgeRequest": {
+      "Type": "Task",
+      "Resource": "rustws:lambda:format_to_judge_converter",
+      "Next": "JudgeTechnicalAccuracy"
+    },
+    "JudgeTechnicalAccuracy": {
+      "Type": "Task",
+      "Resource": "rustws:lambda:judge",
+      "Next": "EnforceTechnicalAccuracyDecision"
+    },
+    "EnforceTechnicalAccuracyDecision": {
+      "Type": "Task",
+      "Resource": "rustws:lambda:judge_enforcer",
+      "Next": "ConvertEnforcerToExampleRequest"
+    },
+    "ConvertEnforcerToExampleRequest": {
+      "Type": "Task",
+      "Resource": "rustws:lambda:enforcer_to_example_converter",
+      "Next": "ValidateExamples"
+    },
+    "ValidateExamples": {
+      "Type": "Task",
+      "Resource": "rustws:lambda:example_validator",
+      "Next": "ConvertExampleToJudgeRequest"
+    },
+    "ConvertExampleToJudgeRequest": {
+      "Type": "Task",
+      "Resource": "rustws:lambda:example_to_judge_converter",
+      "Next": "JudgeClarity"
+    },
+    "JudgeClarity": {
+      "Type": "Task",
+      "Resource": "rustws:lambda:judge",
+      "Next": "EnforceClarityDecision"
+    },
+    "EnforceClarityDecision": {
+      "Type": "Task",
+      "Resource": "rustws:lambda:judge_enforcer",
+      "End": true
+    }
+  }
+}

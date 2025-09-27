@@ -550,6 +550,11 @@ strip = "symbols"
                 .as_str()
                 .unwrap_or("unknown")
                 .to_string(),
+            compiled_at: metadata_json["compiled_at"]
+                .as_str()
+                .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
+                .map(|dt| dt.with_timezone(&chrono::Utc))
+                .unwrap_or_else(chrono::Utc::now),
         };
 
         tracing::info!(
